@@ -1,7 +1,7 @@
+mod sequence;
+
 use crate::{
-    ValType,
-    ResultType,
-    FuncType,
+    ValType as ValTypeOriginal,
     TableType,
     GlobalType,
     TypeIdx,
@@ -41,6 +41,19 @@ macro_rules! instr_tp {
         Ok((vec![], vec![]))
     };
 }
+
+#[derive(Clone)]
+enum ValType {
+    Any, I32, I64, F32, F64,
+}
+
+#[derive(Clone)]
+enum ResultType {
+    Types(Vec<ValType>),
+    EndsWith(Vec<ValType>),
+}
+
+type FuncType = (ResultType, ResultType);
 
 impl Instr {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -156,13 +169,11 @@ impl Instr {
             PARAMETRIC INSTRUCTIONS
             */
 
-            // TODO: value-polymorphic
-            // t ->
-            Instr::Drop => instr_tp!(I32 ->),
+            // value-polymorphic
+            Instr::Drop => instr_tp!(Any ->),
 
-            // TODO: value-polymorphic
-            // t t i32 -> t
-            Instr::Select => instr_tp!(I64 I64 I32 -> I64),
+            // value-polymorphic
+            Instr::Select => instr_tp!(Any Any I32 -> Any),
 
 
             /*
@@ -202,8 +213,8 @@ impl Instr {
                 let opname = "load";
                 let _ = Instr::check_mem_exist(context, opname)?;
                 let width = match valtype {
-                    ValType::I32 | ValType::F32 => 32,
-                    ValType::I64 | ValType::F64 => 64,
+                    ValTypeOriginal::I32 | ValTypeOriginal::F32 => 32,
+                    ValTypeOriginal::I64 | ValTypeOriginal::F64 => 64,
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
@@ -244,8 +255,8 @@ impl Instr {
                 let opname = "store";
                 let _ = Instr::check_mem_exist(context, opname)?;
                 let width = match valtype {
-                    ValType::I32 | ValType::F32 => 32,
-                    ValType::I64 | ValType::F64 => 64,
+                    ValTypeOriginal::I32 | ValTypeOriginal::F32 => 32,
+                    ValTypeOriginal::I64 | ValTypeOriginal::F64 => 64,
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
@@ -295,12 +306,14 @@ impl Instr {
             CONTROL INSTRUCTIONS
             */
             Instr::Nop => instr_tp!(() -> ()),
-            // TODO: stack-polymorphic
-            Instr::Unreachable => instr_tp!(() -> ()),
+            // stack-polymorphic
+            Instr::Unreachable => {
+                Ok((ResultType::EndsWith(vec![]), ResultType::EndsWith(vec![])))
+            },
             // TODO: stack-polymorphic
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
-                unimplemented!()
+                Ok((ResultType::EndsWith(label), ResultType::EndsWith(vec![])))
             },
             Instr::BrIf(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
@@ -309,11 +322,16 @@ impl Instr {
                 Ok((args, label))
             },
             // TODO: stack-polymorphic
-            Instr::BrTable(labelindices, labelidx) => unimplemented!(),
+            Instr::BrTable(labelindices, labelidx) => {
+                let label = Instr::check_label(context, labelidx, "br")?;
+                let mut args = label.clone();
+                args.push(ValType::I32);
+                Ok((ResultType::EndsWith(args), ResultType::EndsWith(vec![])))
+            },
             // TODO: stack-polymorphic
             Instr::Return => {
                 if let Some(rettp) = context.rtn() {
-                    unimplemented!()
+                    Ok((ResultType::EndsWith(rettp), ResultType::EndsWith(vec![])))
                 } else {
                     Err(Error::PreCondition("instr return validate: context.return is absent".to_string()))
                 }
