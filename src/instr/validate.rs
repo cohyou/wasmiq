@@ -2,6 +2,8 @@ mod sequence;
 
 use crate::{
     ValType as ValTypeOriginal,
+    ResultType as ResultTypeOriginal,
+    FuncType as FuncTypeOriginal,
     TableType,
     GlobalType,
     TypeIdx,
@@ -18,42 +20,70 @@ use super::{
     CvtOp,
 };
 
+#[macro_export]
+macro_rules! ft {
+    ($args: expr, $rets: expr) => {
+        Ok((ResultType($args), ResultType($rets)))
+    };
+}
+
+#[macro_export]
 macro_rules! instr_tp {
     ($res: ident) => {
-        Ok((vec![], vec![ValType::$res]))
+        ft!(vec![], vec![ValType::$res])
     };
     ($arg: ident -> $res: ident) => {
-        Ok((vec![ValType::$arg], vec![ValType::$res]))
+        ft!(vec![ValType::$arg], vec![ValType::$res])
     };
     ($arg1: ident $arg2: ident -> $res: ident) => {
-        Ok((vec![ValType::$arg1, ValType::$arg2], vec![ValType::$res]))
+        ft!(vec![ValType::$arg1, ValType::$arg2], vec![ValType::$res])
     };
     ($arg1: ident $arg2: ident $arg3: ident -> $res: ident) => {
-        Ok((vec![ValType::$arg1, ValType::$arg2, ValType::$arg3], vec![ValType::$res]))
+        ft!(vec![ValType::$arg1, ValType::$arg2, ValType::$arg3], vec![ValType::$res])
     };
     ($arg: ident ->) => {
-        Ok((vec![ValType::$arg], vec![]))
+        ft!(vec![ValType::$arg], vec![])
     };
     ($arg1: ident $arg2: ident ->) => {
-        Ok((vec![ValType::$arg1, ValType::$arg2], vec![]))
+        ft!(vec![ValType::$arg1, ValType::$arg2], vec![])
     };
     (() -> ()) => {
-        Ok((vec![], vec![]))
+        ft!(vec![], vec![])
     };
+    (Ellipsis -> Ellipsis) => {
+        ft!(vec![ValType::Ellipsis], vec![ValType::Ellipsis])
+    }
 }
 
-#[derive(Clone)]
+type TypeValIdx = u32;
+
+#[derive(Clone, PartialEq)]
 enum ValType {
-    Any, I32, I64, F32, F64,
+    I32, I64, F32, F64,
+    TypeVal(TypeValIdx),
+    Ellipsis,
 }
 
 #[derive(Clone)]
-enum ResultType {
-    Types(Vec<ValType>),
-    EndsWith(Vec<ValType>),
+struct ResultType(Vec<ValType>);
+
+use std::slice::Iter;
+impl ResultType {
+    fn iter(&self) -> Iter<'_, ValType> {
+        self.0.iter()
+    }
 }
 
 type FuncType = (ResultType, ResultType);
+
+fn vt(vt: &ValTypeOriginal) -> ValType {
+    match vt {
+        ValTypeOriginal::I32 => ValType::I32,
+        ValTypeOriginal::I64 => ValType::I64,
+        ValTypeOriginal::F32 => ValType::F32,
+        ValTypeOriginal::F64 => ValType::F64,
+    }
+}
 
 impl Instr {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -133,7 +163,7 @@ impl Instr {
                             ValSize::V32 => ValType::I32,
                             ValSize::V64 => ValType::I64,
                         };               
-                        Ok((vec![arg_tp], vec![ret_tp]))
+                        ft!(vec![arg_tp], vec![ret_tp])
                     },
                     CvtOp::F32DemoteFromF64 => instr_tp!(F64 -> F32),
                     CvtOp::F64PromoteFromF32 => instr_tp!(F32 -> F64),
@@ -146,7 +176,7 @@ impl Instr {
                             ValSize::V32 => ValType::F32,
                             ValSize::V64 => ValType::F64,
                         };
-                        Ok((vec![arg_tp], vec![ret_tp]))
+                        ft!(vec![arg_tp], vec![ret_tp])
                     },
                     CvtOp::IReinterpretFromF(valsize) => {
                         match valsize {
@@ -170,36 +200,39 @@ impl Instr {
             */
 
             // value-polymorphic
-            Instr::Drop => instr_tp!(Any ->),
-
+            Instr::Drop(None) => ft!(vec![ValType::TypeVal(0)], vec![]),
+            Instr::Drop(Some(valtype)) => ft!(vec![vt(valtype)], vec![]),
             // value-polymorphic
-            Instr::Select => instr_tp!(Any Any I32 -> Any),
-
-
+            Instr::Select(None) => {
+                ft!(vec![ValType::TypeVal(0), ValType::TypeVal(0), ValType::I32], vec![ValType::TypeVal(0)])
+            },
+            Instr::Select(Some(valtype)) => {
+                ft!(vec![vt(valtype), vt(valtype), ValType::I32], vec![vt(valtype)])
+            },
             /*
             VARIABLE INSTRUCTIONS
             */
             Instr::LocalGet(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.get")?;
-                Ok((vec![], vec![tp]))
+                ft!(vec![], vec![vt(&tp)])
             },
             Instr::LocalSet(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.set")?;
-                Ok((vec![tp], vec![]))
+                ft!(vec![vt(&tp)], vec![])
             },
             Instr::LocalTee(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.tee")?;
-                Ok((vec![tp], vec![tp]))
+                ft!(vec![vt(&tp)], vec![vt(&tp)])
             },
             Instr::GlobalGet(globalidx) => {
                 let globaltype = Instr::check_global(context, globalidx, "global.get")?;
-                Ok((vec![], vec![globaltype.0]))
+                ft!(vec![], vec![vt(&globaltype.0)])
             },
             Instr::GlobalSet(globalidx) => {
                 let globaltype = Instr::check_global(context, globalidx, "global.set")?;
 
                 if globaltype.is_var() {
-                    Ok((vec![globaltype.0], vec![]))
+                    ft!(vec![vt(&globaltype.0)], vec![])
                 } else {
                     let message = "instr global.set validate: can't set value to const global";
                     Err(Error::Mutability(message.to_string()))
@@ -218,7 +251,7 @@ impl Instr {
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
-                Ok((vec![ValType::I32], vec![valtype.clone()]))
+                ft!(vec![ValType::I32], vec![vt(valtype)])
             },
             Instr::ILoad8(valsize, _, memarg) => {
                 let opname = "iload8";
@@ -230,7 +263,7 @@ impl Instr {
                     ValSize::V64 => ValType::I64,
                 };
 
-                Ok((vec![ValType::I32], vec![valtype.clone()]))
+                ft!(vec![ValType::I32], vec![valtype.clone()])
             },
             Instr::ILoad16(valsize, _, memarg) => {
                 let opname = "iload16";
@@ -242,7 +275,7 @@ impl Instr {
                     ValSize::V64 => ValType::I64,
                 };
 
-                Ok((vec![ValType::I32], vec![valtype.clone()]))
+                ft!(vec![ValType::I32], vec![valtype.clone()])
             },
             Instr::I64Load32(_, memarg) => {
                 let opname = "i64load32";
@@ -260,7 +293,7 @@ impl Instr {
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
-                Ok((vec![ValType::I32, valtype.clone()], vec![]))
+                ft!(vec![ValType::I32, vt(valtype)], vec![])
             },
             Instr::IStore8(valsize, memarg) => {
                 let opname = "istore8";
@@ -272,7 +305,7 @@ impl Instr {
                     ValSize::V64 => ValType::I64,
                 };
 
-                Ok((vec![ValType::I32, valtype.clone()], vec![]))
+                ft!(vec![ValType::I32, valtype.clone()], vec![])
             },
             Instr::IStore16(valsize, memarg) => {
                 let opname = "istore16";
@@ -284,7 +317,7 @@ impl Instr {
                     ValSize::V64 => ValType::I64,
                 };
 
-                Ok((vec![ValType::I32, valtype.clone()], vec![]))
+                ft!(vec![ValType::I32, valtype.clone()], vec![])
             },
             Instr::I64Store32(memarg) => {
                 let opname = "i64store32";
@@ -306,39 +339,45 @@ impl Instr {
             CONTROL INSTRUCTIONS
             */
             Instr::Nop => instr_tp!(() -> ()),
-            // stack-polymorphic
-            Instr::Unreachable => {
-                Ok((ResultType::EndsWith(vec![]), ResultType::EndsWith(vec![])))
-            },
-            // TODO: stack-polymorphic
+            Instr::Unreachable => instr_tp!(Ellipsis -> Ellipsis),
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
-                Ok((ResultType::EndsWith(label), ResultType::EndsWith(vec![])))
+                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
+                let mut vts = vec![ValType::Ellipsis];
+                vts.extend(label);
+                ft!(vts, vec![ValType::Ellipsis])
             },
             Instr::BrIf(labelidx) => {
-                let label = Instr::check_label(context, labelidx, "br")?;
+                let label = Instr::check_label(context, labelidx, "brif")?;
+                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
                 let mut args = label.clone();
                 args.push(ValType::I32);
-                Ok((args, label))
+                ft!(args, label)
             },
-            // TODO: stack-polymorphic
             Instr::BrTable(labelindices, labelidx) => {
-                let label = Instr::check_label(context, labelidx, "br")?;
+                let label = Instr::check_label(context, labelidx, "brtable")?;
+                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
                 let mut args = label.clone();
                 args.push(ValType::I32);
-                Ok((ResultType::EndsWith(args), ResultType::EndsWith(vec![])))
+                let mut vts = vec![ValType::Ellipsis];
+                vts.extend(args);
+                ft!(vts, vec![ValType::Ellipsis])
             },
-            // TODO: stack-polymorphic
             Instr::Return => {
                 if let Some(rettp) = context.rtn() {
-                    Ok((ResultType::EndsWith(rettp), ResultType::EndsWith(vec![])))
+                    let rettp: Vec<ValType> = rettp.iter().map(|v| vt(v)).collect();
+                    let mut vts = vec![ValType::Ellipsis];
+                    vts.extend(rettp);
+                    ft!(vts, vec![ValType::Ellipsis])
                 } else {
                     Err(Error::PreCondition("instr return validate: context.return is absent".to_string()))
                 }
             },
             Instr::Call(funcidx) => {
                 if let Some(functype) = context.func(funcidx.clone()) {
-                    Ok(functype.clone())
+                    let ft0 = functype.0.iter().map(|v| vt(v)).collect();
+                    let ft1 = functype.1.iter().map(|v| vt(v)).collect();
+                    ft!(ft0, ft1)
                 } else {
                     Err(Error::OutOfIndex("instr call validate: funcidx".to_string()))
                 }
@@ -350,24 +389,25 @@ impl Instr {
                     Err(Error::PreCondition(format!("instr {} validate: table.elemtype is not funcref", opname)))
                 } else {
                     let tp = Instr::check_type(context, funcidx, opname)?;
-                    let mut res = tp.clone();
-                    res.0.push(ValType::I32);
+                    let mut tp0: Vec<ValType> = tp.0.iter().map(|v| vt(v)).collect();
+                    let tp1: Vec<ValType> = tp.1.iter().map(|v| vt(v)).collect();
+                    tp0.push(ValType::I32);
     
-                    Ok(res)
+                    ft!(tp0, tp1)
                 }
             },
-
 
             _ => unimplemented!(),
         }
     }
 
-    fn check_type(context: &Context, typeidx: &TypeIdx, opname: &str) -> Result<FuncType, Error> {
+    fn check_type(context: &Context, typeidx: &TypeIdx, opname: &str) -> Result<FuncTypeOriginal, Error> {
         let tp = context.tp(typeidx.clone())
             .ok_or(Error::OutOfIndex(format!("instr {} validate: typeidx", opname)))?;
         Ok(tp)
     }
-    fn check_local(context: &Context, localidx: &LocalIdx, opname: &str) -> Result<ValType, Error> {
+
+    fn check_local(context: &Context, localidx: &LocalIdx, opname: &str) -> Result<ValTypeOriginal, Error> {
         let tp = context.local(localidx.clone())
             .ok_or(Error::OutOfIndex(format!("instr {} validate: localidx", opname)))?;
         Ok(tp)
@@ -379,7 +419,7 @@ impl Instr {
         Ok(globaltype)
     }
 
-    fn check_label(context: &Context, labelidx: &LabelIdx, opname: &str) -> Result<ResultType, Error> {
+    fn check_label(context: &Context, labelidx: &LabelIdx, opname: &str) -> Result<ResultTypeOriginal, Error> {
         let label = context.label(labelidx.clone())
             .ok_or(Error::OutOfIndex(format!("instr {} validate: labelidx", opname)))?;
         Ok(label)

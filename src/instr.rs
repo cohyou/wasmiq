@@ -36,8 +36,8 @@ pub enum Instr {
     CallIndirect(FuncIdx),
 
     // Parametric Instructions
-    Drop,
-    Select,
+    Drop(Option<ValType>),
+    Select(Option<ValType>),
 
     // Variable Instructions
     LocalGet(LocalIdx),
