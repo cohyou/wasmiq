@@ -10,11 +10,13 @@ use crate::{
 
 pub struct Expr(Vec<Instr>);
 
+#[derive(PartialEq)]
 pub struct MemArg {
     offset: u32,
     align: u32,
 }
 
+#[derive(PartialEq)]
 pub enum Instr {
     /* Block Instructions */
 

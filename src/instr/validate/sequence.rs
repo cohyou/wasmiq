@@ -1,4 +1,5 @@
 use crate::{
+    ValType as ValTypeOriginal,
     Error,
     Context,
     ft,
@@ -12,6 +13,15 @@ use super::{
     FuncType,
 };
 
+fn vt_rev(vt: &ValType) -> ValTypeOriginal {
+    match vt {
+        ValType::I32 => ValTypeOriginal::I32,
+        ValType::I64 => ValTypeOriginal::I64,
+        ValType::F32 => ValTypeOriginal::F32,
+        ValType::F64 => ValTypeOriginal::F64,
+        _ => unimplemented!(),
+    }
+}
 
 impl ResultType {
     pub fn strip_suffix<'a>(&'a self, suffix: &ResultType) -> Option<ResultType> {
@@ -44,31 +54,62 @@ impl ResultType {
 
 impl Instr {
     fn validate_instr_sequence(context: &Context, instrs: Vec<Instr>) -> Result<FuncType, Error> {
-        if let Some(instr) = instrs.first() {
-            let args = instr.validate(context)?.0;
-            let mut ret = Err(Error::Invalid);
-            let mut rets: ResultType; 
+        if instrs.is_empty() { return instr_tp!(Ellipsis -> Ellipsis); }
 
-            for instr_pair in instrs.windows(2) {
-                let first_functype = instr_pair[0].validate(context)?;
-                let second_functype = instr_pair[1].validate(context)?;
+        let mut ret = Err(Error::Invalid);
+        let mut rets: ResultType; 
 
-                // compare types
-                rets = first_functype.1.strip_suffix(&second_functype.0).ok_or(Error::Invalid)?;
-                let ret_args = first_functype.0;
-                let ret_rets = {
-                    if ResultType::is_stack_polymorphic(&second_functype.1) {
-                        second_functype.1
-                    } else {
-                        rets.0.extend(second_functype.1.0);
-                        rets.clone()
-                    }
-                };
-                ret = Ok((ret_args, ret_rets));
+        let mut instr_resolved: Option<Instr> = None;
+
+        for instr_pair in instrs.windows(2) {
+            let first_functype = {
+                if let Some(instr) = instr_resolved {
+                    instr_resolved = None;
+                    instr.validate(context)?
+                } else {
+                    instr_pair[0].validate(context)?
+                }
+            };
+            let instr_second = &instr_pair[1];
+            let second_functype = instr_second.validate(context)?;
+            let mut second_functype_args = second_functype.0;
+            let mut second_functype_rets = second_functype.1;
+
+
+            // resolve valtype for value-polymorphic instrs
+            // TODO: better algorithm...
+            match instr_second {
+                &Instr::Drop(None) => {
+                    let valtype = first_functype.1.last().ok_or(Error::Invalid)?;
+                    second_functype_args = ResultType(vec![valtype.clone()]);
+                    instr_resolved = Some(Instr::Drop(Some(vt_rev(valtype))));
+                },
+                &Instr::Select(None) => {
+                    let valtype = first_functype.1.last2().ok_or(Error::Invalid)?;
+                    second_functype_args = ResultType(vec![valtype.clone(), valtype.clone(), ValType::I32]);
+                    second_functype_rets = ResultType(vec![valtype.clone()]);
+                    instr_resolved = Some(Instr::Select(Some(vt_rev(valtype))));
+                },
+                _ => (),
             }
-            ret
-        } else {
-            instr_tp!(Ellipsis -> Ellipsis)
+
+
+            // compare types
+            rets = first_functype.1.strip_suffix(&second_functype_args).ok_or(Error::Invalid)?;
+            
+
+            let ret_args = first_functype.0;
+            let ret_rets = {
+                if ResultType::is_stack_polymorphic(&second_functype_rets) {
+                    second_functype_rets
+                } else {
+                    rets.0.extend(second_functype_rets.0);
+                    rets.clone()
+                }
+            };
+            ret = Ok((ret_args, ret_rets));
         }
+        
+        ret
     }
 }

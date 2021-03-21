@@ -72,6 +72,22 @@ impl ResultType {
     fn iter(&self) -> Iter<'_, ValType> {
         self.0.iter()
     }
+
+    fn get(&self, idx: usize) -> Option<&ValType> {
+        self.0.get(idx)
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn last(&self) -> Option<&ValType> {
+        self.0.last()
+    }
+
+    fn last2(&self) -> Option<&ValType> {
+        self.0.get(self.0.len() - 2)
+    }
 }
 
 type FuncType = (ResultType, ResultType);
