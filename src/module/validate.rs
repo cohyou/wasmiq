@@ -23,6 +23,7 @@ use super::{
     LabelIdx,
 };
 
+#[derive(Clone)]
 pub struct Context {
     types: Vec<FuncType>,
     funcs: Option<Vec<FuncType>>,
@@ -77,6 +78,19 @@ impl Context {
         self.funcs.as_ref().and_then(|restps| {
             restps.get(idx.clone() as usize).cloned()
         })
+    }
+
+    pub fn clone_with_labels(&self, vts: Vec<ValType>) -> Context {
+        let mut context = self.clone();
+        let labels = {
+            let mut new_labels = vec![vts];
+            if let Some(labels) = &self.labels {
+                new_labels.extend(labels.clone());
+            }
+            new_labels
+        };
+        context.labels = Some(labels);
+        context
     }
 }
 impl Module {

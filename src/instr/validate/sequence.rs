@@ -11,17 +11,8 @@ use super::{
     ValType,
     ResultType,
     FuncType,
+    vt_rev,
 };
-
-fn vt_rev(vt: &ValType) -> ValTypeOriginal {
-    match vt {
-        ValType::I32 => ValTypeOriginal::I32,
-        ValType::I64 => ValTypeOriginal::I64,
-        ValType::F32 => ValTypeOriginal::F32,
-        ValType::F64 => ValTypeOriginal::F64,
-        _ => unimplemented!(),
-    }
-}
 
 impl ResultType {
     pub fn strip_suffix<'a>(&'a self, suffix: &ResultType) -> Option<ResultType> {
@@ -53,7 +44,7 @@ impl ResultType {
 }
 
 impl Instr {
-    fn validate_instr_sequence(context: &Context, instrs: Vec<Instr>) -> Result<FuncType, Error> {
+    pub fn validate_instr_sequence(context: &Context, instrs: &Vec<Instr>) -> Result<FuncType, Error> {
         if instrs.is_empty() { return instr_tp!(Ellipsis -> Ellipsis); }
 
         let mut ret = Err(Error::Invalid);

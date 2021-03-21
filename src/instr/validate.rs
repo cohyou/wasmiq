@@ -15,6 +15,7 @@ use crate::{
     MemArg,
 };
 use super::{
+    BlockType,
     Instr,
     ValSize,
     CvtOp,
@@ -58,14 +59,14 @@ macro_rules! instr_tp {
 type TypeValIdx = u32;
 
 #[derive(Clone, PartialEq)]
-enum ValType {
+pub enum ValType {
     I32, I64, F32, F64,
     TypeVal(TypeValIdx),
     Ellipsis,
 }
 
-#[derive(Clone)]
-struct ResultType(Vec<ValType>);
+#[derive(Clone, PartialEq)]
+pub struct ResultType(pub Vec<ValType>);
 
 use std::slice::Iter;
 impl ResultType {
@@ -88,6 +89,10 @@ impl ResultType {
     fn last2(&self) -> Option<&ValType> {
         self.0.get(self.0.len() - 2)
     }
+
+    // fn valtypes(&self) -> Vec<ValType> {
+    //     self.0
+    // }
 }
 
 type FuncType = (ResultType, ResultType);
@@ -98,6 +103,16 @@ fn vt(vt: &ValTypeOriginal) -> ValType {
         ValTypeOriginal::I64 => ValType::I64,
         ValTypeOriginal::F32 => ValType::F32,
         ValTypeOriginal::F64 => ValType::F64,
+    }
+}
+
+pub fn vt_rev(vt: &ValType) -> ValTypeOriginal {
+    match vt {
+        ValType::I32 => ValTypeOriginal::I32,
+        ValType::I64 => ValTypeOriginal::I64,
+        ValType::F32 => ValTypeOriginal::F32,
+        ValType::F64 => ValTypeOriginal::F64,
+        _ => unimplemented!(),
     }
 }
 
@@ -356,6 +371,35 @@ impl Instr {
             */
             Instr::Nop => instr_tp!(() -> ()),
             Instr::Unreachable => instr_tp!(Ellipsis -> Ellipsis),
+            Instr::Block(blocktype, instrs) => {
+                let ft = blocktype.validate(context)?;
+                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                let context = context.clone_with_labels(vts);
+                Instr::validate_instr_sequence(&context, &instrs)
+            },
+            Instr::Loop(blocktype, instrs) => {
+                let ft = blocktype.validate(context)?;
+                let vts: Vec<ValTypeOriginal> = ft.0.0.iter().map(|v| vt_rev(v)).collect();
+                let context = context.clone_with_labels(vts);
+                Instr::validate_instr_sequence(&context, &instrs)
+            },
+            Instr::If(blocktype, instrs1, None) => {
+                let ft = blocktype.validate(context)?;
+                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                let context = context.clone_with_labels(vts);
+                Instr::validate_instr_sequence(&context, &instrs1)
+            },
+            Instr::If(blocktype, instrs1, Some(instrs2)) => {
+                let ft = blocktype.validate(context)?;
+                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                let context = context.clone_with_labels(vts);
+                let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
+                let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
+                if functype1 != functype2 {
+                    return Err(Error::Invalid);
+                }
+                Ok(functype1)
+            },
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
                 let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
@@ -470,6 +514,23 @@ impl MemArg {
             32 => self.align <= 2,
             64 => self.align <= 3,
             _ => unimplemented!(),
+        }
+    }
+}
+
+impl BlockType {
+    fn validate(&self, context: &Context) -> Result<FuncType, Error> {
+        match &self {
+            BlockType::TypeIdx(idx) => {
+                let functype = context.tp(idx.clone())
+                    .ok_or(Error::OutOfIndex(format!("blocktype validate: typeidx")))?;
+                let tp0: Vec<ValType> = functype.0.iter().map(|v| vt(v)).collect();
+                let tp1: Vec<ValType> = functype.1.iter().map(|v| vt(v)).collect();
+
+                ft!(tp0, tp1)
+            },
+            BlockType::ValType(Some(valtype)) => ft!(vec![], vec![vt(valtype)]),
+            BlockType::ValType(None) => instr_tp!(() -> ()),
         }
     }
 }

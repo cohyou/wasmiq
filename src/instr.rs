@@ -2,13 +2,15 @@ mod validate;
 
 use crate::{
     ValType,
+    TypeIdx,
     FuncIdx,
     GlobalIdx,
     LocalIdx,
     LabelIdx,
 };
 
-pub struct Expr(Vec<Instr>);
+#[derive(PartialEq)]
+pub struct Expr(pub Vec<Instr>);
 
 #[derive(PartialEq)]
 pub struct MemArg {
@@ -17,13 +19,19 @@ pub struct MemArg {
 }
 
 #[derive(PartialEq)]
+pub enum BlockType {
+    TypeIdx(TypeIdx),
+    ValType(Option<ValType>),
+}
+
+#[derive(PartialEq)]
 pub enum Instr {
     /* Block Instructions */
 
     // Control Instructions
-    // Block(BlockType, Expr),
-    // Loop(BlockType, Expr),
-    // If(BlockType, Expr, Option<Expr>),
+    Block(BlockType, Vec<Instr>),
+    Loop(BlockType, Vec<Instr>),
+    If(BlockType, Vec<Instr>, Option<Vec<Instr>>),
 
     /* Plain Instructions */
 
