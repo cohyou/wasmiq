@@ -14,7 +14,7 @@ use crate::{
     LabelIdx,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct Expr(pub Vec<Instr>);
 
 impl Expr {
@@ -23,19 +23,19 @@ impl Expr {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct MemArg {
     offset: u32,
     align: u32,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum BlockType {
     TypeIdx(TypeIdx),
     ValType(Option<ValType>),
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Instr {
     /* Block Instructions */
 

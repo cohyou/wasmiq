@@ -8,6 +8,7 @@ use crate::{
     MemType,
     GlobalType,
     ExternType,
+    Name,
     Mut,
     Expr,
     Instr,
@@ -15,7 +16,7 @@ use crate::{
 };
 use super::{
     Module,
-    ImportDesc,
+    
     Func,
     Table,
     Data,
@@ -23,6 +24,9 @@ use super::{
     Global,
     Elem,
     Start,
+    ExportDesc,
+    ImportDesc,
+    
     TypeIdx,
     FuncIdx,
     GlobalIdx,
@@ -101,13 +105,15 @@ impl Context {
     }
 }
 impl Module {
-    pub fn validate(&self) -> Result<(), Error> {
+    pub fn validate(&self) -> Result<(Vec<ExternType>, Vec<ExternType>), Error> {
         let mut context = Context {
             types: self.types.clone(),
             funcs: None,
             tables: None,
             mems: None,
             globals: None,
+            // elem: None,
+            // data: None,
             locals: None,
             labels: None,
             rtn: None,
@@ -155,30 +161,73 @@ impl Module {
         context.funcs = Some(funcs);
         context.tables = Some(tables);
         context.mems = Some(mems);
-        context.globals = Some(globals);
 
-        Err(Error::Invalid)
-    }
-}
+        let mut context_g = context.clone();
+        context_g.globals = Some(globals);
 
-impl ImportDesc {
-    fn validate(&self, context: &Context) -> Result<ExternType, Error> {
-        match &self {
-            ImportDesc::Func(x) => {
-                let tp = context.types.get(x.clone() as usize)
-                    .ok_or(Error::OutOfIndex("importdesc validate: typeidx".to_string()))?;
-                Ok(ExternType::Func(tp.clone()))
-            },
-            ImportDesc::Table(tabletype) => {
-                Ok(ExternType::Table(tabletype.clone()))
-            },
-            ImportDesc::Mem(memtype) => {
-                Ok(ExternType::Mem(memtype.clone()))
-            },
-            ImportDesc::Global(globaltype) => {
-                Ok(ExternType::Global(globaltype.clone()))
-            },
+        // functype is always valid
+        // for tp in &self.types {
+        //     tp.validate()
+        // }
+
+        for func in &self.funcs {
+            func.validate(&context)?;
         }
+
+        for table in &self.tables {
+            table.validate(&context)?;
+        }
+
+        for mem in &self.mems {
+            mem.validate(&context)?;
+        }
+
+        for global in &self.globals {
+            global.validate(&context_g)?;
+        }
+
+        for el in &self.elem {
+            el.validate(&context)?;
+        }
+
+        for dt in &self.data {
+            dt.validate(&context)?;
+        }
+
+        if let Some(start) = &self.start {
+            start.validate(&context)?;
+        
+        }
+
+        let mut its = vec![];
+        for imp in &self.imports {
+            let externtype = imp.desc.validate(&context)?;
+            its.push(externtype);
+        }
+
+        let mut ets = vec![];
+        for exp in &self.exports {
+            let externtype = exp.desc.validate(&context)?;
+            ets.push(externtype);
+        }
+
+        if let Some(tables) = context.tables {
+            if tables.len() > 1 { return Err(Error::Invalid); }
+        }
+
+        if let Some(mems) = context.mems {
+            if mems.len() > 1 { return Err(Error::Invalid); }
+        }
+
+        let names = &self.exports.iter()
+            .map(|exp| exp.name.clone()).collect::<Vec<Name>>();
+        let mut names = names.clone();
+        names.dedup();
+        if &names.len() < &self.exports.len() {
+            return Err(Error::Invalid);
+        } 
+
+        Ok((its, ets))
     }
 }
 
@@ -284,5 +333,52 @@ impl Start {
             return Err(Error::Invalid);
         }
         Ok(())
+    }
+}
+
+impl ExportDesc {
+    fn validate(&self, context: &Context) -> Result<ExternType, Error> {
+        match &self {
+            ExportDesc::Func(x) => {
+                let functype = context.func(x.clone())
+                    .ok_or(Error::OutOfIndex(format!("exportdesc validate: funcidx")))?;
+                Ok(ExternType::Func(functype.clone()))
+            },
+            ExportDesc::Table(x) => {
+                if x != &0 { return Err(Error::Invalid); }
+                let tabletype = context.table().unwrap();
+                Ok(ExternType::Table(tabletype.clone()))
+            },
+            ExportDesc::Mem(x) => {
+                if x != &0 { return Err(Error::Invalid); }
+                let memtype = context.mem().unwrap();
+                Ok(ExternType::Mem(memtype.clone()))
+            },
+            ExportDesc::Global(x) => {
+                let globaltype = context.global(x.clone()).ok_or(Error::Invalid)?;
+                Ok(ExternType::Global(globaltype.clone()))
+            },
+        }
+    }
+}
+
+impl ImportDesc {
+    fn validate(&self, context: &Context) -> Result<ExternType, Error> {
+        match &self {
+            ImportDesc::Func(x) => {
+                let tp = context.tp(x.clone())
+                    .ok_or(Error::OutOfIndex(format!("importdesc validate: typeidx")))?;
+                Ok(ExternType::Func(tp.clone()))
+            },
+            ImportDesc::Table(tabletype) => {
+                Ok(ExternType::Table(tabletype.clone()))
+            },
+            ImportDesc::Mem(memtype) => {
+                Ok(ExternType::Mem(memtype.clone()))
+            },
+            ImportDesc::Global(globaltype) => {
+                Ok(ExternType::Global(globaltype.clone()))
+            },
+        }
     }
 }

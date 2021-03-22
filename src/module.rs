@@ -18,7 +18,11 @@ pub struct Module {
     tables: Vec<Table>,
     mems: Vec<Mem>,
     globals: Vec<Global>,
+    elem: Vec<Elem>,
+    data: Vec<Data>,
+    start: Option<Start>,
     imports: Vec<Import>,
+    exports: Vec<Export>,
 }
 
 pub type TypeIdx = u32;
@@ -52,6 +56,7 @@ struct Elem {
 
 type Byte = u8;
 
+#[derive(Clone)]
 struct Data {
     data: MemIdx,
     offset: Expr,
@@ -59,6 +64,18 @@ struct Data {
 }
 
 struct Start(pub FuncIdx);
+
+struct Export {
+    name: Name,
+    desc: ExportDesc,
+}
+
+enum ExportDesc {
+    Func(FuncIdx),
+    Table(TableIdx),
+    Mem(MemIdx),
+    Global(GlobalIdx),
+}
 
 pub struct Import {
     module: Name,
