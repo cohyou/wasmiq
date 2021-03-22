@@ -1,5 +1,6 @@
 use crate::{
     ValType as ValTypeOriginal,
+    Expr,
     Error,
     Context,
     ft,
@@ -13,6 +14,20 @@ use super::{
     FuncType,
     vt_rev,
 };
+
+impl Expr {
+    pub fn validate(&self, context: &Context) -> Result<ResultType, Error> {
+        if self.is_constant() {
+            unimplemented!()
+        } else {
+            let functype = Instr::validate_instr_sequence(context, &self.0)?;
+            if functype.0.0.len() > 0 {
+                return Err(Error::Invalid);
+            }
+            Ok(ResultType(functype.1.0))
+        }
+    }
+}
 
 impl ResultType {
     pub fn strip_suffix<'a>(&'a self, suffix: &ResultType) -> Option<ResultType> {

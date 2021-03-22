@@ -1,3 +1,8 @@
+use crate::{
+    Error,
+    Context,
+};
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum ValType {
     I32, I64, F32, F64,
@@ -13,14 +18,34 @@ pub struct Limits {
     max: Option<u32>,
 }
 
+impl Limits {
+    pub fn validate(&self, context: &Context, value: usize) -> Result<usize, Error> {
+        if let Some(max) = self.max {
+            if max < self.min { return Err(Error::Invalid); }
+        }
+        Ok(value)
+    }
+}
+
 #[derive(Clone)]
 pub struct MemType(Limits);
+
+impl MemType {
+    pub fn validate(&self, context: &Context) -> Result<(), Error> {
+        let _ = self.0.validate(context, u16::MAX as usize)?;
+        Ok(())
+    }
+}
 
 #[derive(Clone)]
 pub struct TableType(Limits, ElemType);
 
 impl TableType {
     pub fn is_funcref(&self) -> bool { true }
+    pub fn validate(&self, context: &Context) -> Result<(), Error> {
+        let _ = self.0.validate(context, u32::MAX as usize)?;
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -34,11 +59,28 @@ impl GlobalType {
 }
 
 #[derive(Clone, PartialEq)]
-enum Mut { Const, Var }
+pub enum Mut { Const, Var }
 
 pub enum ExternType {
     Func(FuncType),
     Table(TableType),
     Mem(MemType),
     Global(GlobalType),
+}
+
+impl ExternType {
+    pub fn validate(&self, context: &Context) -> Result<(), Error> {
+        match &self {
+            ExternType::Func(_) => {},
+            ExternType::Table(tabletype) => {
+                tabletype.validate(context)?;
+            },
+            ExternType::Mem(memtype) => {
+                memtype.validate(context)?;
+            },
+            ExternType::Global(_) => {},
+        }
+        
+        Ok(())
+    }
 }

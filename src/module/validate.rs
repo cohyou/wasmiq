@@ -3,10 +3,13 @@ use crate::{
     ResultType,
     FuncType,
     TableType,
+    Limits,
     MemType,
     GlobalType,
     ExternType,
-    // Instr,
+    Mut,
+    Expr,
+    Instr,
     Error,
 };
 use super::{
@@ -175,26 +178,52 @@ impl ImportDesc {
     }
 }
 
+use crate::instr::{vt, vt_rev};
+
 impl Func {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
-        unimplemented!()
+        let functype = context.tp(self.tp.clone())
+            .ok_or(Error::OutOfIndex(format!("func validate: self.tp")))?;
+        let mut new_context = context.clone();
+        let mut new_locals = functype.0.clone();
+        
+        if let Some(locals) = &context.locals {
+            new_locals.extend(locals)
+        }
+        new_context.locals = Some(new_locals);
+        new_context.labels = Some(vec![functype.1.clone()]);
+        new_context.rtn = Some(functype.1.clone());
+
+        let expr_type = self.body.validate(context)?;
+        let vts: Vec<ValType> = expr_type.0.iter().map(|v| vt_rev(v)).collect();
+        if vts != functype.1 {
+            return Err(Error::Invalid);
+        }
+
+        Ok(functype)
     }
 }
 
 impl Table {
     fn validate(&self, context: &Context) -> Result<TableType, Error> {
-        unimplemented!()
+        self.0.validate(context)?;
+        Ok(self.0.clone())
     }
 }
 
 impl Mem {
     fn validate(&self, context: &Context) -> Result<MemType, Error> {
-        unimplemented!()
+        self.0.validate(context)?;
+        Ok(self.0.clone())
     }
 }
 
 impl Global {
     fn validate(&self, context: &Context) -> Result<GlobalType, Error> {
-        unimplemented!()
+        let rt = self.init.validate(context)?;
+        let vts: Vec<ValType> = rt.0.iter().map(|v| vt_rev(v)).collect();
+        if vts != vec![self.tp.0] { return Err(Error::Invalid); }
+        if !self.init.is_constant() { return Err(Error::Invalid); } 
+        Ok(self.tp.clone())
     }
 }

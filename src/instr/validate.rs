@@ -97,7 +97,7 @@ impl ResultType {
 
 type FuncType = (ResultType, ResultType);
 
-fn vt(vt: &ValTypeOriginal) -> ValType {
+pub fn vt(vt: &ValTypeOriginal) -> ValType {
     match vt {
         ValTypeOriginal::I32 => ValType::I32,
         ValTypeOriginal::I64 => ValType::I64,

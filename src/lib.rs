@@ -73,16 +73,18 @@ use types::{
     ValType,
     ResultType,
     FuncType,
+    Limits,
     MemType,
     TableType,
     GlobalType,
     ExternType,
+    Mut,
 };
 
 mod instr;
 use instr::{
     MemArg,
-    // Instr, 
+    Instr, 
     Expr,
 };
 

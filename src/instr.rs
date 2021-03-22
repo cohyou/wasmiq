@@ -1,5 +1,10 @@
 mod validate;
 
+pub use validate::{
+    vt,
+    vt_rev,
+};
+
 use crate::{
     ValType,
     TypeIdx,
@@ -11,6 +16,12 @@ use crate::{
 
 #[derive(PartialEq)]
 pub struct Expr(pub Vec<Instr>);
+
+impl Expr {
+    pub fn is_constant(&self) -> bool {
+        unimplemented!()
+    }
+}
 
 #[derive(PartialEq)]
 pub struct MemArg {
