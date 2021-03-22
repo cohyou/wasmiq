@@ -101,7 +101,8 @@ pub fn module_parse() {
 }
 
 pub fn module_validate(module: Module) -> Result<(), Error> {
-    module.validate()
+    let externtype = module.validate()?;
+    Ok(())
 }
 
 pub use instance::module_instanciate;
