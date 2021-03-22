@@ -38,7 +38,7 @@ impl MemType {
 }
 
 #[derive(Clone)]
-pub struct TableType(Limits, ElemType);
+pub struct TableType(pub Limits, pub ElemType);
 
 impl TableType {
     pub fn is_funcref(&self) -> bool { true }
@@ -48,8 +48,8 @@ impl TableType {
     }
 }
 
-#[derive(Clone)]
-enum ElemType { FuncRef, }
+#[derive(Clone, PartialEq)]
+pub enum ElemType { FuncRef, }
 
 #[derive(Clone)]
 pub struct GlobalType(pub ValType, Mut);

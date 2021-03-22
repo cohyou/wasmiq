@@ -2,6 +2,7 @@ use crate::{
     ValType,
     ResultType,
     FuncType,
+    ElemType,
     TableType,
     Limits,
     MemType,
@@ -17,8 +18,11 @@ use super::{
     ImportDesc,
     Func,
     Table,
+    Data,
     Mem,
     Global,
+    Elem,
+    Start,
     TypeIdx,
     FuncIdx,
     GlobalIdx,
@@ -225,5 +229,60 @@ impl Global {
         if vts != vec![self.tp.0] { return Err(Error::Invalid); }
         if !self.init.is_constant() { return Err(Error::Invalid); } 
         Ok(self.tp.clone())
+    }
+}
+
+impl Elem {
+    fn validate(&self, context: &Context) -> Result<(), Error> {
+        if self.table != 0 { return Err(Error::Invalid); } 
+        let TableType(limits, elemtype) = context.table().ok_or(Error::Invalid)?;
+
+        if elemtype != ElemType::FuncRef { return Err(Error::Invalid); }
+
+        let resulttype = self.offset.validate(context)?;
+        let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
+        if vts != vec![ValType::I32] {
+            return Err(Error::Invalid);
+        }
+
+        if !self.offset.is_constant() {
+            return Err(Error::Invalid);
+        }
+
+        for y in &self.init {
+            if context.func(y.clone()).is_none() {
+                return Err(Error::Invalid);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Data {
+    fn validate(&self, context: &Context) -> Result<(), Error> {
+        if self.data != 0 { return Err(Error::Invalid); }
+
+        let resulttype = self.offset.validate(context)?;
+        let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
+        if vts != vec![ValType::I32] {
+            return Err(Error::Invalid);
+        }
+
+        if !self.offset.is_constant() {
+            return Err(Error::Invalid);
+        }
+
+        Ok(())
+    }
+}
+
+impl Start {
+    fn validate(&self, context: &Context) -> Result<(), Error> {
+        let functype = context.func(self.0).ok_or(Error::Invalid)?;
+        if functype.0.len() > 0 || functype.1.len() > 0 {
+            return Err(Error::Invalid);
+        }
+        Ok(())
     }
 }

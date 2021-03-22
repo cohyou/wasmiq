@@ -23,8 +23,8 @@ pub struct Module {
 
 pub type TypeIdx = u32;
 pub type FuncIdx = u32;
-// pub(super) type Tableidx = u32;
-// pub(super) type Memidx = u32;
+pub type TableIdx = u32;
+pub type MemIdx = u32;
 pub type GlobalIdx = u32;
 pub type LabelIdx = u32;
 pub type LocalIdx = u32;
@@ -43,6 +43,22 @@ pub struct Global {
     tp: GlobalType,
     init: Expr,
 }
+
+struct Elem {
+    table: TableIdx,
+    offset: Expr,
+    init: Vec<FuncIdx>,
+}
+
+type Byte = u8;
+
+struct Data {
+    data: MemIdx,
+    offset: Expr,
+    init: Vec<Byte>,
+}
+
+struct Start(pub FuncIdx);
 
 pub struct Import {
     module: Name,

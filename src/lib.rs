@@ -75,6 +75,7 @@ use types::{
     FuncType,
     Limits,
     MemType,
+    ElemType,
     TableType,
     GlobalType,
     ExternType,
