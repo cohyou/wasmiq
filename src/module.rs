@@ -3,6 +3,7 @@ mod instance;
 
 use crate::{
     Name,
+    Byte,
     ValType,
     FuncType,
     MemType,
@@ -53,8 +54,6 @@ struct Elem {
     offset: Expr,
     init: Vec<FuncIdx>,
 }
-
-type Byte = u8;
 
 #[derive(Clone)]
 struct Data {

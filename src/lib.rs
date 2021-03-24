@@ -1,6 +1,5 @@
 mod store;
 pub use store::store_init;
-use store::Store;
 
 mod module;
 pub use module::{
@@ -20,14 +19,13 @@ use module::{
     GlobalIdx,
     LocalIdx,
     LabelIdx,
+    Func,
     Context,
 };
 
 mod instance;
 pub use instance::instance_export;
-use instance::{
-    ModuleInst, 
-    ExternVal,
+use instance::{   
 };
 
 mod func;
@@ -66,7 +64,11 @@ pub use global::{
 };
 
 mod val;
-use val::Name;
+use val::{
+    Byte,
+    Name,
+    Mut,
+};
 
 mod types;
 use types::{
@@ -79,7 +81,6 @@ use types::{
     TableType,
     GlobalType,
     ExternType,
-    Mut,
 };
 
 mod instr;
@@ -91,3 +92,12 @@ use instr::{
 
 mod error;
 pub use error::Error;
+
+mod runtime;
+use runtime::{
+    Store,
+    ModuleInst,
+    ExternVal,
+    Frame,
+    FuncInst,
+};

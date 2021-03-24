@@ -99,7 +99,7 @@ pub enum Instr {
     CvtOp(CvtOp),
 
     // Administrative Instructions
-    // Trap,
+    Trap,
     // Invoke(FuncAddr),
     // InitElem(TableAddr, u32, Vec<Funcidx>),
     // InitData(MemAddr, u32, Vec<u8>),

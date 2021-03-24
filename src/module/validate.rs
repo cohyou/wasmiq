@@ -112,8 +112,6 @@ impl Module {
             tables: None,
             mems: None,
             globals: None,
-            // elem: None,
-            // data: None,
             locals: None,
             labels: None,
             rtn: None,

@@ -1,4 +1,5 @@
 use crate::{
+    Mut,
     Error,
     Context,
 };
@@ -57,9 +58,6 @@ pub struct GlobalType(pub ValType, Mut);
 impl GlobalType {
     pub fn is_var(&self) -> bool { self.1 == Mut::Var }
 }
-
-#[derive(Clone, PartialEq)]
-pub enum Mut { Const, Var }
 
 pub enum ExternType {
     Func(FuncType),
