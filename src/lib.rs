@@ -100,4 +100,5 @@ use runtime::{
     ExternVal,
     Frame,
     FuncInst,
+    Thread,
 };

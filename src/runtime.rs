@@ -1,3 +1,5 @@
+mod operation;
+
 use std::rc::Weak;
 
 use crate::{
@@ -101,4 +103,9 @@ enum StackEntry {
 pub struct Frame {
     locals: Vec<Val>,
     pub module: ModuleInst,
+}
+
+pub struct Thread {
+    pub frame: Frame,
+    pub instrs: Vec<Instr>,
 }
