@@ -17,10 +17,22 @@ use module::{
     TypeIdx,
     FuncIdx,
     GlobalIdx,
+    TableIdx,
     LocalIdx,
     LabelIdx,
     Func,
     Context,
+
+    Import,
+    ImportDesc,
+    Table,
+    Mem,
+    Global,
+    Export,
+    ExportDesc,
+    Start,
+    Elem,
+    Data,
 };
 
 mod instance;
@@ -75,7 +87,7 @@ use types::{
     ValType,
     ResultType,
     FuncType,
-    // Limits,
+    Limits,
     MemType,
     ElemType,
     TableType,
@@ -98,6 +110,7 @@ use instr::{
     IRelOp,
     FRelOp,
     CvtOp,
+    BlockType,
 };
 
 mod error;
@@ -114,4 +127,9 @@ use runtime::{
     FuncAddr,
     TableAddr,
     MemAddr,
+};
+
+mod decoder;
+use decoder::{
+    decode_module,
 };

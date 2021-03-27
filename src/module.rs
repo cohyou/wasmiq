@@ -13,17 +13,18 @@ use crate::{
     Error,
 };
 
+#[derive(Default)]
 pub struct Module {
-    types: Vec<FuncType>,
-    funcs: Vec<Func>,
-    tables: Vec<Table>,
-    mems: Vec<Mem>,
-    globals: Vec<Global>,
-    elem: Vec<Elem>,
-    data: Vec<Data>,
-    start: Option<Start>,
-    imports: Vec<Import>,
-    exports: Vec<Export>,
+    pub types: Vec<FuncType>,
+    pub funcs: Vec<Func>,
+    pub tables: Vec<Table>,
+    pub mems: Vec<Mem>,
+    pub globals: Vec<Global>,
+    pub elem: Vec<Elem>,
+    pub data: Vec<Data>,
+    pub start: Option<Start>,
+    pub imports: Vec<Import>,
+    pub exports: Vec<Export>,
 }
 
 pub type TypeIdx = u32;
@@ -35,41 +36,41 @@ pub type LabelIdx = u32;
 pub type LocalIdx = u32;
 
 pub struct Func {
-    tp: TypeIdx,
-    locals: Vec<ValType>,
-    body: Expr,
+    pub tp: TypeIdx,
+    pub locals: Vec<ValType>,
+    pub body: Expr,
 }
 
-pub struct Table(TableType);
+pub struct Table(pub TableType);
 
-pub struct Mem(MemType);
+pub struct Mem(pub MemType);
 
 pub struct Global {
-    tp: GlobalType,
-    init: Expr,
+    pub tp: GlobalType,
+    pub init: Expr,
 }
 
-struct Elem {
-    table: TableIdx,
-    offset: Expr,
-    init: Vec<FuncIdx>,
+pub struct Elem {
+    pub table: TableIdx,
+    pub offset: Expr,
+    pub init: Vec<FuncIdx>,
 }
 
 #[derive(Clone)]
-struct Data {
-    data: MemIdx,
-    offset: Expr,
-    init: Vec<Byte>,
+pub struct Data {
+    pub data: MemIdx,
+    pub offset: Expr,
+    pub init: Vec<Byte>,
 }
 
-struct Start(pub FuncIdx);
+pub struct Start(pub FuncIdx);
 
-struct Export {
-    name: Name,
-    desc: ExportDesc,
+pub struct Export {
+    pub name: Name,
+    pub desc: ExportDesc,
 }
 
-enum ExportDesc {
+pub enum ExportDesc {
     Func(FuncIdx),
     Table(TableIdx),
     Mem(MemIdx),
@@ -77,12 +78,12 @@ enum ExportDesc {
 }
 
 pub struct Import {
-    module: Name,
-    name: Name,
-    desc: ImportDesc,
+    pub module: Name,
+    pub name: Name,
+    pub desc: ImportDesc,
 }
 
-enum ImportDesc {
+pub enum ImportDesc {
     Func(TypeIdx),
     Table(TableType),
     Mem(MemType),
@@ -91,8 +92,16 @@ enum ImportDesc {
 
 pub use validate::Context;
 
-pub fn module_decode() -> Result<Module, Error> {
-    unimplemented!();
+use std::io::Read;
+use crate::{
+    decode_module,
+};
+pub fn module_decode(reader: &mut impl Read) -> Result<Module, Error> {
+    if let Ok(module) = decode_module(reader) {
+        Ok(module)
+    } else {
+        Err(Error::Invalid)
+    }
 }
 
 pub fn module_parse() {

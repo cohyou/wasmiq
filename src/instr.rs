@@ -18,7 +18,7 @@ use crate::{
     Frame,
 };
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Default)]
 pub struct Expr(pub Vec<Instr>);
 
 impl Expr {
@@ -29,8 +29,8 @@ impl Expr {
 
 #[derive(PartialEq, Clone)]
 pub struct MemArg {
-    offset: u32,
-    align: u32,
+    pub offset: u32,
+    pub align: u32,
 }
 
 #[derive(PartialEq, Clone)]

@@ -15,8 +15,8 @@ pub type FuncType = (ResultType, ResultType);
 
 #[derive(Clone)]
 pub struct Limits {
-    min: u32,
-    max: Option<u32>,
+    pub min: u32,
+    pub max: Option<u32>,
 }
 
 impl Limits {
@@ -29,7 +29,7 @@ impl Limits {
 }
 
 #[derive(Clone)]
-pub struct MemType(Limits);
+pub struct MemType(pub Limits);
 
 impl MemType {
     pub fn validate(&self, context: &Context) -> Result<(), Error> {
@@ -53,7 +53,7 @@ impl TableType {
 pub enum ElemType { FuncRef, }
 
 #[derive(Clone)]
-pub struct GlobalType(pub ValType, Mut);
+pub struct GlobalType(pub ValType, pub Mut);
 
 impl GlobalType {
     pub fn is_var(&self) -> bool { self.1 == Mut::Var }
