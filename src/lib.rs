@@ -25,8 +25,8 @@ use module::{
 
 mod instance;
 pub use instance::instance_export;
-use instance::{   
-};
+// use instance::{   
+// };
 
 mod func;
 pub use func::{
@@ -75,7 +75,7 @@ use types::{
     ValType,
     ResultType,
     FuncType,
-    Limits,
+    // Limits,
     MemType,
     ElemType,
     TableType,
@@ -88,6 +88,16 @@ use instr::{
     MemArg,
     Instr, 
     Expr,
+    ValSize,
+    ValSign,
+    IUnOp,
+    FUnOp,
+    IBinOp,
+    FBinOp,
+    ITestOp,
+    IRelOp,
+    FRelOp,
+    CvtOp,
 };
 
 mod error;
@@ -101,4 +111,7 @@ use runtime::{
     Frame,
     FuncInst,
     Thread,
+    FuncAddr,
+    TableAddr,
+    MemAddr,
 };

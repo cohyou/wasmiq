@@ -100,7 +100,7 @@ pub fn module_parse() {
 }
 
 pub fn module_validate(module: Module) -> Result<(), Error> {
-    let externtype = module.validate()?;
+    let _externtype = module.validate()?;
     Ok(())
 }
 

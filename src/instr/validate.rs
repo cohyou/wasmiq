@@ -74,13 +74,13 @@ impl ResultType {
         self.0.iter()
     }
 
-    fn get(&self, idx: usize) -> Option<&ValType> {
-        self.0.get(idx)
-    }
+    // fn get(&self, idx: usize) -> Option<&ValType> {
+    //     self.0.get(idx)
+    // }
 
-    fn len(&self) -> usize {
-        self.0.len()
-    }
+    // fn len(&self) -> usize {
+    //     self.0.len()
+    // }
 
     fn last(&self) -> Option<&ValType> {
         self.0.last()
@@ -196,6 +196,7 @@ impl Instr {
                         };               
                         ft!(vec![arg_tp], vec![ret_tp])
                     },
+                    CvtOp::ITruncSatFromF(_valsize_i, _valsize_f, _) => unimplemented!(),
                     CvtOp::F32DemoteFromF64 => instr_tp!(F64 -> F32),
                     CvtOp::F64PromoteFromF32 => instr_tp!(F32 -> F64),
                     CvtOp::FConvertFromI(valsize_f, valsize_i, _) => {
@@ -414,7 +415,7 @@ impl Instr {
                 args.push(ValType::I32);
                 ft!(args, label)
             },
-            Instr::BrTable(labelindices, labelidx) => {
+            Instr::BrTable(_labelindices, labelidx) => {
                 let label = Instr::check_label(context, labelidx, "brtable")?;
                 let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
                 let mut args = label.clone();

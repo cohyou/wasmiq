@@ -20,7 +20,7 @@ pub struct Limits {
 }
 
 impl Limits {
-    pub fn validate(&self, context: &Context, value: usize) -> Result<usize, Error> {
+    pub fn validate(&self, _context: &Context, value: usize) -> Result<usize, Error> {
         if let Some(max) = self.max {
             if max < self.min { return Err(Error::Invalid); }
         }

@@ -12,6 +12,10 @@ use crate::{
     GlobalIdx,
     LocalIdx,
     LabelIdx,
+    FuncAddr,
+    TableAddr,
+    MemAddr,
+    Frame,
 };
 
 #[derive(PartialEq, Clone)]
@@ -80,8 +84,8 @@ pub enum Instr {
     MemoryGrow,
 
     // Numeric Instructions
-    I32Const(i32),
-    I64Const(i64),
+    I32Const(u32),
+    I64Const(u64),
     F32Const(f32),
     F64Const(f64),
 
@@ -100,11 +104,11 @@ pub enum Instr {
 
     // Administrative Instructions
     Trap,
-    // Invoke(FuncAddr),
-    // InitElem(TableAddr, u32, Vec<Funcidx>),
-    // InitData(MemAddr, u32, Vec<u8>),
-    // Label(usize, Vec<Instr>, Vec<Instr>),
-    // Frame(usize, Frame, Vec<Instr>),
+    Invoke(FuncAddr),
+    InitElem(TableAddr, u32, Vec<FuncIdx>),
+    InitData(MemAddr, u32, Vec<u8>),
+    Label(usize, Vec<Instr>, Vec<Instr>),
+    Frame(usize, Frame, Vec<Instr>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -142,6 +146,7 @@ pub enum CvtOp {
     I32WrapFromI64,
     I64ExtendFromI32(ValSign),
     ITruncFromF(ValSize, ValSize, ValSign),
+    ITruncSatFromF(ValSize, ValSize, ValSign),
     F32DemoteFromF64,
     F64PromoteFromF32,
     FConvertFromI(ValSize, ValSize, ValSign),

@@ -1,6 +1,20 @@
-mod operation;
+mod operation32;
+mod operation64;
+mod thread;
+mod unop;
+mod binop;
+mod testop;
+mod relop;
 
-use std::rc::Weak;
+pub use operation32::*;
+pub use operation64::*;
+pub use unop::*;
+pub use binop::*;
+pub use testop::*;
+pub use relop::*;
+
+// use std::rc::Weak;
+// use std::collections::VecDeque;
 
 use crate::{
     FuncType,
@@ -11,14 +25,15 @@ use crate::{
     Instr,
 };
 
-enum Val {
-    I32Const(i32),
-    I64Const(i64),
+#[derive(Clone, Copy, PartialEq)]
+pub enum Val {
+    I32Const(u32),
+    I64Const(u64),
     F32Const(f32),
     F64Const(f64),
 }
 
-enum Result {
+pub enum Result {
     Vals(Vec<Val>),
     Trap,
 }
@@ -32,12 +47,12 @@ pub struct Store {
 }
 
 type Addr = usize;
-type FuncAddr = Addr;
-type TableAddr = Addr;
-type MemAddr = Addr;
+pub type FuncAddr = Addr;
+pub type TableAddr = Addr;
+pub type MemAddr = Addr;
 type GlobalAddr = Addr;
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Clone)]
 pub struct ModuleInst {
     types: Vec<FuncType>,
     funcaddrs: Vec<FuncAddr>,
@@ -79,11 +94,13 @@ pub struct GlobalInst {
     mutability: Mut, 
 }
 
+#[derive(PartialEq, Clone)]
 struct ExportInst {
     name: Name,
     value: ExternVal,
 }
 
+#[derive(PartialEq, Clone)]
 pub enum ExternVal {
     Func(FuncAddr),
     Table(TableAddr),
@@ -93,13 +110,13 @@ pub enum ExternVal {
 
 struct Stack(pub Vec<StackEntry>);
 
-enum StackEntry {
+pub enum StackEntry {
     Value(Val),
     Label(u32, Vec<Instr>),
     Activation(u32, Frame),
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Clone)]
 pub struct Frame {
     locals: Vec<Val>,
     pub module: ModuleInst,
@@ -108,4 +125,15 @@ pub struct Frame {
 pub struct Thread {
     pub frame: Frame,
     pub instrs: Vec<Instr>,
+    pub stack: Vec<StackEntry>,
+}
+
+impl Thread {
+    pub fn trap_with_frame(frame: Frame) -> Self {
+        Thread {
+            frame: frame, 
+            instrs: vec![Instr::Trap],
+            stack: vec![],
+        }
+    }
 }

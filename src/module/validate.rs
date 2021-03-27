@@ -4,14 +4,14 @@ use crate::{
     FuncType,
     ElemType,
     TableType,
-    Limits,
+    // Limits,
     MemType,
     GlobalType,
     ExternType,
     Name,
-    Mut,
-    Expr,
-    Instr,
+    // Mut,
+    // Expr,
+    // Instr,
     Error,
 };
 use super::{
@@ -229,7 +229,10 @@ impl Module {
     }
 }
 
-use crate::instr::{vt, vt_rev};
+use crate::instr::{
+    // vt, 
+    vt_rev,
+};
 
 impl Func {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -282,7 +285,7 @@ impl Global {
 impl Elem {
     fn validate(&self, context: &Context) -> Result<(), Error> {
         if self.table != 0 { return Err(Error::Invalid); } 
-        let TableType(limits, elemtype) = context.table().ok_or(Error::Invalid)?;
+        let TableType(_limits, elemtype) = context.table().ok_or(Error::Invalid)?;
 
         if elemtype != ElemType::FuncRef { return Err(Error::Invalid); }
 
