@@ -143,6 +143,9 @@ pub enum FRelOp { Eq, Ne, Lt, Gt, Le, Ge, }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CvtOp {
+    IExtend8S(ValSize),
+    IExtend16S(ValSize),
+    I64Extend32S,
     I32WrapFromI64,
     I64ExtendFromI32(ValSign),
     ITruncFromF(ValSize, ValSize, ValSign),

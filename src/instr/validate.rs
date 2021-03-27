@@ -183,6 +183,9 @@ impl Instr {
             /* t2.cvtop_t1_sx? */
             Instr::CvtOp(cvtop) => {
                 match cvtop {
+                    CvtOp::IExtend8S(_valsize) => unimplemented!(),
+                    CvtOp::IExtend16S(_valsize) => unimplemented!(),
+                    CvtOp::I64Extend32S => unimplemented!(),
                     CvtOp::I32WrapFromI64 => instr_tp!(I64 -> I32),
                     CvtOp::I64ExtendFromI32(_) => instr_tp!(I32 -> I64),
                     CvtOp::ITruncFromF(valsize_i, valsize_f, _) => {

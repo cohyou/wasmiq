@@ -208,6 +208,11 @@ fn execute_instr(instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Opt
         Instr::FRelOp(ValSize::V32, FRelOp::Ge) => (None, Some(execute_fge32(vals))),
         Instr::FRelOp(ValSize::V64, FRelOp::Ge) => (None, Some(execute_fge64(vals))),
 
+        Instr::CvtOp(CvtOp::IExtend8S(ValSize::V32)) => unimplemented!(),
+        Instr::CvtOp(CvtOp::IExtend8S(ValSize::V64)) => unimplemented!(),
+        Instr::CvtOp(CvtOp::IExtend16S(ValSize::V32)) => unimplemented!(),
+        Instr::CvtOp(CvtOp::IExtend16S(ValSize::V64)) => unimplemented!(),
+        Instr::CvtOp(CvtOp::I64Extend32S) => unimplemented!(),
         Instr::CvtOp(CvtOp::I32WrapFromI64) => unimplemented!(),
         Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::U)) => unimplemented!(),
         Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::S)) => unimplemented!(),
