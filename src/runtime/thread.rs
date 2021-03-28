@@ -25,20 +25,19 @@ use super::*;
 
 use std::collections::VecDeque;
 
-impl Thread {
-    pub fn spawn<'a>(&mut self, store: &'a mut Store, instrs: &mut VecDeque<Instr>) -> &'a mut Store {
-        self.execute_instrs(store, instrs);
-        store
+impl<'a> Thread<'a> {
+    pub fn spawn(&mut self, instrs: &mut VecDeque<Instr>) {
+        self.execute_instrs(instrs);
     }
 
-    fn execute_instrs<'a>(&mut self, store: &'a mut Store, instrs: &mut VecDeque<Instr>) {
+    fn execute_instrs(&mut self, instrs: &mut VecDeque<Instr>) {
         while let Some(instr) = instrs.pop_front() {
             let mut vals = vec![];
             while let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.insert(0, val);
             }
 
-            match self.execute_instr(store, &instr, &mut vals) {
+            match self.execute_instr(&instr, &mut vals) {
                 (instrs_new, Some(Result::Vals(vals))) => {
                     let entries = vals.iter().map(|v| StackEntry::Value(v.clone()));
                     self.stack.extend(entries.collect::<Vec<StackEntry>>());
@@ -55,7 +54,7 @@ impl Thread {
         }
     }
 
-    fn execute_instr<'a>(&mut self, store: &'a mut Store, instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
+    fn execute_instr(&mut self, instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
         match instr {
             /* Block Instructions */
     
@@ -249,7 +248,7 @@ impl Thread {
     
             // Administrative Instructions
             Instr::Trap => (None, None),
-            Instr::Invoke(funcaddr) => self.execute_invoke(store, funcaddr, vals),
+            Instr::Invoke(funcaddr) => self.execute_invoke(funcaddr, vals),
             Instr::InitElem(tableaddr, offset, funcindices) => {
                 init_elem(tableaddr, offset, funcindices);
                 (None, None)
@@ -258,14 +257,14 @@ impl Thread {
                 init_data(memaddr, offset, bytes);
                 (None, None)
             },
-            Instr::Label(labelidx, instrs_cont, instrs) => self.execute_instrs_with_label(store, labelidx, instrs_cont, instrs),
+            Instr::Label(labelidx, instrs_cont, instrs) => self.execute_instrs_with_label(labelidx, instrs_cont, instrs),
             Instr::Frame(_frameidx, _frame, _instrs) => unimplemented!(),
         }
     }
 
-    fn execute_invoke<'a>(&mut self, store: &'a mut Store, funcaddr: &FuncAddr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
+    fn execute_invoke(&mut self, funcaddr: &FuncAddr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
         let mut instrs = vec![];
-        let funcinst = store.funcs[funcaddr.clone()].clone();
+        let funcinst = self.store.funcs[funcaddr.clone()].clone();
     
         match funcinst {
             FuncInst::User(userfunc) => {
@@ -310,10 +309,10 @@ impl Thread {
         (Some(instrs), Some(Result::Vals(vals.clone())))
     }
 
-    fn execute_instrs_with_label<'a>(&mut self, store: &'a mut Store, _labelidx: &LabelIdx, _instrs_cont: &Vec<Instr>, instrs: &Vec<Instr>) -> (Option<Vec<Instr>>, Option<Result>) {
+    fn execute_instrs_with_label(&mut self, _labelidx: &LabelIdx, _instrs_cont: &Vec<Instr>, instrs: &Vec<Instr>) -> (Option<Vec<Instr>>, Option<Result>) {
         // jump to the start of the instruction sequence instrs.
         let mut instrs = VecDeque::from(instrs.clone());
-        self.execute_instrs(store, &mut instrs);
+        self.execute_instrs(&mut instrs);
         (None, None)
     }
 }

@@ -134,15 +134,17 @@ pub struct Frame {
     pub module: ModuleInst,
 }
 
-pub struct Thread {
+pub struct Thread<'a> {
+    pub store: &'a mut Store,
     pub frame: Frame,
     pub instrs: Vec<Instr>,
     pub stack: Vec<StackEntry>,
 }
 
-impl Thread {
-    pub fn trap_with_frame(frame: Frame) -> Self {
+impl<'a> Thread<'a> {
+    pub fn trap_with_frame(store: &'a mut Store, frame: Frame) -> Self {
         Thread {
+            store: store,
             frame: frame, 
             instrs: vec![Instr::Trap],
             stack: vec![],
