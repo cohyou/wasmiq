@@ -13,7 +13,7 @@ pub type ResultType = Vec<ValType>;
 
 pub type FuncType = (ResultType, ResultType);
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct Limits {
     pub min: u32,
     pub max: Option<u32>,
@@ -28,7 +28,7 @@ impl Limits {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct MemType(pub Limits);
 
 impl MemType {
@@ -38,7 +38,7 @@ impl MemType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TableType(pub Limits, pub ElemType);
 
 impl TableType {
@@ -52,7 +52,7 @@ impl TableType {
 #[derive(Clone, PartialEq)]
 pub enum ElemType { FuncRef, }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct GlobalType(pub ValType, pub Mut);
 
 impl GlobalType {

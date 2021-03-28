@@ -29,6 +29,8 @@ use crate::{
     Export,
     ExportDesc,
     ExportInst,
+    ElemType,
+    ValType,
 };
 
 use std::collections::VecDeque;
@@ -72,9 +74,50 @@ impl Module {
                         return (frame, trap);
                     }
                 },
-                ExternVal::Table(_) => unimplemented!(),
-                ExternVal::Mem(_) => unimplemented!(),
+                ExternVal::Table(tableaddr) => {
+                    let tabletype = match store.tables.get(tableaddr.clone()) {
+                        None => return (frame, trap),
+                        Some(TableInst{elem, max: m}) => {
+                            TableType(Limits{min: elem.len() as u32, max: m.clone()}, ElemType::FuncRef)
+                        }
+                    };
+                    if let ExternType::Table(tt) = ext_type {
+                        if tabletype != tt { return (frame, trap); }
+                    } else {
+                        return (frame, trap);
+                    }
+                },
+                ExternVal::Mem(memaddr) => {
+                    let memtype = match store.mems.get(memaddr.clone()) {
+                        None => return (frame, trap),
+                        Some(MemInst{data, max}) => {
+                            MemType(Limits{min: (data.len()/64) as u32, max: max.clone()})
+                        }
+                    };
+                    if let ExternType::Mem(mt) = ext_type {
+                        if memtype != mt { return (frame, trap); }
+                    } else {
+                        return (frame, trap);
+                    }
+                },
                 ExternVal::Global(globaladdr) => {
+                    let globaltype = match store.globals.get(globaladdr.clone()) {
+                        None => return (frame, trap),
+                        Some(GlobalInst{value: val, mutability: mt}) => {
+                            let vt = match val {
+                                Val::I32Const(_) => ValType::I32,
+                                Val::I64Const(_) => ValType::I64,
+                                Val::F32Const(_) => ValType::F32,
+                                Val::F64Const(_) => ValType::F64,
+                            };
+                            GlobalType(vt, mt.clone())
+                        },
+                    };
+                    if let ExternType::Global(gt) = ext_type {
+                        if globaltype != gt { return (frame, trap); }
+                    } else {
+                        return (frame, trap);
+                    }
                     globaladdrs.push(globaladdr.clone());
                 },
             }
