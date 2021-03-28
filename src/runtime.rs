@@ -110,8 +110,8 @@ pub struct GlobalInst {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct ExportInst {
-    name: Name,
-    value: ExternVal,
+    pub name: Name,
+    pub value: ExternVal,
 }
 
 #[derive(PartialEq, Clone, Debug)]

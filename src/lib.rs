@@ -132,6 +132,9 @@ use runtime::{
     Val,
     GlobalAddr,
     GlobalInst,
+    TableInst,
+    MemInst,
+    ExportInst,
 };
 
 mod decoder;

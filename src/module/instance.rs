@@ -19,6 +19,16 @@ use crate::{
     GlobalInst,
     Func,
     FuncType,
+    TableInst,
+    Limits,
+    TableType,
+    TableAddr,
+    MemAddr,
+    MemType,
+    MemInst,
+    Export,
+    ExportDesc,
+    ExportInst,
 };
 
 use std::collections::VecDeque;
@@ -153,24 +163,77 @@ impl Module {
         unimplemented!();
     }
 
-    fn alloc_module<'a>(&self, store: &'a mut Store, _ext: Vec<ExternVal>, _vals: Vec<Val>) -> ModuleInst {
-        let moduleinst = ModuleInst::default();
+    fn alloc_module<'a>(&self, store: &'a mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
+        let mut moduleinst = ModuleInst::default();
 
         fn hostfunc() {}
         alloc_hostfunc(store, (vec![], vec![]), hostfunc);
 
+        let mut funcaddrs = vec![];
+        for func in &self.funcs {
+            let (_, funcaddr) = alloc_func(store, func, &moduleinst);
+            funcaddrs.push(funcaddr);
+        }
 
-        use crate::{Expr,};
-        let func = Func{ tp: 1, locals: vec![], body: Expr::default() };
-        alloc_func(store, func, moduleinst);
+        let mut tableaddrs = vec![];
+        for table in &self.tables {
+            let (_, tableaddr) = alloc_table(store, table.0.clone());
+            tableaddrs.push(tableaddr);
+        }
+
+        let mut memaddrs = vec![];
+        for mem in &self.mems {
+            let (_, memaddr) = alloc_mem(store, mem.0.clone());
+            memaddrs.push(memaddr);
+        }
+
+        let mut globaladdrs = vec![];
+        for (i, global) in self.globals.iter().enumerate() {
+            let (_, globaladdr) = alloc_global(store, global.tp.clone(), vals[i]);
+            globaladdrs.push(globaladdr);
+        }
 
 
-        use crate::{ValType, Mut};
-        let globaltype = GlobalType(ValType::I32, Mut::Const);
-        alloc_global(store, globaltype, Val::I32Const(0));
+        let mut funcaddrs_ext = vec![];
+        let mut tableaddrs_ext = vec![];
+        let mut memaddrs_ext = vec![];
+        let mut globaladdrs_ext = vec![];
+        for externval in externvals {
+            match externval {
+                ExternVal::Func(func) => funcaddrs_ext.push(func),
+                ExternVal::Global(global) => globaladdrs_ext.push(global),
+                ExternVal::Mem(mem) => memaddrs_ext.push(mem),
+                ExternVal::Table(table) => tableaddrs_ext.push(table),
+            }
+        }
 
-        // moduleinst
-        unimplemented!();
+        funcaddrs_ext.extend(funcaddrs);
+        tableaddrs_ext.extend(tableaddrs);
+        memaddrs_ext.extend(memaddrs);
+        globaladdrs_ext.extend(globaladdrs);
+
+        
+        let mut exportinsts = vec![];
+        for export in &self.exports {
+            let Export{ name: _, desc} = export;
+            let externval = match desc {
+                ExportDesc::Func(funcidx) => ExternVal::Func(funcaddrs_ext[funcidx.clone() as usize]),
+                ExportDesc::Table(tableidx) => ExternVal::Table(tableaddrs_ext[tableidx.clone() as usize]),
+                ExportDesc::Mem(memidx) => ExternVal::Mem(memaddrs_ext[memidx.clone() as usize]),
+                ExportDesc::Global(globalidx) => ExternVal::Global(globaladdrs_ext[globalidx.clone() as usize]),
+            };
+            let exportinst = ExportInst{ name: export.name.clone(), value: externval };
+            exportinsts.push(exportinst);
+        }
+
+        moduleinst.types = self.types.clone();
+        moduleinst.funcaddrs = funcaddrs_ext;
+        moduleinst.tableaddrs = tableaddrs_ext;
+        moduleinst.memaddrs = memaddrs_ext;
+        moduleinst.globaladdrs = globaladdrs_ext;
+        moduleinst.exports = exportinsts;
+
+        moduleinst
     }
 
     fn evaluate_global() -> Val {
@@ -186,10 +249,10 @@ impl Module {
     }
 }
 
-fn alloc_func<'a>(store: &'a mut Store, func: Func, moduleinst: ModuleInst) -> (&'a mut Store, FuncAddr) {
+fn alloc_func<'a>(store: &'a mut Store, func: &Func, moduleinst: &ModuleInst) -> (&'a mut Store, FuncAddr) {
     let addr = store.funcs.len();
     let functype = &moduleinst.types[func.tp as usize];
-    let funcinst = FuncInst::user(functype.clone(), moduleinst, func);
+    let funcinst = FuncInst::user(functype.clone(), moduleinst.clone(), func.clone());
     store.funcs.push(funcinst);
     (store, addr)
 }
@@ -201,9 +264,32 @@ fn alloc_hostfunc<'a>(store: &'a mut Store, functype: FuncType, hostfunc: fn()) 
     (store, addr)
 }
 
+fn alloc_table<'a>(store: &'a mut Store, tabletype: TableType) -> (&'a mut Store, TableAddr) {
+    let addr = store.tables.len();
+    let TableType(Limits{ min: n, max: m }, _) = tabletype;
+    let mut elem = vec![];
+    for _ in 0..n { elem.push(None) }
+    let tableinst = TableInst{ elem: elem, max: m };
+    store.tables.push(tableinst);
+    (store, addr)
+}
+
+fn alloc_mem<'a>(store: &'a mut Store, memtype: MemType) -> (&'a mut Store, MemAddr) {
+    let addr = store.mems.len();
+    let MemType(Limits{ min: n, max: m }) = memtype;
+    let data = Vec::with_capacity((n * 64) as usize);
+    let meminst = MemInst{ data: data, max: m };
+    store.mems.push(meminst);
+    (store, addr)
+}
+
 fn alloc_global<'a>(store: &'a mut Store, globaltype: GlobalType, val: Val) -> (&'a mut Store, GlobalAddr) {
     let addr = store.globals.len();
     let globalinst = GlobalInst{ value: val, mutability: globaltype.1 };
     store.globals.push(globalinst);
     (store, addr)
 }
+
+// fn grow_table() {}
+
+// fn grow_mem() {}
