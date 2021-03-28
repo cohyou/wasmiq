@@ -315,6 +315,19 @@ impl<'a> Thread<'a> {
         // jump to the start of the instruction sequence instrs.
         let mut instrs = VecDeque::from(instrs.clone());
         self.execute_instrs(&mut instrs);
+
+        // exit with label
+        let mut vals = vec![];
+        while let Some(val) = self.stack.pop() {
+            vals.push(val);
+        }
+        // let m = vals.len();
+
+        self.stack.pop();  // pop the label
+        
+        self.stack.extend(vals);
+
+
         (None, None)
     }
 }
