@@ -43,7 +43,7 @@ pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<Ext
 }
 
 impl Module {
-    fn instanciate<'a>(&self, store: &'a mut Store, externvals: Vec<ExternVal>) -> (Frame, Vec<Instr>) {
+    fn instanciate(&self, store: &mut Store, externvals: Vec<ExternVal>) -> (Frame, Vec<Instr>) {
         let frame = Frame::default();
         let trap = vec![Instr::Trap];
 
@@ -158,11 +158,11 @@ impl Module {
         unimplemented!()
     }
 
-    pub fn invoke<'a>(_store: &'a mut Store, _funcaddr: FuncAddr, _vals: Vec<Val>) -> Thread {
+    pub fn invoke(_store: &mut Store, _funcaddr: FuncAddr, _vals: Vec<Val>) -> Thread {
         unimplemented!();
     }
 
-    fn alloc_module<'a>(&self, store: &'a mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
+    fn alloc_module(&self, store: &mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
         let mut moduleinst = ModuleInst::default();
 
         fn hostfunc() {}
