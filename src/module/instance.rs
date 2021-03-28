@@ -12,9 +12,13 @@ use crate::{
     StackEntry,
     Val,
     Instr,
-    // IUnOp,
-    // ValSize,
     Start,
+    FuncAddr,
+    GlobalType,
+    GlobalAddr,
+    GlobalInst,
+    Func,
+    FuncType,
 };
 
 use std::collections::VecDeque;
@@ -140,12 +144,32 @@ impl Module {
             instrs.push_back(Instr::Invoke(funcaddr.clone()));
         }
 
-        thread.spawn(&mut instrs);
+        thread.spawn(store, &mut instrs);
 
         unimplemented!()
     }
 
-    fn alloc_module(&self, _store: &Store, _ext: Vec<ExternVal>, _vals: Vec<Val>) -> ModuleInst {
+    pub fn invoke<'a>(_store: &'a mut Store, _funcaddr: FuncAddr, _vals: Vec<Val>) -> (&'a mut Store, Thread) {
+        unimplemented!();
+    }
+
+    fn alloc_module<'a>(&self, store: &'a mut Store, _ext: Vec<ExternVal>, _vals: Vec<Val>) -> ModuleInst {
+        let moduleinst = ModuleInst::default();
+
+        fn hostfunc() {}
+        alloc_hostfunc(store, (vec![], vec![]), hostfunc);
+
+
+        use crate::{Expr,};
+        let func = Func{ tp: 1, locals: vec![], body: Expr::default() };
+        alloc_func(store, func, moduleinst);
+
+
+        use crate::{ValType, Mut};
+        let globaltype = GlobalType(ValType::I32, Mut::Const);
+        alloc_global(store, globaltype, Val::I32Const(0));
+
+        // moduleinst
         unimplemented!();
     }
 
@@ -162,3 +186,24 @@ impl Module {
     }
 }
 
+fn alloc_func<'a>(store: &'a mut Store, func: Func, moduleinst: ModuleInst) -> (&'a mut Store, FuncAddr) {
+    let addr = store.funcs.len();
+    let functype = &moduleinst.types[func.tp as usize];
+    let funcinst = FuncInst::user(functype.clone(), moduleinst, func);
+    store.funcs.push(funcinst);
+    (store, addr)
+}
+
+fn alloc_hostfunc<'a>(store: &'a mut Store, functype: FuncType, hostfunc: fn()) -> (&'a mut Store, FuncAddr) {
+    let addr = store.funcs.len();
+    let funcinst = FuncInst::host(functype, hostfunc);
+    store.funcs.push(funcinst);
+    (store, addr)
+}
+
+fn alloc_global<'a>(store: &'a mut Store, globaltype: GlobalType, val: Val) -> (&'a mut Store, GlobalAddr) {
+    let addr = store.globals.len();
+    let globalinst = GlobalInst{ value: val, mutability: globaltype.1 };
+    store.globals.push(globalinst);
+    (store, addr)
+}

@@ -10,6 +10,7 @@ use super::expr::{decode_expr};
 
 
 pub struct Code {
+    #[allow(dead_code)]
     size: u32,
     locals: Vec<Locals>,
     body: Expr,

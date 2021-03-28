@@ -52,7 +52,7 @@ type Addr = usize;
 pub type FuncAddr = Addr;
 pub type TableAddr = Addr;
 pub type MemAddr = Addr;
-type GlobalAddr = Addr;
+pub type GlobalAddr = Addr;
 
 #[derive(Default, PartialEq, Clone)]
 pub struct ModuleInst {
@@ -64,20 +64,32 @@ pub struct ModuleInst {
     pub exports: Vec<ExportInst>,
 }
 
+#[derive(Clone)]
 pub enum FuncInst {
     User(UserFuncInst),
     Host(HostFuncInst),
 }
 
+impl FuncInst {
+    pub fn user(tp: FuncType, module: ModuleInst, code: Func) -> FuncInst {
+        FuncInst::User(UserFuncInst {tp, module, code})
+    }
+    pub fn host(tp: FuncType, hostcode: fn()) -> FuncInst {
+        FuncInst::Host(HostFuncInst {tp, hostcode})
+    }
+}
+
+#[derive(Clone)]
 pub struct UserFuncInst {
     pub tp: FuncType,
     module: ModuleInst,
     code: Func,
 }
 
+#[derive(Clone)]
 pub struct HostFuncInst {
     pub tp: FuncType,
-    hostcode: fn(),
+    pub hostcode: fn(),
 }
 
 pub struct TableInst {
@@ -92,8 +104,8 @@ pub struct MemInst {
 }
 
 pub struct GlobalInst {
-    value: Val,
-    mutability: Mut, 
+    pub value: Val,
+    pub mutability: Mut, 
 }
 
 #[derive(PartialEq, Clone)]

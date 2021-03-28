@@ -35,6 +35,7 @@ pub type GlobalIdx = u32;
 pub type LabelIdx = u32;
 pub type LocalIdx = u32;
 
+#[derive(Clone)]
 pub struct Func {
     pub tp: TypeIdx,
     pub locals: Vec<ValType>,

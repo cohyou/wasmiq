@@ -24,18 +24,19 @@ use super::*;
 use std::collections::VecDeque;
 
 impl Thread {
-    pub fn spawn(&mut self, instrs: &mut VecDeque<Instr>) {
-        self.execute_instrs(instrs);
+    pub fn spawn<'a>(&mut self, store: &'a mut Store, instrs: &mut VecDeque<Instr>) -> &'a mut Store {
+        self.execute_instrs(store, instrs);
+        store
     }
 
-    fn execute_instrs(&mut self, instrs: &mut VecDeque<Instr>) {
+    fn execute_instrs<'a>(&mut self, store: &'a mut Store, instrs: &mut VecDeque<Instr>) {
         while let Some(instr) = instrs.pop_front() {
             let mut vals = vec![];
             while let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.insert(0, val);
             }
 
-            match execute_instr(&instr, &mut vals) {
+            match execute_instr(store, &instr, &mut vals) {
                 (instrs_new, Some(Result::Vals(vals))) => {
                     let entries = vals.iter().map(|v| StackEntry::Value(v.clone()));
                     self.stack.extend(entries.collect::<Vec<StackEntry>>());
@@ -55,7 +56,7 @@ impl Thread {
 
 }
 
-fn execute_instr(instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
+fn execute_instr<'a>(store: &'a mut Store, instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
     match instr {
         /* Block Instructions */
 
@@ -249,7 +250,7 @@ fn execute_instr(instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Opt
 
         // Administrative Instructions
         Instr::Trap => (None, None),
-        Instr::Invoke(_funcaddr) => unimplemented!(),
+        Instr::Invoke(funcaddr) => execute_invoke(store, funcaddr, vals),
         Instr::InitElem(tableaddr, offset, funcindices) => {
             init_elem(tableaddr, offset, funcindices);
             (None, None)
@@ -261,4 +262,20 @@ fn execute_instr(instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Opt
         Instr::Label(_labelidx, _instrs_cont, _instrs) => unimplemented!(),
         Instr::Frame(_frameidx, _frame, _instrs) => unimplemented!(),
     }
+}
+
+fn execute_invoke<'a>(store: &'a mut Store, funcaddr: &FuncAddr, _vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Option<Result>) {
+    let funcinst = store.funcs[funcaddr.clone()].clone();
+
+    match funcinst {
+        FuncInst::User(_userfunc) => {
+
+        },
+        FuncInst::Host(hostfunc) => {
+            let f = hostfunc.hostcode;
+            f();
+        },
+    }
+
+    (Some(vec![]), Some(Result::Trap))
 }

@@ -129,6 +129,8 @@ use runtime::{
     MemAddr,
     StackEntry,
     Val,
+    GlobalAddr,
+    GlobalInst,
 };
 
 mod decoder;
