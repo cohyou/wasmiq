@@ -127,6 +127,8 @@ use runtime::{
     FuncAddr,
     TableAddr,
     MemAddr,
+    StackEntry,
+    Val,
 };
 
 mod decoder;

@@ -5,6 +5,7 @@ mod unop;
 mod binop;
 mod testop;
 mod relop;
+mod admin;
 
 pub use operation32::*;
 pub use operation64::*;
@@ -12,6 +13,7 @@ pub use unop::*;
 pub use binop::*;
 pub use testop::*;
 pub use relop::*;
+pub use admin::*;
 
 // use std::rc::Weak;
 // use std::collections::VecDeque;
@@ -54,12 +56,12 @@ type GlobalAddr = Addr;
 
 #[derive(Default, PartialEq, Clone)]
 pub struct ModuleInst {
-    types: Vec<FuncType>,
-    funcaddrs: Vec<FuncAddr>,
-    tableaddrs: Vec<TableAddr>,
-    memaddrs: Vec<MemAddr>,
-    globaladdrs: Vec<GlobalAddr>,
-    exports: Vec<ExportInst>,
+    pub types: Vec<FuncType>,
+    pub funcaddrs: Vec<FuncAddr>,
+    pub tableaddrs: Vec<TableAddr>,
+    pub memaddrs: Vec<MemAddr>,
+    pub globaladdrs: Vec<GlobalAddr>,
+    pub exports: Vec<ExportInst>,
 }
 
 pub enum FuncInst {
@@ -79,14 +81,14 @@ pub struct HostFuncInst {
 }
 
 pub struct TableInst {
-    elem: Vec<FuncElem>,
-    max: Option<u32>,
+    pub elem: Vec<FuncElem>,
+    pub max: Option<u32>,
 }
 type FuncElem = Option<FuncAddr>;
 
 pub struct MemInst {
-    data: Vec<Byte>,
-    max: Option<u32>,
+    pub data: Vec<Byte>,
+    pub max: Option<u32>,
 }
 
 pub struct GlobalInst {
@@ -95,7 +97,7 @@ pub struct GlobalInst {
 }
 
 #[derive(PartialEq, Clone)]
-struct ExportInst {
+pub struct ExportInst {
     name: Name,
     value: ExternVal,
 }
@@ -108,8 +110,6 @@ pub enum ExternVal {
     Global(GlobalAddr),
 }
 
-struct Stack(pub Vec<StackEntry>);
-
 pub enum StackEntry {
     Value(Val),
     Label(u32, Vec<Instr>),
@@ -118,7 +118,7 @@ pub enum StackEntry {
 
 #[derive(Default, PartialEq, Clone)]
 pub struct Frame {
-    locals: Vec<Val>,
+    pub locals: Vec<Val>,
     pub module: ModuleInst,
 }
 

@@ -248,10 +248,16 @@ fn execute_instr(instr: &Instr, vals: &mut Vec<Val>) -> (Option<Vec<Instr>>, Opt
         Instr::CvtOp(CvtOp::FReinterpretFromI(ValSize::V64)) => unimplemented!(),
 
         // Administrative Instructions
-        Instr::Trap => unimplemented!(),
+        Instr::Trap => (None, None),
         Instr::Invoke(_funcaddr) => unimplemented!(),
-        Instr::InitElem(_tableaddr, _offset, _funcindices) => unimplemented!(),
-        Instr::InitData(_memaddr, _offset, _bytes) => unimplemented!(),
+        Instr::InitElem(tableaddr, offset, funcindices) => {
+            init_elem(tableaddr, offset, funcindices);
+            (None, None)
+        },
+        Instr::InitData(memaddr, offset, bytes) => {
+            init_data(memaddr, offset, bytes);
+            (None, None)
+        },
         Instr::Label(_labelidx, _instrs_cont, _instrs) => unimplemented!(),
         Instr::Frame(_frameidx, _frame, _instrs) => unimplemented!(),
     }

@@ -4,7 +4,7 @@ use crate::{
     Context,
 };
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ValType {
     I32, I64, F32, F64,
 }
