@@ -20,6 +20,7 @@ use module::{
     TableIdx,
     LocalIdx,
     LabelIdx,
+    MemIdx,
     Func,
     Context,
 
@@ -136,4 +137,11 @@ use runtime::{
 mod decoder;
 use decoder::{
     decode_module,
+};
+
+mod parser;
+
+mod encoder;
+pub use encoder::{
+    module_encode,
 };
