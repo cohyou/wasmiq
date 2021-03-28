@@ -112,8 +112,8 @@ pub enum Instr {
     Invoke(FuncAddr),
     InitElem(TableAddr, u32, Vec<FuncIdx>),
     InitData(MemAddr, u32, Vec<u8>),
-    Label(usize, Vec<Instr>, Vec<Instr>),
-    Frame(usize, Frame, Vec<Instr>),
+    Label(u32, Vec<Instr>, Vec<Instr>),
+    Frame(u32, Frame, Vec<Instr>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
