@@ -27,7 +27,7 @@ use crate::{
     Instr,
 };
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Val {
     I32Const(u32),
     I64Const(u64),
@@ -54,7 +54,7 @@ pub type TableAddr = Addr;
 pub type MemAddr = Addr;
 pub type GlobalAddr = Addr;
 
-#[derive(Default, PartialEq, Clone)]
+#[derive(Default, PartialEq, Clone, Debug)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
     pub funcaddrs: Vec<FuncAddr>,
@@ -108,13 +108,13 @@ pub struct GlobalInst {
     pub mutability: Mut, 
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct ExportInst {
     name: Name,
     value: ExternVal,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum ExternVal {
     Func(FuncAddr),
     Table(TableAddr),
@@ -128,7 +128,7 @@ pub enum StackEntry {
     Activation(u32, Frame),
 }
 
-#[derive(Default, PartialEq, Clone)]
+#[derive(Default, PartialEq, Clone, Debug)]
 pub struct Frame {
     pub locals: Vec<Val>,
     pub module: ModuleInst,

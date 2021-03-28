@@ -13,7 +13,7 @@ pub type ResultType = Vec<ValType>;
 
 pub type FuncType = (ResultType, ResultType);
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Limits {
     pub min: u32,
     pub max: Option<u32>,

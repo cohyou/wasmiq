@@ -11,10 +11,12 @@ use crate::{
     GlobalType,
     Expr,
     Error,
+    Parser,
 };
 
 #[derive(Default)]
 pub struct Module {
+    pub id: Option<String>,
     pub types: Vec<FuncType>,
     pub funcs: Vec<Func>,
     pub tables: Vec<Table>,
@@ -35,7 +37,7 @@ pub type GlobalIdx = u32;
 pub type LabelIdx = u32;
 pub type LocalIdx = u32;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Func {
     pub tp: TypeIdx,
     pub locals: Vec<ValType>,
@@ -105,8 +107,21 @@ pub fn module_decode(reader: &mut impl Read) -> Result<Module, Error> {
     }
 }
 
+use std::env;
+use std::fs::File;
+
 pub fn module_parse() {
-    unimplemented!();
+    let args = env::args().collect::<Vec<String>>();
+    let file_name = &args[1];
+    let reader = File::open(file_name).unwrap();
+    let mut parser = Parser::new(reader);
+    match parser.parse() {
+        Err(err) => {
+            println!("PARSE ERROR: {:?}", err);
+            return;
+        },
+        _ => {},
+    }
 }
 
 pub fn module_validate(module: Module) -> Result<(), Error> {

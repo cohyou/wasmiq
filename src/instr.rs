@@ -27,19 +27,24 @@ impl Expr {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug, Default)]
 pub struct MemArg {
     pub offset: u32,
     pub align: u32,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum BlockType {
     TypeIdx(TypeIdx),
     ValType(Option<ValType>),
 }
 
-#[derive(PartialEq, Clone)]
+impl Default for BlockType {
+    fn default() -> Self {
+        BlockType::ValType(None)
+    }
+}
+#[derive(PartialEq, Clone, Debug)]
 pub enum Instr {
     /* Block Instructions */
 

@@ -140,6 +140,9 @@ use decoder::{
 };
 
 mod parser;
+use parser::{
+    Parser,
+};
 
 mod encoder;
 pub use encoder::{
