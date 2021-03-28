@@ -299,6 +299,8 @@ impl<'a> Thread<'a> {
                 instrs.push(activation);
                 let label = Instr::Label(m as u32, vec![], expr.0);
                 instrs.push(label);
+                let labelval = StackEntry::Label(0, vec![]);
+                self.stack.push(labelval);
             },
             FuncInst::Host(hostfunc) => {
                 let f = hostfunc.hostcode;

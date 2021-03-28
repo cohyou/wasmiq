@@ -31,6 +31,7 @@ use crate::{
     ExportInst,
     ElemType,
     ValType,
+    Expr,
 };
 
 use std::collections::VecDeque;
@@ -69,7 +70,7 @@ impl Module {
                         Some(FuncInst::Host(funcinst)) => funcinst.tp.clone(),
                     };
                     if let ExternType::Func(ft) = ext_type {
-                        if functype != ft { return (frame, trap); }
+                        if Module::match_functype(functype, ft) { return (frame, trap); }
                     } else {
                         return (frame, trap);
                     }
@@ -82,7 +83,7 @@ impl Module {
                         }
                     };
                     if let ExternType::Table(tt) = ext_type {
-                        if tabletype != tt { return (frame, trap); }
+                        if Module::match_tabletype(tabletype, tt) { return (frame, trap); }
                     } else {
                         return (frame, trap);
                     }
@@ -95,7 +96,7 @@ impl Module {
                         }
                     };
                     if let ExternType::Mem(mt) = ext_type {
-                        if memtype != mt { return (frame, trap); }
+                        if Module::match_memtype(memtype, mt) { return (frame, trap); }
                     } else {
                         return (frame, trap);
                     }
@@ -114,7 +115,7 @@ impl Module {
                         },
                     };
                     if let ExternType::Global(gt) = ext_type {
-                        if globaltype != gt { return (frame, trap); }
+                        if Module::match_globaltype(globaltype, gt) { return (frame, trap); }
                     } else {
                         return (frame, trap);
                     }
@@ -131,8 +132,10 @@ impl Module {
         let frame_g = Frame { module: moduleinst_g, locals: vec![] };
         thread.stack.push(StackEntry::Activation(0, frame_g));
         let mut vals = vec![];
-        for _global in &self.globals {
-            vals.push(Self::evaluate_global());
+        for global in &self.globals {
+            let moduleinst = ModuleInst::default();
+            let frame = Frame { module: moduleinst, locals: vec![] };
+            vals.push(Self::evaluate_expr(thread.store, frame, global.init.clone()));
         }
         thread.stack.pop();
 
@@ -140,7 +143,8 @@ impl Module {
 
         let mut instr_init_elem_list: VecDeque<Instr> = VecDeque::from(vec![]);
         for elem in &self.elem {
-            let eo = if let Val::I32Const(eo) = Self::evaluate_elem() {
+            let frame = Frame{module: moduleinst.clone(), locals: vec![]};
+            let eo = if let Val::I32Const(eo) = Self::evaluate_expr(thread.store, frame, elem.offset.clone()) {
                 eo
             } else {
                 return (thread.frame, trap);
@@ -158,7 +162,8 @@ impl Module {
 
         let mut instr_init_data_list: VecDeque<Instr> = VecDeque::from(vec![]);
         for data in &self.data {
-            let data_o = if let Val::I32Const(data_o) = Self::evaluate_data() {
+            let frame = Frame{module: moduleinst.clone(), locals: vec![]};
+            let data_o = if let Val::I32Const(data_o) = Self::evaluate_expr(thread.store, frame, data.offset.clone()) {
                 data_o
             } else {
                 return (thread.frame, trap);
@@ -198,11 +203,50 @@ impl Module {
 
         thread.spawn(&mut instrs);
 
-        unimplemented!()
+        (thread.frame, vec![])
     }
 
-    pub fn invoke(_store: &mut Store, _funcaddr: FuncAddr, _vals: Vec<Val>) -> Thread {
-        unimplemented!();
+    pub fn invoke(store: &mut Store, funcaddr: FuncAddr, vals: Vec<Val>) -> (Vec<Val>, Vec<Instr>) {
+        let funcinst = if let Some(funcinst) = store.funcs.get(funcaddr) {
+            funcinst
+        } else {
+            return (vec![], vec![Instr::Trap]);
+        };
+        let (argtypes, returntypes) = match funcinst {
+            FuncInst::User(user) => user.tp.clone(),
+            FuncInst::Host(host) => host.tp.clone(),
+        };
+        if vals.len() != argtypes.len() {
+            return (vec![], vec![Instr::Trap]);
+        }
+        for (argtype, val) in argtypes.iter().zip(vals.clone()) {
+            let matches = match val {
+                Val::I32Const(_) => argtype == &ValType::I32,
+                Val::I64Const(_) => argtype == &ValType::I64,
+                Val::F32Const(_) => argtype == &ValType::F32,
+                Val::F64Const(_) => argtype == &ValType::F64,
+            };
+            if !matches { return (vec![], vec![Instr::Trap]); }
+        }
+
+        let frame = Frame{ module: ModuleInst::default(), locals: vec![] };
+        let mut thread = Thread::new_with_frame(store, frame.clone());
+        thread.stack.push(StackEntry::Activation(0, frame.clone()));
+        let vals: Vec<StackEntry> = vals.clone().iter().map(|v| StackEntry::Value(v.clone())).collect();
+        thread.stack.extend(vals);
+
+        let instrs = vec![Instr::Invoke(funcaddr)];
+        let mut instrs = VecDeque::from(instrs);
+        thread.spawn(&mut instrs);
+
+        let mut returnvals = vec![];
+        for _ in 0..returntypes.len() {
+            if let Some(StackEntry::Value(v)) = thread.stack.pop() {
+                returnvals.push(v);
+            }
+        }
+
+        (returnvals, vec![])
     }
 
     fn alloc_module(&self, store: &mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
@@ -278,16 +322,35 @@ impl Module {
         moduleinst
     }
 
-    fn evaluate_global() -> Val {
-        unimplemented!();
+    fn evaluate_expr(store: &mut Store, frame: Frame, expr: Expr) -> Val {
+        let mut thread = Thread::new_with_frame(store, frame);
+        let mut instrs = VecDeque::from(expr.0);
+        thread.spawn(&mut instrs);
+        if let Some(StackEntry::Value(val)) = thread.stack.pop() {
+            val
+        } else {
+            panic!("evaluate_offset");
+        }
     }
 
-    fn evaluate_elem() -> Val {
-        unimplemented!();
+    fn match_functype(ft1: FuncType, ft2: FuncType) -> bool {
+        // TODO: update match algorithm
+        ft1 != ft2
     }
 
-    fn evaluate_data() -> Val {
-        unimplemented!();
+    fn match_tabletype(tt1: TableType, tt2: TableType) -> bool {
+        // TODO: update match algorithm
+        tt1 != tt2
+    }
+
+    fn match_memtype(mt1: MemType, mt2: MemType) -> bool {
+        // TODO: update match algorithm
+        mt1 != mt2
+    }
+
+    fn match_globaltype(gt1: GlobalType, gt2: GlobalType) -> bool {
+        // TODO: update match algorithm
+        gt1 != gt2
     }
 }
 

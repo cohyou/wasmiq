@@ -142,6 +142,14 @@ pub struct Thread<'a> {
 }
 
 impl<'a> Thread<'a> {
+    pub fn new_with_frame(store: &'a mut Store, frame: Frame) -> Self {
+        Thread {
+            store: store,
+            frame: frame, 
+            instrs: vec![],
+            stack: vec![],
+        }
+    }
     pub fn trap_with_frame(store: &'a mut Store, frame: Frame) -> Self {
         Thread {
             store: store,
