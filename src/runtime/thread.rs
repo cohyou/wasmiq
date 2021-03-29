@@ -12,18 +12,10 @@ use crate::{
     FRelOp,
     CvtOp,
     ValType,
-    // LabelIdx,
 };
 
 use super::*;
 
-// macro_rules! vali32 {
-//     ($i:ident) => {
-//         StackEntry::Value(Val::I32Const($i))
-//     };
-// }
-
-// use std::collections::VecDeque;
 
 impl<'a> Thread<'a> {
     pub fn spawn(&mut self, instrs: &Vec<Instr>) {
@@ -32,29 +24,13 @@ impl<'a> Thread<'a> {
 
     fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> Result {
         for instr in instrs {
-            // let mut vals = vec![];
-            // while let Some(StackEntry::Value(val)) = self.stack.pop() {
-            //     vals.insert(0, val);
-            // }
-
             match self.execute_instr(instr) {
                 Result::Vals(vals) => {
-                    // let entries = vals.iter().map(|v| StackEntry::Value(v.clone()));
-                    // self.stack.extend(entries.collect::<Vec<StackEntry>>());
-                
-                    // if let Some(mut instr_new) = instrs_new {
-                    //     while let Some(instr) = instr_new.pop() {
-                    //         instrs.push_front(instr);
-                    //     }
-                    // }
-                    // Result::Vals(vals)
-                    // result_vals = vals;
                     let vals: Vec<StackEntry> = vals.iter()
                         .map(|v| StackEntry::Value(v.clone())).collect();
                     self.stack.extend(vals);
                 },
                 Result::Trap => return Result::Trap,
-                // _ => unimplemented!(),
             }
         }
         Result::Vals(vec![])
@@ -65,33 +41,33 @@ impl<'a> Thread<'a> {
             /* Block Instructions */
     
             // Control Instructions
-            Instr::Block(_blocktype, _instrs) => unimplemented!(),
-            Instr::Loop(_blocktype, _instrs) => unimplemented!(),
-            Instr::If(_blocktype, _instrs1, _instrs2) => unimplemented!(),
+            Instr::Block(_blocktype, _instrs) => self.execute_block(),
+            Instr::Loop(_blocktype, _instrs) => self.execute_loop(),
+            Instr::If(_blocktype, _instrs1, _instrs2) => self.execute_if(),
     
     
             /* Plain Instructions */
     
             // Control Instructions
-            Instr::Unreachable => unimplemented!(),
-            Instr::Nop => unimplemented!(),
-            Instr::Br(_labelidx) => unimplemented!(),
-            Instr::BrIf(_labelidx) => unimplemented!(),
-            Instr::BrTable(_labelindices, _labelidx) => unimplemented!(),
-            Instr::Return => unimplemented!(),
-            Instr::Call(_funcidx) => unimplemented!(),
-            Instr::CallIndirect(_funcidx) => unimplemented!(),
+            Instr::Unreachable => Result::Trap,
+            Instr::Nop => Result::Vals(vec![]),
+            Instr::Br(_labelidx) => self.execute_br(),
+            Instr::BrIf(_labelidx) => self.execute_brif(),
+            Instr::BrTable(_labelindices, _labelidx) => self.execute_brtable(),
+            Instr::Return => self.execute_return(),
+            Instr::Call(_funcidx) => self.execute_call(),
+            Instr::CallIndirect(_funcidx) => self.execute_callindirect(),
     
             // Parametric Instructions
-            Instr::Drop(_valtype) => unimplemented!(),
-            Instr::Select(_valtype) => unimplemented!(),
+            Instr::Drop(_) => self.execute_drop(),
+            Instr::Select(_valtype) => self.execute_select(),
     
             // Variable Instructions
-            Instr::LocalGet(_localidx) => unimplemented!(),
-            Instr::LocalSet(_localidx) => unimplemented!(),
-            Instr::LocalTee(_localidx) => unimplemented!(),
-            Instr::GlobalGet(_globalidx) => unimplemented!(),
-            Instr::GlobalSet(_globalidx) => unimplemented!(),
+            Instr::LocalGet(localidx) => self.execute_localget(localidx),
+            Instr::LocalSet(_localidx) => self.execute_localset(),
+            Instr::LocalTee(_localidx) => self.execute_localtee(),
+            Instr::GlobalGet(_globalidx) => self.execute_globalget(),
+            Instr::GlobalSet(_globalidx) => self.execute_globalset(),
     
             // Memory Instructions
             Instr::Load(_valtype, _memarg) => unimplemented!(),
@@ -102,8 +78,8 @@ impl<'a> Thread<'a> {
             Instr::IStore8(_valsize, _memarg) => unimplemented!(),
             Instr::IStore16(_valsize, _memarg) => unimplemented!(),
             Instr::I64Store32(_memarg) => unimplemented!(),
-            Instr::MemorySize => unimplemented!(),
-            Instr::MemoryGrow => unimplemented!(),
+            Instr::MemorySize => self.execute_memorysize(),
+            Instr::MemoryGrow => self.execute_memorygrow(),
     
             // Numeric Instructions
             Instr::I32Const(i) => Result::Vals(vec![Val::I32Const(i.clone())]),
@@ -213,16 +189,16 @@ impl<'a> Thread<'a> {
             Instr::FRelOp(ValSize::V32, FRelOp::Ge) => self.execute_fge32(),
             Instr::FRelOp(ValSize::V64, FRelOp::Ge) => self.execute_fge64(),
     
-            Instr::CvtOp(CvtOp::IExtend8S(ValSize::V32)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::IExtend8S(ValSize::V64)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::IExtend16S(ValSize::V32)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::IExtend16S(ValSize::V64)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::I64Extend32S) => unimplemented!(),
-            Instr::CvtOp(CvtOp::I32WrapFromI64) => unimplemented!(),
-            Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::U)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::S)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V32, ValSign::U)) => unimplemented!(),
-            Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V32, ValSign::S)) => unimplemented!(),
+            Instr::CvtOp(CvtOp::IExtend8S(ValSize::V32)) => self.execute_i32extend8s(),
+            Instr::CvtOp(CvtOp::IExtend8S(ValSize::V64)) => self.execute_i64extend8s(),
+            Instr::CvtOp(CvtOp::IExtend16S(ValSize::V32)) => self.execute_i32extend16s(),
+            Instr::CvtOp(CvtOp::IExtend16S(ValSize::V64)) => self.execute_i64extend16s(),
+            Instr::CvtOp(CvtOp::I64Extend32S) => self.execute_i64extend32s(),
+            Instr::CvtOp(CvtOp::I32WrapFromI64) => self.execute_i32wrap_i64(),
+            Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::U)) => self.execute_i64wrap_i32_u(),
+            Instr::CvtOp(CvtOp::I64ExtendFromI32(ValSign::S)) => self.execute_i64wrap_i32_s(),
+            Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V32, ValSign::U)) => self.execute_i32trunc_f32_u(),
+            Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V32, ValSign::S)) => self.execute_i32trunc_f32_s(),
             Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V64, ValSign::U)) => unimplemented!(),
             Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V32, ValSize::V64, ValSign::S)) => unimplemented!(),
             Instr::CvtOp(CvtOp::ITruncFromF(ValSize::V64, ValSize::V32, ValSign::U)) => unimplemented!(),
@@ -251,20 +227,6 @@ impl<'a> Thread<'a> {
             Instr::CvtOp(CvtOp::IReinterpretFromF(ValSize::V64)) => unimplemented!(),
             Instr::CvtOp(CvtOp::FReinterpretFromI(ValSize::V32)) => unimplemented!(),
             Instr::CvtOp(CvtOp::FReinterpretFromI(ValSize::V64)) => unimplemented!(),
-    
-            // Administrative Instructions
-            // Instr::Trap => (None, None),
-            // Instr::Invoke(funcaddr) => self.execute_invoke(funcaddr, vals),
-            // Instr::InitElem(tableaddr, offset, funcindices) => {
-            //     init_elem(tableaddr, offset, funcindices);
-            //     (None, None)
-            // },
-            // Instr::InitData(memaddr, offset, bytes) => {
-            //     init_data(memaddr, offset, bytes);
-            //     (None, None)
-            // },
-            // Instr::Label(labelidx, instrs_cont, instrs) => self.execute_instrs_with_label(labelidx, instrs_cont, instrs),
-            // Instr::Frame(_frameidx, _frame, _instrs) => unimplemented!(),
         }
     }
 

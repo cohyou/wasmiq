@@ -5,6 +5,11 @@ mod unop;
 mod binop;
 mod testop;
 mod relop;
+mod cvtop;
+mod parametric;
+mod variable;
+mod memory;
+mod control;
 
 pub use operation32::*;
 pub use operation64::*;
@@ -12,9 +17,11 @@ pub use unop::*;
 pub use binop::*;
 pub use testop::*;
 pub use relop::*;
-
-// use std::rc::Weak;
-// use std::collections::VecDeque;
+pub use cvtop::*;
+pub use parametric::*;
+pub use variable::*;
+pub use memory::*;
+pub use control::*;
 
 use crate::{
     FuncType,
@@ -136,8 +143,6 @@ pub struct Frame {
 
 pub struct Thread<'a> {
     pub store: &'a mut Store,
-    // pub frame: Frame,
-    // pub instrs: Vec<Instr>,
     pub stack: Vec<StackEntry>,
 }
 
@@ -148,16 +153,20 @@ impl<'a> Thread<'a> {
             stack: vec![],
         }
     }
-    // pub fn new_with_frame(store: &'a mut Store, frame: Frame) -> Self {
-    //     Thread {
-    //         store: store,
-    //         stack: vec![],
-    //     }
-    // }
-    // pub fn trap_with_frame(store: &'a mut Store, frame: Frame) -> Self {
-    //     Thread {
-    //         store: store,
-    //         stack: vec![],
-    //     }
-    // }
 }
+
+// pub fn signed8(n: u8) -> i8 {
+//     unimplemented!();
+// }
+
+// pub fn signed16(n: u16) -> i16 {
+//     unimplemented!();
+// }
+
+// pub fn signed32(n: u32) -> i32 {
+//     unimplemented!();
+// }
+
+// pub fn signed64(n: u64) -> i64 {
+//     unimplemented!();
+// }
