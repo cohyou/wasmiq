@@ -1,3 +1,8 @@
+use crate::{
+    ValSize,
+    ValSign,
+};
+
 use super::*;
 
 macro_rules! val {
@@ -80,7 +85,48 @@ impl<'a> Thread<'a> {
             Result::Trap
         }
     }
+
     // fn execute_cvtop<T1, T2>(&mut self, func: fn(T1) -> T2) -> Result {
 
     // }
+}
+
+macro_rules! trunc_sat_op {
+    ($this:ident, $v:ident, $vp:pat, $vr:expr) => {
+        if let Some(StackEntry::Value($vp)) = $this.stack.pop() {
+            Result::Vals(vec![$vr])
+        } else {
+            Result::Trap
+        }
+    };
+}
+impl<'a> Thread<'a> {
+    pub fn execute_i32trunc_sat_f32_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::F32Const(v), Val::I32Const(v as u32))
+    }
+    pub fn execute_i32trunc_sat_f64_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::F64Const(v), Val::I32Const(v as u32))
+    }
+    pub fn execute_i64trunc_sat_f32_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::F32Const(v), Val::I64Const(v as u64))
+    }
+    pub fn execute_i64trunc_sat_f64_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::F64Const(v), Val::I64Const(v as u64))
+    }
+}
+
+// TODO: check algorithm correct
+impl<'a> Thread<'a> {
+    pub fn execute_f32convert_i32_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::I32Const(v), Val::F32Const(v as f32))
+    }
+    pub fn execute_f32convert_i64_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::I64Const(v), Val::F32Const(v as f32))
+    }
+    pub fn execute_f64convert_i32_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::I32Const(v), Val::F64Const(v as f64))
+    }
+    pub fn execute_f64convert_i64_u(&mut self) -> Result {
+        trunc_sat_op!(self, v, Val::I64Const(v), Val::F64Const(v as f64))
+    }
 }

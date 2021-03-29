@@ -170,3 +170,12 @@ impl<'a> Thread<'a> {
 // pub fn signed64(n: u64) -> i64 {
 //     unimplemented!();
 // }
+
+#[test]
+fn test_trunc() {
+    let n = f32::INFINITY;
+    let i = n as i8;
+    assert_eq!(f32::NEG_INFINITY as i8, 1i8);
+    assert_eq!(i, 1i8);
+    assert_eq!(1.0 as u8, 1u8);
+}
