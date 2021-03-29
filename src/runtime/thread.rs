@@ -72,12 +72,12 @@ impl<'a> Thread<'a> {
             // Memory Instructions
             Instr::Load(valtype, memarg) => self.execute_load(valtype, memarg),
             Instr::Store(valtype, memarg) => self.execute_store(valtype, memarg),
-            Instr::ILoad8(_valsize, _valsign, _memarg) => unimplemented!(),
-            Instr::ILoad16(_valsize, _valsign, _memarg) => unimplemented!(),
-            Instr::I64Load32(_valsign, _memarg) => unimplemented!(),
-            Instr::IStore8(_valsize, _memarg) => unimplemented!(),
-            Instr::IStore16(_valsize, _memarg) => unimplemented!(),
-            Instr::I64Store32(_memarg) => unimplemented!(),
+            Instr::ILoad8(valsize, valsign, memarg) => self.execute_iload8(valsize, valsign, memarg),
+            Instr::ILoad16(valsize, valsign, memarg) => self.execute_iload16(valsize, valsign, memarg),
+            Instr::I64Load32(valsign, memarg) => self.execute_i64load32(valsign, memarg),
+            Instr::IStore8(valsize, memarg) => self.execute_istore8(valsize, memarg),
+            Instr::IStore16(valsize, memarg) => self.execute_istore16(valsize, memarg),
+            Instr::I64Store32(memarg) => self.execute_i64store32(memarg),
             Instr::MemorySize => self.execute_memorysize(),
             Instr::MemoryGrow => self.execute_memorygrow(),
     

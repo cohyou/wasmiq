@@ -203,15 +203,32 @@ impl<'a> Thread<'a> {
 
 impl<'a> Thread<'a> {
     pub fn execute_demote(&mut self) -> Result {
-        if let Some(StackEntry::Value(Val::F64Const(_v))) = self.stack.pop() {
-            unimplemented!()
+        if let Some(StackEntry::Value(Val::F64Const(v))) = self.stack.pop() {
+            if v.is_nan() {
+                if v == f64::NAN {
+                    return Result::f32val(f32::NAN);
+                } else {
+                    unimplemented!()
+                }
+            }
+            if v.is_infinite() || v == 0.0 { return Result::f32val(v as f32); }
+            if v < f32::MIN as f64 || v > f32::MAX as f64 { return Result::Trap; }
+            Result::f32val(v as f32)
         } else {
             Result::Trap
         }
     }
+    
     pub fn execute_promote(&mut self) -> Result {
-        if let Some(StackEntry::Value(Val::F32Const(_v))) = self.stack.pop() {
-            unimplemented!()
+        if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
+            if v.is_nan() {
+                if v == f32::NAN {
+                    return Result::f64val(f64::NAN);
+                } else {
+                    unimplemented!()
+                }
+            }
+            Result::f64val(v as f64)
         } else {
             Result::Trap
         }

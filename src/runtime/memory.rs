@@ -2,6 +2,8 @@ use crate::{
     ValType,
     MemArg,
     Error,
+    ValSize,
+    ValSign,
 };
 
 use super::*;
@@ -11,6 +13,22 @@ use super::{
 
 impl<'a> Thread<'a> {
     pub fn execute_load(&mut self, valtype: &ValType, memarg: &MemArg) -> ExecResult {
+        let n = match valtype {
+            ValType::I32 | ValType::F32 => 32,
+            ValType::I64 | ValType::F64 => 64,
+        };
+        self.execute_load_internal(valtype, &ValSign::U, memarg, n)
+    }
+    pub fn execute_iload8(&mut self, _valsize: &ValSize, _valsign: &ValSign, _memarg: &MemArg) -> ExecResult {
+        unimplemented!()
+    }
+    pub fn execute_iload16(&mut self, _valsize: &ValSize, _valsign: &ValSign, _memarg: &MemArg) -> ExecResult {
+        unimplemented!()
+    }
+    pub fn execute_i64load32(&mut self, valsign: &ValSign, memarg: &MemArg)-> ExecResult {
+        self.execute_load_internal(&ValType::I64, valsign, memarg, 32)
+    }
+    pub fn execute_load_internal(&mut self, valtype: &ValType,  _valsign: &ValSign, memarg: &MemArg, n: usize) -> ExecResult {
         let (_, frame) = self.current_frame();
         let memaddr = frame.module.memaddrs[0];
         let mem = &self.store.mems[memaddr];
@@ -21,27 +39,76 @@ impl<'a> Thread<'a> {
         };
 
         let ea = c + memarg.offset;
-        let n = match valtype {
-            ValType::I32 | ValType::F32 => 32,
-            ValType::I64 | ValType::F64 => 64,
-        };
-        let max = (n / 8) as usize;
         let ea = ea as usize;
-        if ea + max > mem.data.len() {
+        let max = ea + (n / 8) as usize;
+        if max > mem.data.len() {
             return Result::Trap;
         }
 
-        // let bytes = mem.data[ea..max];
-        // let c = u64::from_le_bytes(bytes);
-
-        // Result::Vals(vec![Val::I64Const(c)])
-        unimplemented!()
+        let slice = &mem.data[ea..max];
+        match n {
+            8 => {
+                let mut bytes = [0x00; 1];
+                for i in 0..1 {
+                    bytes[i] = slice[i];
+                }
+                let v = u8::from_le_bytes(bytes);
+                match valtype {
+                    ValType::I32 => Result::i32val(v as u32),
+                    ValType::I64 => Result::i64val(v as u64),
+                    // ValType::F32 => Result::f32val(v as f32),
+                    // ValType::F64 => Result::f64val(v as f64),
+                    _ => unreachable!(),
+                }
+            },
+            16 => {
+                let mut bytes = [0x00; 2];
+                for i in 0..2 {
+                    bytes[i] = slice[i];
+                }
+                let v = u16::from_le_bytes(bytes);
+                match valtype {
+                    ValType::I32 => Result::i32val(v as u32),
+                    ValType::I64 => Result::i64val(v as u64),
+                    // ValType::F32 => Result::f32val(v as f32),
+                    // ValType::F64 => Result::f64val(v as f64),
+                    _ => unreachable!(),
+                }
+            },
+            32 => {
+                let mut bytes = [0x00; 4];
+                for i in 0..4 {
+                    bytes[i] = slice[i];
+                }
+                let v = u32::from_le_bytes(bytes);
+                match valtype {
+                    ValType::I32 => Result::i32val(v as u32),
+                    ValType::I64 => Result::i64val(v as u64),
+                    ValType::F32 => Result::f32val(v as f32),
+                    ValType::F64 => Result::f64val(v as f64),
+                }
+            },
+            64 => {
+                let mut bytes = [0x00; 8];
+                for i in 0..8 {
+                    bytes[i] = slice[i];
+                }
+                let v = u64::from_le_bytes(bytes);
+                match valtype {
+                    ValType::I32 => Result::i32val(v as u32),
+                    ValType::I64 => Result::i64val(v as u64),
+                    ValType::F32 => Result::f32val(v as f32),
+                    ValType::F64 => Result::f64val(v as f64),
+                }
+            },
+            _ => unreachable!(),
+        }
     }
 
     pub fn execute_store(&mut self, valtype: &ValType, memarg: &MemArg) -> ExecResult {
         let (_, frame) = self.current_frame();
         let memaddr = frame.module.memaddrs[0];
-        let mem = &self.store.mems[memaddr];
+        let mem = &mut self.store.mems[memaddr];
         let c = if let Some(StackEntry::Value(Val::I32Const(c))) = self.stack.pop() {
             c
         } else {
@@ -53,11 +120,71 @@ impl<'a> Thread<'a> {
             ValType::I32 | ValType::F32 => 32,
             ValType::I64 | ValType::F64 => 64,
         };
-        let max = (n / 8) as usize;
         let ea = ea as usize;
-        if ea + max > mem.data.len() {
+        let max = ea + (n / 8) as usize;
+        if max > mem.data.len() {
             return Result::Trap;
         }
+        let slice = &mut mem.data[ea..max];
+
+        match valtype {
+            ValType::I32 => {
+                let n = if let Some(StackEntry::Value(Val::I32Const(n))) = self.stack.pop() {
+                    n
+                } else {
+                    unreachable!()
+                };
+                let bytes = n.to_le_bytes();
+                for i in 0..4 {
+                    slice[i] = bytes[i];
+                }
+                Result::Vals(vec![])
+            },
+            ValType::I64 => {
+                let n = if let Some(StackEntry::Value(Val::I64Const(n))) = self.stack.pop() {
+                    n
+                } else {
+                    unreachable!()
+                };
+                let bytes = n.to_le_bytes();
+                for i in 0..8 {
+                    slice[i] = bytes[i];
+                }
+                Result::Vals(vec![])
+            },
+            ValType::F32 => {
+                let n = if let Some(StackEntry::Value(Val::F32Const(n))) = self.stack.pop() {
+                    n
+                } else {
+                    unreachable!()
+                };
+                let bytes = n.to_le_bytes();
+                for i in 0..4 {
+                    slice[i] = bytes[i];
+                }
+                Result::Vals(vec![])
+            },
+            ValType::F64 => {
+                let n = if let Some(StackEntry::Value(Val::F64Const(n))) = self.stack.pop() {
+                    n
+                } else {
+                    unreachable!()
+                };
+                let bytes = n.to_le_bytes();
+                for i in 0..8 {
+                    slice[i] = bytes[i];
+                }
+                Result::Vals(vec![])
+            },
+        }
+    }
+    pub fn execute_istore8(&mut self, _valsize: &ValSize, _memarg: &MemArg) -> ExecResult {
+        unimplemented!()
+    }
+    pub fn execute_istore16(&mut self, _valsize: &ValSize, _memarg: &MemArg) -> ExecResult {
+        unimplemented!()
+    }
+    pub fn execute_i64store32(&mut self, _memarg: &MemArg) -> ExecResult {
         unimplemented!()
     }
 
