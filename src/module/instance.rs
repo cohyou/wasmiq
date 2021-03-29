@@ -335,22 +335,38 @@ impl Module {
     }
 
     fn match_functype(ft1: FuncType, ft2: FuncType) -> bool {
-        // TODO: update match algorithm
         ft1 != ft2
     }
 
-    fn match_tabletype(tt1: TableType, tt2: TableType) -> bool {
-        // TODO: update match algorithm
-        tt1 != tt2
+    fn match_limits(limits1: Limits, limits2: Limits) -> bool {
+        let Limits{min: n1, max: m1} = limits1;
+        let Limits{min: n2, max: m2} = limits2;
+        if n1 >= n2 {
+            if let Some(m2) = m2 {
+                if let Some(m1) = m1 {
+                    m1 <= m2
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
+        } else {
+            false
+        }
     }
 
-    fn match_memtype(mt1: MemType, mt2: MemType) -> bool {
-        // TODO: update match algorithm
-        mt1 != mt2
+    fn match_tabletype(tt1: TableType, tt2: TableType) -> bool {
+        let TableType(limits1, elemtype1) = tt1;
+        let TableType(limits2, elemtype2) = tt2;
+        Module::match_limits(limits1, limits2) && elemtype1 == elemtype2
+    }
+
+    fn match_memtype(MemType(limits1): MemType, MemType(limits2): MemType) -> bool {
+        Module::match_limits(limits1, limits2)
     }
 
     fn match_globaltype(gt1: GlobalType, gt2: GlobalType) -> bool {
-        // TODO: update match algorithm
         gt1 != gt2
     }
 }
