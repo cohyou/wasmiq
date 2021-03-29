@@ -504,7 +504,7 @@ fn instr2wasm(instr: &Instr) -> Vec<Byte> {
                 CvtOp::ITruncSatFromF(ValSize::V64, ValSize::V64, ValSign::S) => unimplemented!(),
             }
         }
-        _ => unimplemented!(),
+        // _ => unimplemented!(),
     }
 }
 

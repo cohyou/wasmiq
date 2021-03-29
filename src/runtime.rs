@@ -5,7 +5,6 @@ mod unop;
 mod binop;
 mod testop;
 mod relop;
-mod admin;
 
 pub use operation32::*;
 pub use operation64::*;
@@ -13,7 +12,6 @@ pub use unop::*;
 pub use binop::*;
 pub use testop::*;
 pub use relop::*;
-pub use admin::*;
 
 // use std::rc::Weak;
 // use std::collections::VecDeque;
@@ -92,12 +90,14 @@ pub struct HostFuncInst {
     pub hostcode: fn(),
 }
 
+#[derive(Clone)]
 pub struct TableInst {
     pub elem: Vec<FuncElem>,
     pub max: Option<u32>,
 }
 type FuncElem = Option<FuncAddr>;
 
+#[derive(Clone)]
 pub struct MemInst {
     pub data: Vec<Byte>,
     pub max: Option<u32>,
@@ -136,26 +136,28 @@ pub struct Frame {
 
 pub struct Thread<'a> {
     pub store: &'a mut Store,
-    pub frame: Frame,
-    pub instrs: Vec<Instr>,
+    // pub frame: Frame,
+    // pub instrs: Vec<Instr>,
     pub stack: Vec<StackEntry>,
 }
 
 impl<'a> Thread<'a> {
-    pub fn new_with_frame(store: &'a mut Store, frame: Frame) -> Self {
+    pub fn new(store: &'a mut Store) -> Self {
         Thread {
             store: store,
-            frame: frame, 
-            instrs: vec![],
             stack: vec![],
         }
     }
-    pub fn trap_with_frame(store: &'a mut Store, frame: Frame) -> Self {
-        Thread {
-            store: store,
-            frame: frame, 
-            instrs: vec![Instr::Trap],
-            stack: vec![],
-        }
-    }
+    // pub fn new_with_frame(store: &'a mut Store, frame: Frame) -> Self {
+    //     Thread {
+    //         store: store,
+    //         stack: vec![],
+    //     }
+    // }
+    // pub fn trap_with_frame(store: &'a mut Store, frame: Frame) -> Self {
+    //     Thread {
+    //         store: store,
+    //         stack: vec![],
+    //     }
+    // }
 }

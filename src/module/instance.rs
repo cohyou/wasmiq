@@ -11,8 +11,8 @@ use crate::{
     Thread,
     StackEntry,
     Val,
-    Instr,
-    Start,
+    // Instr,
+    // Start,
     FuncAddr,
     GlobalType,
     GlobalAddr,
@@ -32,13 +32,12 @@ use crate::{
     ElemType,
     ValType,
     Expr,
+    Result as ExecResult,
 };
 
-use std::collections::VecDeque;
-
 pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<ExternVal>) -> Result<ModuleInst, Error> {
-    let (frame, instrs) = module.instanciate(store, externvals);
-    if instrs.is_empty() {
+    let (frame, result) = module.instanciate(store, externvals);
+    if let ExecResult::Vals(_) = result {
         Ok(frame.module)
     } else {
         Err(Error::Invalid)
@@ -46,64 +45,64 @@ pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<Ext
 }
 
 impl Module {
-    fn instanciate(&self, store: &mut Store, externvals: Vec<ExternVal>) -> (Frame, Vec<Instr>) {
-        let frame = Frame::default();
-        let trap = vec![Instr::Trap];
+    fn instanciate(&self, store: &mut Store, externvals: Vec<ExternVal>) -> (Frame, ExecResult) {
+        let frame_default = Frame::default();
+        let trap = ExecResult::Trap;
 
         let externtypes = match self.validate() {
             Err(_error) => {
-                return (frame, trap);
+                return (frame_default, trap);
             },
             Ok(externtypes) => externtypes,
         };
         let externtypes_imp = externtypes.0;
         if externtypes_imp.len() != externvals.len() { 
-            return (frame, trap);
+            return (frame_default, trap);
         }
         let mut globaladdrs = vec![];
         for (ext_val, ext_type) in externvals.iter().zip(externtypes_imp) {
             match ext_val {
                 ExternVal::Func(funcaddr) => {
                     let functype = match store.funcs.get(funcaddr.clone()) {
-                        None => return (frame, trap),
+                        None => return (frame_default, trap),
                         Some(FuncInst::User(funcinst)) => funcinst.tp.clone(),
                         Some(FuncInst::Host(funcinst)) => funcinst.tp.clone(),
                     };
                     if let ExternType::Func(ft) = ext_type {
-                        if Module::match_functype(functype, ft) { return (frame, trap); }
+                        if Module::match_functype(functype, ft) { return (frame_default, trap); }
                     } else {
-                        return (frame, trap);
+                        return (frame_default, trap);
                     }
                 },
                 ExternVal::Table(tableaddr) => {
                     let tabletype = match store.tables.get(tableaddr.clone()) {
-                        None => return (frame, trap),
+                        None => return (frame_default, trap),
                         Some(TableInst{elem, max: m}) => {
                             TableType(Limits{min: elem.len() as u32, max: m.clone()}, ElemType::FuncRef)
                         }
                     };
                     if let ExternType::Table(tt) = ext_type {
-                        if Module::match_tabletype(tabletype, tt) { return (frame, trap); }
+                        if Module::match_tabletype(tabletype, tt) { return (frame_default, trap); }
                     } else {
-                        return (frame, trap);
+                        return (frame_default, trap);
                     }
                 },
                 ExternVal::Mem(memaddr) => {
                     let memtype = match store.mems.get(memaddr.clone()) {
-                        None => return (frame, trap),
+                        None => return (frame_default, trap),
                         Some(MemInst{data, max}) => {
                             MemType(Limits{min: (data.len()/64) as u32, max: max.clone()})
                         }
                     };
                     if let ExternType::Mem(mt) = ext_type {
-                        if Module::match_memtype(memtype, mt) { return (frame, trap); }
+                        if Module::match_memtype(memtype, mt) { return (frame_default, trap); }
                     } else {
-                        return (frame, trap);
+                        return (frame_default, trap);
                     }
                 },
                 ExternVal::Global(globaladdr) => {
                     let globaltype = match store.globals.get(globaladdr.clone()) {
-                        None => return (frame, trap),
+                        None => return (frame_default, trap),
                         Some(GlobalInst{value: val, mutability: mt}) => {
                             let vt = match val {
                                 Val::I32Const(_) => ValType::I32,
@@ -115,17 +114,16 @@ impl Module {
                         },
                     };
                     if let ExternType::Global(gt) = ext_type {
-                        if Module::match_globaltype(globaltype, gt) { return (frame, trap); }
+                        if Module::match_globaltype(globaltype, gt) { return (frame_default, trap); }
                     } else {
-                        return (frame, trap);
+                        return (frame_default, trap);
                     }
                     globaladdrs.push(globaladdr.clone());
                 },
             }
         }
 
-        let frame = Frame::default();
-        let mut thread = Thread::trap_with_frame(store, frame);
+        let mut thread = Thread::new(store);
 
         let mut moduleinst_g = ModuleInst::default();
         moduleinst_g.globaladdrs = globaladdrs;
@@ -133,91 +131,96 @@ impl Module {
         thread.stack.push(StackEntry::Activation(0, frame_g));
         let mut vals = vec![];
         for global in &self.globals {
-            let moduleinst = ModuleInst::default();
-            let frame = Frame { module: moduleinst, locals: vec![] };
-            vals.push(Self::evaluate_expr(thread.store, frame, global.init.clone()));
+            vals.push(Self::evaluate_expr(thread.store, global.init.clone()));
         }
         thread.stack.pop();
 
         let moduleinst = self.alloc_module(thread.store, vec![], vals);
+        let tableaddrs = moduleinst.tableaddrs.clone();
+        let memaddrs = moduleinst.memaddrs.clone();
+        let frame = Frame { module: moduleinst, locals: vec![] };
+        thread.stack.push(StackEntry::Activation(0, frame));
 
-        let mut instr_init_elem_list: VecDeque<Instr> = VecDeque::from(vec![]);
+        let mut init_elem_list = vec![]; 
         for elem in &self.elem {
-            let frame = Frame{module: moduleinst.clone(), locals: vec![]};
-            let eo = if let Val::I32Const(eo) = Self::evaluate_expr(thread.store, frame, elem.offset.clone()) {
+            let eo = if let Val::I32Const(eo) = Self::evaluate_expr(thread.store, elem.offset.clone()) {
                 eo
             } else {
-                return (thread.frame, trap);
+                return (frame_default, trap);
             };
             let tableidx = elem.table;
-            let tableaddr = moduleinst.tableaddrs[tableidx as usize];
+            let tableaddr = tableaddrs[tableidx as usize];
             let tableinst = &thread.store.tables[tableaddr];
             let eend = eo as usize + elem.init.len();
 
             if eend > tableinst.elem.len() {
-                return (thread.frame, trap);
+                return (frame_default, trap);
             }
-            instr_init_elem_list.push_back(Instr::InitElem(tableaddr, eo, elem.init.clone()));
+            init_elem_list.push(eo);
         }
 
-        let mut instr_init_data_list: VecDeque<Instr> = VecDeque::from(vec![]);
+        let mut init_data_list = vec![]; 
         for data in &self.data {
-            let frame = Frame{module: moduleinst.clone(), locals: vec![]};
-            let data_o = if let Val::I32Const(data_o) = Self::evaluate_expr(thread.store, frame, data.offset.clone()) {
+            let data_o = if let Val::I32Const(data_o) = Self::evaluate_expr(thread.store, data.offset.clone()) {
                 data_o
             } else {
-                return (thread.frame, trap);
+                return (frame_default, trap);
             };
             let memidx = data.data;
-            let memaddr = moduleinst.memaddrs[memidx as usize];
+            let memaddr = memaddrs[memidx as usize];
             let meminst = &thread.store.mems[memaddr];
             let dend = data_o as usize + data.init.len();
 
             if dend > meminst.data.len() {
-                return (thread.frame, trap);
+                return (frame_default, trap);
             }
-            instr_init_data_list.push_back(Instr::InitData(memaddr, data_o, data.init.clone()))
+            init_data_list.push(data_o);
         }
 
-        let frame = Frame { module: moduleinst, locals: vec![] };
-        thread.stack.push(StackEntry::Activation(0, frame));
         let frame = if let Some(StackEntry::Activation(0, frame)) = thread.stack.pop() {
             frame
         } else {
-            return (thread.frame, trap);
+            return (frame_default, trap);
         };
-
-        let mut instrs = VecDeque::new();
-
-        while let Some(init_elem) = instr_init_elem_list.pop_front() {
-            instrs.push_back(init_elem);
+        for (elem, eo) in self.elem.iter().zip(init_elem_list) {
+            for (j, funcidx) in elem.init.iter().enumerate() {
+                let funcaddr = frame.module.funcaddrs[funcidx.clone() as usize];
+                let tableidx = elem.table;
+                let tableaddr = tableaddrs[tableidx as usize];
+                let tableinst = &mut thread.store.tables[tableaddr];
+                tableinst.elem[eo as usize + j] = Some(funcaddr);
+            }
         }
-        while let Some(init_data) = instr_init_data_list.pop_front() {
-            instrs.push_back(init_data);
+        for (data, data_o) in self.data.iter().zip(init_data_list) {
+            let memidx = data.data;
+            let memaddr = memaddrs[memidx as usize];
+            let meminst = &mut thread.store.mems[memaddr];
+            for (j, byte) in data.init.iter().enumerate() {
+                meminst.data[data_o as usize + j] = byte.clone();
+            }
         }
 
-        if let Some(Start(funcidx)) = &self.start {
-            let funcaddr = frame.module.funcaddrs[funcidx.clone() as usize];
-            instrs.push_back(Instr::Invoke(funcaddr.clone()));
+        if let Some(start) = &self.start {
+            let funcaddr = frame.module.funcaddrs[start.0 as usize];
+            let mut thread = Thread::new(store);
+            thread.execute_invoke(&funcaddr);
         }
 
-        thread.spawn(&mut instrs);
-
-        (thread.frame, vec![])
+        (frame, ExecResult::Vals(vec![]))
     }
 
-    pub fn invoke(store: &mut Store, funcaddr: FuncAddr, vals: Vec<Val>) -> (Vec<Val>, Vec<Instr>) {
+    pub fn invoke(store: &mut Store, funcaddr: FuncAddr, vals: Vec<Val>) -> ExecResult {
         let funcinst = if let Some(funcinst) = store.funcs.get(funcaddr) {
             funcinst
         } else {
-            return (vec![], vec![Instr::Trap]);
+            return ExecResult::Trap;
         };
         let (argtypes, returntypes) = match funcinst {
             FuncInst::User(user) => user.tp.clone(),
             FuncInst::Host(host) => host.tp.clone(),
         };
         if vals.len() != argtypes.len() {
-            return (vec![], vec![Instr::Trap]);
+            return ExecResult::Trap;
         }
         for (argtype, val) in argtypes.iter().zip(vals.clone()) {
             let matches = match val {
@@ -226,18 +229,17 @@ impl Module {
                 Val::F32Const(_) => argtype == &ValType::F32,
                 Val::F64Const(_) => argtype == &ValType::F64,
             };
-            if !matches { return (vec![], vec![Instr::Trap]); }
+            if !matches { return ExecResult::Trap; }
         }
 
-        let frame = Frame{ module: ModuleInst::default(), locals: vec![] };
-        let mut thread = Thread::new_with_frame(store, frame.clone());
-        thread.stack.push(StackEntry::Activation(0, frame.clone()));
+        let dummy_frame = Frame{ module: ModuleInst::default(), locals: vec![] };
+        let mut thread = Thread::new(store);
+        thread.stack.push(StackEntry::Activation(0, dummy_frame.clone()));
         let vals: Vec<StackEntry> = vals.clone().iter().map(|v| StackEntry::Value(v.clone())).collect();
         thread.stack.extend(vals);
 
-        let instrs = vec![Instr::Invoke(funcaddr)];
-        let mut instrs = VecDeque::from(instrs);
-        thread.spawn(&mut instrs);
+        let mut thread = Thread::new(store);
+        thread.execute_invoke(&funcaddr);
 
         let mut returnvals = vec![];
         for _ in 0..returntypes.len() {
@@ -246,7 +248,7 @@ impl Module {
             }
         }
 
-        (returnvals, vec![])
+        ExecResult::Vals(returnvals)
     }
 
     fn alloc_module(&self, store: &mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
@@ -322,10 +324,9 @@ impl Module {
         moduleinst
     }
 
-    fn evaluate_expr(store: &mut Store, frame: Frame, expr: Expr) -> Val {
-        let mut thread = Thread::new_with_frame(store, frame);
-        let mut instrs = VecDeque::from(expr.0);
-        thread.spawn(&mut instrs);
+    fn evaluate_expr(store: &mut Store, expr: Expr) -> Val {
+        let mut thread = Thread::new(store);
+        thread.spawn(&mut expr.0.clone());
         if let Some(StackEntry::Value(val)) = thread.stack.pop() {
             val
         } else {

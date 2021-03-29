@@ -12,10 +12,10 @@ use crate::{
     GlobalIdx,
     LocalIdx,
     LabelIdx,
-    FuncAddr,
-    TableAddr,
-    MemAddr,
-    Frame,
+    // FuncAddr,
+    // TableAddr,
+    // MemAddr,
+    // Frame,
 };
 
 #[derive(PartialEq, Clone, Default)]
@@ -108,12 +108,12 @@ pub enum Instr {
     CvtOp(CvtOp),
 
     // Administrative Instructions
-    Trap,
-    Invoke(FuncAddr),
-    InitElem(TableAddr, u32, Vec<FuncIdx>),
-    InitData(MemAddr, u32, Vec<u8>),
-    Label(u32, Vec<Instr>, Vec<Instr>),
-    Frame(u32, Frame, Vec<Instr>),
+    // Trap,
+    // Invoke(FuncAddr),
+    // InitElem(TableAddr, u32, Vec<FuncIdx>),
+    // InitData(MemAddr, u32, Vec<u8>),
+    // Label(u32, Vec<Instr>, Vec<Instr>),
+    // Frame(u32, Frame, Vec<Instr>),
 }
 
 #[derive(Debug, PartialEq, Clone)]

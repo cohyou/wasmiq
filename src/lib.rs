@@ -135,6 +135,7 @@ use runtime::{
     TableInst,
     MemInst,
     ExportInst,
+    Result,
 };
 
 mod decoder;
