@@ -1,8 +1,3 @@
-// use crate::{
-//     ValSize,
-//     ValSign,
-// };
-
 use super::*;
 
 macro_rules! val {
@@ -64,34 +59,112 @@ impl<'a> Thread<'a> {
             Result::Trap
         }
     }
+}
+
+// macro_rules! trunc_op {
+//     ($this:ident, $vt:pat) => {
+//         if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
+//             if v.is_nan() || v.is_infinite() { return Result::Trap; }
+//             if v < u32::MIN as f32 || v > u32::MAX as f32 { return Result::Trap; }
+//             let vi = unsafe { v.to_int_unchecked::<u32>() };
+//             Result::Vals(vec![Val::I32Const(vi)])
+//         } else {
+//             Result::Trap
+//         }
+//     };
+// }
+
+impl<'a> Thread<'a> {
     pub fn execute_i32trunc_f32_u(&mut self) -> Result {
         if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
             if v.is_nan() || v.is_infinite() { return Result::Trap; }
-            let vf = v.trunc().round() as u32;
-            // TODO: update algorithm
-            Result::Vals(vec![Val::I32Const(vf)])
+            if v < u32::MIN as f32 || v > u32::MAX as f32 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<u32>() };
+            Result::Vals(vec![Val::I32Const(vi)])
         } else {
             Result::Trap
         }
     }
+
     pub fn execute_i32trunc_f32_s(&mut self) -> Result {
         if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
             if v.is_nan() || v.is_infinite() { return Result::Trap; }
-            // let vf = v.trunc().round() as i32;
-            // TODO: update algorithm
-            // Result::Vals(vec![Val::I32Const(vf)])Result::Trap
-            unimplemented!()
+            if v < i32::MIN as f32 || v > i32::MAX as f32 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<i32>() };
+            Result::Vals(vec![Val::I32Const(unsigned32(vi))])
         } else {
             Result::Trap
         }
     }
 
-    // fn execute_cvtop<T1, T2>(&mut self, func: fn(T1) -> T2) -> Result {
+    pub fn execute_i32trunc_f64_u(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F64Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < u32::MIN as f64 || v > u32::MAX as f64 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<u32>() };
+            Result::Vals(vec![Val::I32Const(vi)])
+        } else {
+            Result::Trap
+        }
+    }
 
-    // }
+    pub fn execute_i32trunc_f64_s(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F64Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < i32::MIN as f64 || v > i32::MAX as f64 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<i32>() };
+            Result::Vals(vec![Val::I32Const(unsigned32(vi))])
+        } else {
+            Result::Trap
+        }
+    }
+
+    pub fn execute_i64trunc_f32_u(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < u32::MIN as f32 || v > u32::MAX as f32 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<u64>() };
+            Result::Vals(vec![Val::I64Const(vi)])
+        } else {
+            Result::Trap
+        }
+    }
+
+    pub fn execute_i64trunc_f32_s(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F32Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < i32::MIN as f32 || v > i32::MAX as f32 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<i64>() };
+            Result::Vals(vec![Val::I64Const(unsigned64(vi))])
+        } else {
+            Result::Trap
+        }
+    }
+
+    pub fn execute_i64trunc_f64_u(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F64Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < u32::MIN as f64 || v > u32::MAX as f64 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<u64>() };
+            Result::Vals(vec![Val::I64Const(vi)])
+        } else {
+            Result::Trap
+        }
+    }
+
+    pub fn execute_i64trunc_f64_s(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F64Const(v))) = self.stack.pop() {
+            if v.is_nan() || v.is_infinite() { return Result::Trap; }
+            if v < i32::MIN as f64 || v > i32::MAX as f64 { return Result::Trap; }
+            let vi = unsafe { v.to_int_unchecked::<i64>() };
+            Result::Vals(vec![Val::I64Const(unsigned64(vi))])
+        } else {
+            Result::Trap
+        }
+    }
 }
 
-macro_rules! trunc_sat_op {
+macro_rules! convert_op {
     ($this:ident, $v:ident, $vp:pat, $vr:expr) => {
         if let Some(StackEntry::Value($vp)) = $this.stack.pop() {
             Result::Vals(vec![$vr])
@@ -100,33 +173,93 @@ macro_rules! trunc_sat_op {
         }
     };
 }
+
 impl<'a> Thread<'a> {
     pub fn execute_i32trunc_sat_f32_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::F32Const(v), Val::I32Const(v as u32))
+        convert_op!(self, v, Val::F32Const(v), Val::I32Const(v as u32))
+    }
+    pub fn execute_i32trunc_sat_f32_s(&mut self) -> Result {
+        convert_op!(self, v, Val::F32Const(v), Val::I32Const(unsigned32(v as i32)))
     }
     pub fn execute_i32trunc_sat_f64_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::F64Const(v), Val::I32Const(v as u32))
+        convert_op!(self, v, Val::F64Const(v), Val::I32Const(v as u32))
+    }
+    pub fn execute_i32trunc_sat_f64_s(&mut self) -> Result {
+        convert_op!(self, v, Val::F64Const(v), Val::I32Const(unsigned32(v as i32)))
     }
     pub fn execute_i64trunc_sat_f32_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::F32Const(v), Val::I64Const(v as u64))
+        convert_op!(self, v, Val::F32Const(v), Val::I64Const(v as u64))
+    }
+    pub fn execute_i64trunc_sat_f32_s(&mut self) -> Result {
+        convert_op!(self, v, Val::F32Const(v), Val::I64Const(unsigned64(v as i64)))
     }
     pub fn execute_i64trunc_sat_f64_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::F64Const(v), Val::I64Const(v as u64))
+        convert_op!(self, v, Val::F64Const(v), Val::I64Const(v as u64))
+    }
+    pub fn execute_i64trunc_sat_f64_s(&mut self) -> Result {
+        convert_op!(self, v, Val::F64Const(v), Val::I64Const(unsigned64(v as i64)))
     }
 }
 
-// TODO: check algorithm correct
+impl<'a> Thread<'a> {
+    pub fn execute_demote(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F64Const(_v))) = self.stack.pop() {
+            unimplemented!()
+        } else {
+            Result::Trap
+        }
+    }
+    pub fn execute_promote(&mut self) -> Result {
+        if let Some(StackEntry::Value(Val::F32Const(_v))) = self.stack.pop() {
+            unimplemented!()
+        } else {
+            Result::Trap
+        }
+    }
+}
+
 impl<'a> Thread<'a> {
     pub fn execute_f32convert_i32_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::I32Const(v), Val::F32Const(v as f32))
+        convert_op!(self, v, Val::I32Const(v), Val::F32Const(v as f32))
+    }
+    pub fn execute_f32convert_i32_s(&mut self) -> Result {
+        convert_op!(self, v, Val::I32Const(v), Val::F32Const(signed32(v) as f32))
     }
     pub fn execute_f32convert_i64_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::I64Const(v), Val::F32Const(v as f32))
+        convert_op!(self, v, Val::I64Const(v), Val::F32Const(v as f32))
+    }
+    pub fn execute_f32convert_i64_s(&mut self) -> Result {
+        convert_op!(self, v, Val::I64Const(v), Val::F32Const(signed64(v) as f32))
     }
     pub fn execute_f64convert_i32_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::I32Const(v), Val::F64Const(v as f64))
+        convert_op!(self, v, Val::I32Const(v), Val::F64Const(v as f64))
+    }
+    pub fn execute_f64convert_i32_s(&mut self) -> Result {
+        convert_op!(self, v, Val::I32Const(v), Val::F64Const(signed32(v) as f64))
     }
     pub fn execute_f64convert_i64_u(&mut self) -> Result {
-        trunc_sat_op!(self, v, Val::I64Const(v), Val::F64Const(v as f64))
+        convert_op!(self, v, Val::I64Const(v), Val::F64Const(v as f64))
+    }
+    pub fn execute_f64convert_i64_s(&mut self) -> Result {
+        convert_op!(self, v, Val::I64Const(v), Val::F64Const(signed64(v) as f64))
+    }
+}
+
+impl<'a> Thread<'a> {
+    pub fn execute_i32reinterpret_f32(&mut self) -> Result {
+        fn reinterpret(n: f32) -> u32 { u32::from_le_bytes(n.to_le_bytes()) }
+        convert_op!(self, v, Val::F32Const(v), Val::I32Const(reinterpret(v)))
+    }
+    pub fn execute_i64reinterpret_f64(&mut self) -> Result {
+        fn reinterpret(n: f64) -> u64 { u64::from_le_bytes(n.to_le_bytes()) }
+        convert_op!(self, v, Val::F64Const(v), Val::I64Const(reinterpret(v)))
+    }
+    pub fn execute_f32reinterpret_i32(&mut self) -> Result {
+        fn reinterpret(n: u32) -> f32 { f32::from_le_bytes(n.to_le_bytes()) }
+        convert_op!(self, v, Val::I32Const(v), Val::F32Const(reinterpret(v)))
+    }
+    pub fn execute_f64reinterpret_f64(&mut self) -> Result {
+        fn reinterpret(n: u64) -> f64 { f64::from_le_bytes(n.to_le_bytes()) }
+        convert_op!(self, v, Val::I64Const(v), Val::F64Const(reinterpret(v)))
     }
 }

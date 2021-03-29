@@ -1,3 +1,5 @@
+use super::*;
+
 pub fn iadd64(c1: u64, c2: u64) -> u64 { c1.wrapping_add(c2) }
 pub fn isub64(c1: u64, c2: u64) -> u64 { c1.wrapping_sub(c2) }
 pub fn imul64(c1: u64, c2: u64) -> u64 { c1.wrapping_mul(c2) }
@@ -7,12 +9,12 @@ pub fn irem_u64(c1: u64, c2: u64) -> u64 { c1.wrapping_rem(c2) }
 pub fn irem_s64(c1: u64, c2: u64) -> u64 { c1.wrapping_rem_euclid(c2) }
 pub fn iand64(c1: u64, c2: u64) -> u64 { c1 & c2 }
 pub fn ior64(c1: u64, c2: u64) -> u64 { c1 | c2 }
-pub fn ixor64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn ixor64(c1: u64, c2: u64) -> u64 { c1 ^ c2 }
 pub fn ishl64(c1: u64, c2: u64) -> u64 { c1.wrapping_shl(c2 as u32) }
-pub fn ishr_u64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
-pub fn ishr_s64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
-pub fn irotl64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
-pub fn irotr64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn ishr_u64(c1: u64, c2: u64) -> u64 { c1.wrapping_shr(c2 as u32) }
+pub fn ishr_s64(c1: u64, c2: u64) -> u64 { unsigned64(signed64(c1).wrapping_shr(c2 as u32)) }
+pub fn irotl64(c1: u64, c2: u64) -> u64 { c1.rotate_left((c2 % 64) as u32) }
+pub fn irotr64(c1: u64, c2: u64) -> u64 { c1.rotate_right((c2 % 64) as u32) }
 pub fn iclz64(i: u64) -> u64 { i.leading_zeros().into() }
 pub fn ictz64(i: u64) -> u64 { i.trailing_zeros().into() }
 pub fn ipopcnt64(i: u64) -> u64 { i.count_ones().into() }
@@ -20,21 +22,21 @@ pub fn ieqz64(i: u64) -> u64 { if i == 0 { 1 } else { 0 } }
 pub fn ieq64(c1: u64, c2: u64) -> u64 { if c1 == c2 { 1 } else { 0 } }
 pub fn ine64(c1: u64, c2: u64) -> u64 { if c1 != c2 { 1 } else { 0 } }
 pub fn ilt_u64(c1: u64, c2: u64) -> u64 { if c1 < c2 { 1 } else { 0 } }
-pub fn ilt_s64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn ilt_s64(c1: u64, c2: u64) -> u64 { if signed64(c1) < signed64(c2) { 1 } else { 0 } }
 pub fn igt_u64(c1: u64, c2: u64) -> u64 { if c1 > c2 { 1 } else { 0 } }
-pub fn igt_s64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn igt_s64(c1: u64, c2: u64) -> u64 { if signed64(c1) > signed64(c2) { 1 } else { 0 } }
 pub fn ile_u64(c1: u64, c2: u64) -> u64 { if c1 <= c2 { 1 } else { 0 } }
-pub fn ile_s64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn ile_s64(c1: u64, c2: u64) -> u64 { if signed64(c1) <= signed64(c2) { 1 } else { 0 } }
 pub fn ige_u64(c1: u64, c2: u64) -> u64 { if c1 >= c2 { 1 } else { 0 } }
-pub fn ige_s64(_c1: u64, _c2: u64) -> u64 { unimplemented!() }
+pub fn ige_s64(c1: u64, c2: u64) -> u64 { if signed64(c1) >= signed64(c2) { 1 } else { 0 } }
 // iextendM_s
 
 pub fn fadd64(c1: f64, c2: f64) -> f64 { c1 + c2 }
 pub fn fsub64(c1: f64, c2: f64) -> f64 { c1 - c2 }
 pub fn fmul64(c1: f64, c2: f64) -> f64 { c1 * c2 }
 pub fn fdiv64(c1: f64, c2: f64) -> f64 { c1 / c2 }
-pub fn fmin64(c1: f64, c2: f64) -> f64 { if c1 < c2 { c1 } else { c2 } }
-pub fn fmax64(c1: f64, c2: f64) -> f64 { if c1 > c2 { c1 } else { c2 } }
+pub fn fmin64(c1: f64, c2: f64) -> f64 { c1.min(c2) }
+pub fn fmax64(c1: f64, c2: f64) -> f64 { c1.max(c2) }
 pub fn fcopysign64(c1: f64, c2: f64) -> f64 { c1.copysign(c2) }
 pub fn fabs64(f: f64) -> f64 { f.abs() }
 pub fn fneg64(f: f64) -> f64 { -f }

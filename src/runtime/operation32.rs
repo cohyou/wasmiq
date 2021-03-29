@@ -1,3 +1,5 @@
+use super::*;
+
 pub fn iadd32(c1: u32, c2: u32) -> u32 { c1.wrapping_add(c2) }
 pub fn isub32(c1: u32, c2: u32) -> u32 { c1.wrapping_sub(c2) }
 pub fn imul32(c1: u32, c2: u32) -> u32 { c1.wrapping_mul(c2) }
@@ -7,12 +9,12 @@ pub fn irem_u32(c1: u32, c2: u32) -> u32 { c1.wrapping_rem(c2) }
 pub fn irem_s32(c1: u32, c2: u32) -> u32 { c1.wrapping_rem_euclid(c2) }
 pub fn iand32(c1: u32, c2: u32) -> u32 { c1 & c2 }
 pub fn ior32(c1: u32, c2: u32) -> u32 { c1 | c2 }
-pub fn ixor32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn ixor32(c1: u32, c2: u32) -> u32 { c1 ^ c2 }
 pub fn ishl32(c1: u32, c2: u32) -> u32 { c1.wrapping_shl(c2) }
-pub fn ishr_u32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
-pub fn ishr_s32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
-pub fn irotl32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
-pub fn irotr32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn ishr_u32(c1: u32, c2: u32) -> u32 { c1.wrapping_shr(c2) }
+pub fn ishr_s32(c1: u32, c2: u32) -> u32 { unsigned32(signed32(c1).wrapping_shr(c2)) }
+pub fn irotl32(c1: u32, c2: u32) -> u32 { c1.rotate_left(c2 % 32) }
+pub fn irotr32(c1: u32, c2: u32) -> u32 { c1.rotate_right(c2 % 32) }
 pub fn iclz32(i: u32) -> u32 { i.leading_zeros() }
 pub fn ictz32(i: u32) -> u32 { i.trailing_zeros() }
 pub fn ipopcnt32(i: u32) -> u32 { i.count_ones() }
@@ -20,21 +22,21 @@ pub fn ieqz32(i: u32) -> u32 { if i == 0 { 1 } else { 0 } }
 pub fn ieq32(c1: u32, c2: u32) -> u32 { if c1 == c2 { 1 } else { 0 } }
 pub fn ine32(c1: u32, c2: u32) -> u32 { if c1 != c2 { 1 } else { 0 } }
 pub fn ilt_u32(c1: u32, c2: u32) -> u32 { if c1 < c2 { 1 } else { 0 } }
-pub fn ilt_s32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn ilt_s32(c1: u32, c2: u32) -> u32 { if signed32(c1) < signed32(c2) { 1 } else { 0 } }
 pub fn igt_u32(c1: u32, c2: u32) -> u32 { if c1 > c2 { 1 } else { 0 } }
-pub fn igt_s32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn igt_s32(c1: u32, c2: u32) -> u32 { if signed32(c1) > signed32(c2) { 1 } else { 0 } }
 pub fn ile_u32(c1: u32, c2: u32) -> u32 { if c1 <= c2 { 1 } else { 0 } }
-pub fn ile_s32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn ile_s32(c1: u32, c2: u32) -> u32 { if signed32(c1) <= signed32(c2) { 1 } else { 0 } }
 pub fn ige_u32(c1: u32, c2: u32) -> u32 { if c1 >= c2 { 1 } else { 0 } }
-pub fn ige_s32(_c1: u32, _c2: u32) -> u32 { unimplemented!() }
+pub fn ige_s32(c1: u32, c2: u32) -> u32 { if signed32(c1) >= signed32(c2) { 1 } else { 0 } }
 // iextendM_s
 
 pub fn fadd32(c1: f32, c2: f32) -> f32 { c1 + c2 }
 pub fn fsub32(c1: f32, c2: f32) -> f32 { c1 - c2 }
 pub fn fmul32(c1: f32, c2: f32) -> f32 { c1 * c2 }
 pub fn fdiv32(c1: f32, c2: f32) -> f32 { c1 / c2 }
-pub fn fmin32(c1: f32, c2: f32) -> f32 { if c1 < c2 { c1 } else { c2 } }
-pub fn fmax32(c1: f32, c2: f32) -> f32 { if c1 > c2 { c1 } else { c2 } }
+pub fn fmin32(c1: f32, c2: f32) -> f32 { c1.min(c2) }
+pub fn fmax32(c1: f32, c2: f32) -> f32 { c1.max(c2) }
 pub fn fcopysign32(c1: f32, c2: f32) -> f32 { c1.copysign(c2) }
 pub fn fabs32(f: f32) -> f32 { f.abs() }
 pub fn fneg32(f: f32) -> f32 { -f }

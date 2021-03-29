@@ -45,6 +45,13 @@ pub enum Result {
     Trap,
 }
 
+impl Result {
+    pub fn i32val(n: u32) -> Self { Result::Vals(vec![Val::I32Const(n)]) }
+    pub fn i64val(n: u64) -> Self { Result::Vals(vec![Val::I64Const(n)]) }
+    pub fn f32val(n: f32) -> Self { Result::Vals(vec![Val::F32Const(n)]) }
+    pub fn f64val(n: f64) -> Self { Result::Vals(vec![Val::F64Const(n)]) }
+}
+
 #[derive(Default)]
 pub struct Store {
     pub funcs: Vec<FuncInst>,
@@ -155,21 +162,10 @@ impl<'a> Thread<'a> {
     }
 }
 
-// pub fn signed8(n: u8) -> i8 {
-//     unimplemented!();
-// }
-
-// pub fn signed16(n: u16) -> i16 {
-//     unimplemented!();
-// }
-
-// pub fn signed32(n: u32) -> i32 {
-//     unimplemented!();
-// }
-
-// pub fn signed64(n: u64) -> i64 {
-//     unimplemented!();
-// }
+pub fn signed32(n: u32) -> i32 { i32::from_le_bytes(n.to_le_bytes()) }
+pub fn signed64(n: u64) -> i64 { i64::from_le_bytes(n.to_le_bytes()) }
+pub fn unsigned32(n: i32) -> u32 { u32::from_le_bytes(n.to_le_bytes()) }
+pub fn unsigned64(n: i64) -> u64 { u64::from_le_bytes(n.to_le_bytes()) }
 
 #[test]
 fn test_trunc() {
