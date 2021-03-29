@@ -1,7 +1,7 @@
-use crate::{
-    ValSize,
-    ValSign,
-};
+// use crate::{
+//     ValSize,
+//     ValSign,
+// };
 
 use super::*;
 
@@ -79,7 +79,7 @@ impl<'a> Thread<'a> {
             if v.is_nan() || v.is_infinite() { return Result::Trap; }
             // let vf = v.trunc().round() as i32;
             // TODO: update algorithm
-            // Result::Vals(vec![Val::I32Const(vf)])
+            // Result::Vals(vec![Val::I32Const(vf)])Result::Trap
             unimplemented!()
         } else {
             Result::Trap

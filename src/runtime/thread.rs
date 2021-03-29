@@ -22,7 +22,7 @@ impl<'a> Thread<'a> {
         self.execute_instrs(instrs);
     }
 
-    fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> Result {
+    pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> Result {
         for instr in instrs {
             match self.execute_instr(instr) {
                 Result::Vals(vals) => {
@@ -41,9 +41,9 @@ impl<'a> Thread<'a> {
             /* Block Instructions */
     
             // Control Instructions
-            Instr::Block(_blocktype, _instrs) => self.execute_block(),
-            Instr::Loop(_blocktype, _instrs) => self.execute_loop(),
-            Instr::If(_blocktype, _instrs1, _instrs2) => self.execute_if(),
+            Instr::Block(blocktype, instrs) => self.execute_block(blocktype, instrs),
+            Instr::Loop(blocktype, instrs) => self.execute_loop(blocktype, instrs),
+            Instr::If(blocktype, instrs1, instrs2) => self.execute_if(blocktype, instrs1, instrs2),
     
     
             /* Plain Instructions */
@@ -51,27 +51,27 @@ impl<'a> Thread<'a> {
             // Control Instructions
             Instr::Unreachable => Result::Trap,
             Instr::Nop => Result::Vals(vec![]),
-            Instr::Br(_labelidx) => self.execute_br(),
-            Instr::BrIf(_labelidx) => self.execute_brif(),
-            Instr::BrTable(_labelindices, _labelidx) => self.execute_brtable(),
+            Instr::Br(labelidx) => self.execute_br(labelidx),
+            Instr::BrIf(labelidx) => self.execute_brif(labelidx),
+            Instr::BrTable(labelindices, labelidx) => self.execute_brtable(labelindices, labelidx),
             Instr::Return => self.execute_return(),
-            Instr::Call(_funcidx) => self.execute_call(),
-            Instr::CallIndirect(_funcidx) => self.execute_callindirect(),
+            Instr::Call(funcidx) => self.execute_call(funcidx),
+            Instr::CallIndirect(funcidx) => self.execute_callindirect(funcidx),
     
             // Parametric Instructions
             Instr::Drop(_) => self.execute_drop(),
-            Instr::Select(_valtype) => self.execute_select(),
+            Instr::Select(_) => self.execute_select(),
     
             // Variable Instructions
             Instr::LocalGet(localidx) => self.execute_localget(localidx),
-            Instr::LocalSet(_localidx) => self.execute_localset(),
-            Instr::LocalTee(_localidx) => self.execute_localtee(),
-            Instr::GlobalGet(_globalidx) => self.execute_globalget(),
-            Instr::GlobalSet(_globalidx) => self.execute_globalset(),
+            Instr::LocalSet(localidx) => self.execute_localset(localidx),
+            Instr::LocalTee(localidx) => self.execute_localtee(localidx),
+            Instr::GlobalGet(globalidx) => self.execute_globalget(globalidx),
+            Instr::GlobalSet(globalidx) => self.execute_globalset(globalidx),
     
             // Memory Instructions
-            Instr::Load(_valtype, _memarg) => unimplemented!(),
-            Instr::Store(_valtype, _memarg) => unimplemented!(),
+            Instr::Load(valtype, memarg) => self.execute_load(valtype, memarg),
+            Instr::Store(valtype, memarg) => self.execute_store(valtype, memarg),
             Instr::ILoad8(_valsize, _valsign, _memarg) => unimplemented!(),
             Instr::ILoad16(_valsize, _valsign, _memarg) => unimplemented!(),
             Instr::I64Load32(_valsign, _memarg) => unimplemented!(),
@@ -230,7 +230,7 @@ impl<'a> Thread<'a> {
         }
     }
 
-    pub fn execute_invoke(&mut self, funcaddr: &FuncAddr) {
+    pub fn execute_invoke(&mut self, funcaddr: &FuncAddr) -> Result {
         // let mut instrs = vec![];
         let funcinst = self.store.funcs[funcaddr.clone()].clone();
     
@@ -267,12 +267,18 @@ impl<'a> Thread<'a> {
                 self.stack.push(activation);
                 let label = StackEntry::Label(m as u32, vec![]);
 
-                self.execute_instrs_with_label(label, &expr.0);
+                if let Result::Vals(vals) = self.execute_instrs_with_label(label, &expr.0) {
+                    let vals: Vec<StackEntry> = vals.iter().map(|v| StackEntry::Value(v.clone())).collect();
+                    self.stack.extend(vals);
+                } else {
+                    return Result::Trap;
+                }
+
 
                 let mut vals = vec![];
                 let n = m;
                 for _ in 0..n {
-                    if let Some(val) = self.stack.pop() {
+                    if let Some(StackEntry::Value(val)) = self.stack.pop() {
                         vals.push(val);
                     }
                 }
@@ -280,16 +286,17 @@ impl<'a> Thread<'a> {
                 // pop the label
                 self.stack.pop();  
 
-                self.stack.extend(vals);
+                Result::Vals(vals)
             },
             FuncInst::Host(hostfunc) => {
                 let f = hostfunc.hostcode;
                 f();
+                unimplemented!()
             },
         }
     }
 
-    fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) {
+    pub fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) -> Result {
         self.stack.push(label);
 
         self.execute_instrs(instrs);
@@ -297,7 +304,7 @@ impl<'a> Thread<'a> {
         let mut vals = vec![];
         let m = vals.len();
         for _ in 0..m {
-            if let Some(val) = self.stack.pop() {
+            if let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.push(val);
             }
         }
@@ -305,7 +312,16 @@ impl<'a> Thread<'a> {
         // pop the label
         self.stack.pop();  
         
-        self.stack.extend(vals);
+        Result::Vals(vals)
+    }
+
+    pub fn current_frame(&mut self) -> (u32, Frame) {
+        for entry in self.stack.iter().rev() {
+            if let StackEntry::Activation(arity, frame) = entry {
+                return (arity.clone(), frame.clone());
+            }
+        }
+        unreachable!()
     }
 }
 

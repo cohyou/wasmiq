@@ -16,6 +16,8 @@ use crate::{
     // TableAddr,
     // MemAddr,
     // Frame,
+    FuncType,
+    ModuleInst,
 };
 
 #[derive(PartialEq, Clone, Default)]
@@ -38,7 +40,21 @@ pub enum BlockType {
     TypeIdx(TypeIdx),
     ValType(Option<ValType>),
 }
-
+impl BlockType {
+    pub fn extend(&self, moduleinst: &ModuleInst) -> FuncType {
+        match self {
+            BlockType::TypeIdx(typeidx) => {
+                moduleinst.types[typeidx.clone() as usize].clone()
+            },
+            BlockType::ValType(None) => {
+                (vec![], vec![])
+            },
+            BlockType::ValType(Some(valtype)) => {
+                (vec![], vec![valtype.clone()])
+            },
+        }
+    }
+}
 impl Default for BlockType {
     fn default() -> Self {
         BlockType::ValType(None)

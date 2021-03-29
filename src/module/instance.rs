@@ -414,4 +414,4 @@ fn alloc_global<'a>(store: &'a mut Store, globaltype: GlobalType, val: Val) -> G
 
 // fn grow_table() {}
 
-// fn grow_mem() {}
+
