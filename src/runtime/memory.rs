@@ -19,11 +19,19 @@ impl<'a> Thread<'a> {
         };
         self.execute_load_internal(valtype, &ValSign::U, memarg, n)
     }
-    pub fn execute_iload8(&mut self, _valsize: &ValSize, _valsign: &ValSign, _memarg: &MemArg) -> ExecResult {
-        unimplemented!()
+    pub fn execute_iload8(&mut self, valsize: &ValSize, valsign: &ValSign, memarg: &MemArg) -> ExecResult {
+        let valtype = match valsize {
+            ValSize::V32 => ValType::I32,
+            ValSize::V64 => ValType::I64,
+        };
+        self.execute_load_internal(&valtype, valsign, memarg, 8)
     }
-    pub fn execute_iload16(&mut self, _valsize: &ValSize, _valsign: &ValSign, _memarg: &MemArg) -> ExecResult {
-        unimplemented!()
+    pub fn execute_iload16(&mut self, valsize: &ValSize, valsign: &ValSign, memarg: &MemArg) -> ExecResult {
+        let valtype = match valsize {
+            ValSize::V32 => ValType::I32,
+            ValSize::V64 => ValType::I64,
+        };
+        self.execute_load_internal(&valtype, valsign, memarg, 16)
     }
     pub fn execute_i64load32(&mut self, valsign: &ValSign, memarg: &MemArg)-> ExecResult {
         self.execute_load_internal(&ValType::I64, valsign, memarg, 32)
