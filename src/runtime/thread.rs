@@ -315,7 +315,7 @@ impl<'a> Thread<'a> {
         Result::Vals(vals)
     }
 
-    pub fn current_frame(&mut self) -> (u32, Frame) {
+    pub fn current_frame(&self) -> (u32, Frame) {
         for entry in self.stack.iter().rev() {
             if let StackEntry::Activation(arity, frame) = entry {
                 return (arity.clone(), frame.clone());
