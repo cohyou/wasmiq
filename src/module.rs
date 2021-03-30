@@ -12,6 +12,7 @@ use crate::{
     Expr,
     Error,
     Parser,
+    ExternType,
 };
 
 #[derive(Default)]
@@ -131,10 +132,10 @@ pub fn module_validate(module: Module) -> Result<(), Error> {
 
 pub use instance::module_instanciate;
 
-pub fn module_imports() {
-
+pub fn module_imports(_module: Module) -> (Name, Name, Vec<ExternType>) {
+    unimplemented!()
 }
 
-pub fn module_exports() {
-
+pub fn module_exports(_module: Module) -> (Name, Vec<ExternType>) {
+    unimplemented!()
 }
