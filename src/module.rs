@@ -144,21 +144,23 @@ pub fn module_validate(module: Module) -> Result<(), Error> {
 
 pub use instance::module_instanciate;
 
-pub fn module_imports(module: Module, externtypes: Vec<ExternType>) -> Vec<(Name, Name, ExternType)> {
+pub fn module_imports(module: Module) -> Vec<(Name, Name, ExternType)> {
+    let externtypes = module.validate().unwrap();
     let imports = module.imports;
-    assert_eq!(imports.len(), externtypes.len());
+    assert_eq!(imports.len(), externtypes.0.len());
     let mut results = vec![];
-    for (import, externtype) in imports.iter().zip(externtypes) {
+    for (import, externtype) in imports.iter().zip(externtypes.0) {
         results.push( (import.module.clone(), import.name.clone(), externtype) );
     }
     results
 }
 
-pub fn module_exports(module: Module, externtypes: Vec<ExternType>) -> Vec<(Name, ExternType)> {
+pub fn module_exports(module: Module) -> Vec<(Name, ExternType)> {
+    let externtypes = module.validate().unwrap();
     let exports = module.exports;
-    assert_eq!(exports.len(), externtypes.len());
+    assert_eq!(exports.len(), externtypes.1.len());
     let mut results = vec![];
-    for (export, externtype) in exports.iter().zip(externtypes) {
+    for (export, externtype) in exports.iter().zip(externtypes.1) {
         results.push( (export.name.clone(), externtype) );
     }
     results
