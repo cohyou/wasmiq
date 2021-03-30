@@ -34,6 +34,16 @@ use module::{
     Start,
     Elem,
     Data,
+
+    alloc_hostfunc,
+    alloc_table,
+    find_tabletype,
+    grow_table,
+    alloc_mem,
+    find_memtype,
+    grow_mem,
+    alloc_global,
+    find_globaltype,
 };
 
 

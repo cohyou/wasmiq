@@ -75,11 +75,11 @@ impl Module {
                     }
                 },
                 ExternVal::Table(tableaddr) => {
-                    let tabletype = match store.tables.get(tableaddr.clone()) {
-                        None => return (frame_default, trap),
-                        Some(TableInst{elem, max: m}) => {
-                            TableType(Limits{min: elem.len() as u32, max: m.clone()}, ElemType::FuncRef)
-                        }
+                    let tabletype = 
+                    if let Some(tabletype) = find_tabletype(store, tableaddr.clone()) {
+                        tabletype
+                    } else {
+                        return (frame_default, trap);
                     };
                     if let ExternType::Table(tt) = ext_type {
                         if Module::match_tabletype(tabletype, tt) { return (frame_default, trap); }
@@ -88,11 +88,11 @@ impl Module {
                     }
                 },
                 ExternVal::Mem(memaddr) => {
-                    let memtype = match store.mems.get(memaddr.clone()) {
-                        None => return (frame_default, trap),
-                        Some(MemInst{data, max}) => {
-                            MemType(Limits{min: (data.len()/64) as u32, max: max.clone()})
-                        }
+                    let memtype = 
+                    if let Some(memtype) = find_memtype(store, memaddr.clone()) {
+                        memtype
+                    } else {
+                        return (frame_default, trap);
                     };
                     if let ExternType::Mem(mt) = ext_type {
                         if Module::match_memtype(memtype, mt) { return (frame_default, trap); }
@@ -101,17 +101,11 @@ impl Module {
                     }
                 },
                 ExternVal::Global(globaladdr) => {
-                    let globaltype = match store.globals.get(globaladdr.clone()) {
-                        None => return (frame_default, trap),
-                        Some(GlobalInst{value: val, mutability: mt}) => {
-                            let vt = match val {
-                                Val::I32Const(_) => ValType::I32,
-                                Val::I64Const(_) => ValType::I64,
-                                Val::F32Const(_) => ValType::F32,
-                                Val::F64Const(_) => ValType::F64,
-                            };
-                            GlobalType(vt, mt.clone())
-                        },
+                    let globaltype = 
+                    if let Some(globaltype) = find_globaltype(store, globaladdr.clone()) {
+                        globaltype
+                    } else {
+                        return (frame_default, trap);
                     };
                     if let ExternType::Global(gt) = ext_type {
                         if Module::match_globaltype(globaltype, gt) { return (frame_default, trap); }
@@ -379,14 +373,14 @@ fn alloc_func(store: &mut Store, func: &Func, moduleinst: &ModuleInst) -> FuncAd
     addr
 }
 
-fn alloc_hostfunc(store: &mut Store, functype: FuncType, hostfunc: fn()) -> FuncAddr {
+pub fn alloc_hostfunc(store: &mut Store, functype: FuncType, hostfunc: fn()) -> FuncAddr {
     let addr = store.funcs.len();
     let funcinst = FuncInst::host(functype, hostfunc);
     store.funcs.push(funcinst);
     addr
 }
 
-fn alloc_table<'a>(store: &'a mut Store, tabletype: TableType) -> TableAddr {
+pub fn alloc_table<'a>(store: &'a mut Store, tabletype: TableType) -> TableAddr {
     let addr = store.tables.len();
     let TableType(Limits{ min: n, max: m }, _) = tabletype;
     let mut elem = vec![];
@@ -396,7 +390,7 @@ fn alloc_table<'a>(store: &'a mut Store, tabletype: TableType) -> TableAddr {
     addr
 }
 
-fn alloc_mem<'a>(store: &'a mut Store, memtype: MemType) -> MemAddr {
+pub fn alloc_mem<'a>(store: &'a mut Store, memtype: MemType) -> MemAddr {
     let addr = store.mems.len();
     let MemType(Limits{ min: n, max: m }) = memtype;
     let data = Vec::with_capacity((n * 64) as usize);
@@ -405,13 +399,69 @@ fn alloc_mem<'a>(store: &'a mut Store, memtype: MemType) -> MemAddr {
     addr
 }
 
-fn alloc_global<'a>(store: &'a mut Store, globaltype: GlobalType, val: Val) -> GlobalAddr {
+pub fn alloc_global<'a>(store: &'a mut Store, globaltype: GlobalType, val: Val) -> GlobalAddr {
     let addr = store.globals.len();
     let globalinst = GlobalInst{ value: val, mutability: globaltype.1 };
     store.globals.push(globalinst);
     addr
 }
 
-// fn grow_table() {}
+pub fn find_tabletype(store: &Store, tableaddr: TableAddr) -> Option<TableType> {
+    match store.tables.get(tableaddr.clone()) {
+        None => None,
+        Some(TableInst{elem, max: m}) => {
+            Some(TableType(Limits{min: elem.len() as u32, max: m.clone()}, ElemType::FuncRef))
+        }
+    }
+}
 
+pub fn grow_table(tableinst: &mut TableInst, n: usize) -> std::result::Result<(), Error> {
+    let len = n + (tableinst.elem.len() / (64*1024));
+    if len > 2usize.pow(32) { return Err(Error::Invalid); }
+    if let Some(mx) = tableinst.max {
+        if (mx as usize) < len { return Err(Error::Invalid); }
+    }
+    for _ in 0..n {
+        tableinst.elem.push(None);    
+    }
 
+    Ok(())
+}
+
+pub fn find_memtype(store: &Store, memaddr: TableAddr) -> Option<MemType> {
+    match store.mems.get(memaddr.clone()) {
+        None => None,
+        Some(MemInst{data, max}) => {
+            Some(MemType(Limits{min: (data.len()/64) as u32, max: max.clone()}))
+        }
+    }
+}
+
+pub fn grow_mem(meminst: &mut MemInst, n: usize) -> std::result::Result<(), Error> {
+    let len = n + (meminst.data.len() / (64*1024));
+    if len > 2usize.pow(16) { return Err(Error::Invalid); }
+    if let Some(mx) = meminst.max {
+        if (mx as usize) < len { return Err(Error::Invalid); }
+    }
+    for _ in 0..n {
+        let page = [0x00;64*1024];
+        meminst.data.extend(Vec::from(page));    
+    }
+
+    Ok(())
+}
+
+pub fn find_globaltype(store: &Store, globaladdr: GlobalAddr) -> Option<GlobalType> {
+    match store.globals.get(globaladdr.clone()) {
+        None => None,
+        Some(GlobalInst{value: val, mutability: mt}) => {
+            let vt = match val {
+                Val::I32Const(_) => ValType::I32,
+                Val::I64Const(_) => ValType::I64,
+                Val::F32Const(_) => ValType::F32,
+                Val::F64Const(_) => ValType::F64,
+            };
+            Some(GlobalType(vt, mt.clone()))
+        },
+    }
+}

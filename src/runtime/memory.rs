@@ -1,10 +1,10 @@
 use crate::{
     ValType,
     MemArg,
-    Error,
     ValSize,
     ValSign,
-    MemInst,
+
+    grow_mem,
 };
 
 use super::*;
@@ -231,18 +231,4 @@ impl<'a> Thread<'a> {
             Result::Vals(vec![Val::I32Const(sz as u32)])
         }
     }
-}
-
-pub fn grow_mem(meminst: &mut MemInst, n: usize) -> std::result::Result<(), Error> {
-    let len = n + (meminst.data.len() / (64*1024));
-    if len > 2usize.pow(16) { return Err(Error::Invalid); }
-    if let Some(mx) = meminst.max {
-        if (mx as usize) < len { return Err(Error::Invalid); }
-    }
-    for _ in 0..n {
-        let page = [0x00;64*1024];
-        meminst.data.extend(Vec::from(page));    
-    }
-
-    Ok(())
 }

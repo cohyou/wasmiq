@@ -1,6 +1,18 @@
 mod validate;
 mod instance;
 
+pub use instance::{
+    alloc_hostfunc,
+    alloc_table,
+    find_tabletype,
+    grow_table,
+    alloc_mem,
+    find_memtype,
+    grow_mem,
+    alloc_global,
+    find_globaltype,
+};
+
 use crate::{
     Name,
     Byte,
@@ -132,10 +144,22 @@ pub fn module_validate(module: Module) -> Result<(), Error> {
 
 pub use instance::module_instanciate;
 
-pub fn module_imports(_module: Module) -> (Name, Name, Vec<ExternType>) {
-    unimplemented!()
+pub fn module_imports(module: Module, externtypes: Vec<ExternType>) -> Vec<(Name, Name, ExternType)> {
+    let imports = module.imports;
+    assert_eq!(imports.len(), externtypes.len());
+    let mut results = vec![];
+    for (import, externtype) in imports.iter().zip(externtypes) {
+        results.push( (import.module.clone(), import.name.clone(), externtype) );
+    }
+    results
 }
 
-pub fn module_exports(_module: Module) -> (Name, Vec<ExternType>) {
-    unimplemented!()
+pub fn module_exports(module: Module, externtypes: Vec<ExternType>) -> Vec<(Name, ExternType)> {
+    let exports = module.exports;
+    assert_eq!(exports.len(), externtypes.len());
+    let mut results = vec![];
+    for (export, externtype) in exports.iter().zip(externtypes) {
+        results.push( (export.name.clone(), externtype) );
+    }
+    results
 }

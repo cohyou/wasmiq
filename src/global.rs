@@ -4,20 +4,28 @@ use crate::{
     Val,
     GlobalAddr,
     Error,
+    Mut,
+
+    alloc_global,
+    find_globaltype,
 };
 
-pub fn global_alloc(_store: &mut Store, _globaltype: GlobalType, _val: Val) -> GlobalAddr {
-    unimplemented!()
+pub fn global_alloc(store: &mut Store, globaltype: GlobalType, val: Val) -> GlobalAddr {
+    alloc_global(store, globaltype, val)
 }
 
-pub fn global_type(_store: &Store, _globaladdr: GlobalAddr) -> GlobalType {
-    unimplemented!()
+pub fn global_type(store: &Store, globaladdr: GlobalAddr) -> GlobalType {
+    find_globaltype(store, globaladdr).unwrap()
 }
 
-pub fn global_read(_store: &Store, _globaladdr: GlobalAddr) -> Val {
-    unimplemented!()
+pub fn global_read(store: &Store, globaladdr: GlobalAddr) -> Val {
+    let gi = &store.globals[globaladdr];
+    gi.value
 }
 
-pub fn global_write(_store: &mut Store, _globaladdr: GlobalAddr, _val: Val) -> Result<(), Error> {
-    unimplemented!()
+pub fn global_write(store: &mut Store, globaladdr: GlobalAddr, val: Val) -> Result<(), Error> {
+    let gi = &mut store.globals[globaladdr];
+    if gi.mutability != Mut::Var { return Err(Error::Invalid); }
+    gi.value = val;
+    Ok(())
 }

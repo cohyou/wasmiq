@@ -5,6 +5,11 @@ use crate::{
     Error,
 };
 
-pub fn instance_export(_moduleinst: ModuleInst, _name: Name) -> Result<ExternVal, Error> {
-    unimplemented!()
+pub fn instance_export(moduleinst: ModuleInst, name: Name) -> Result<ExternVal, Error> {
+    for exportinst in moduleinst.exports {
+        if exportinst.name == name {
+            return Ok(exportinst.value);
+        }
+    }
+    Err(Error::Invalid)
 }
