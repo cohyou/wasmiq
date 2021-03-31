@@ -9,12 +9,23 @@ impl<R> Parser<R> where R: Read + Seek {
         self.match_keyword(Keyword::Elem)?;
 
         // table id
-        let tableidx = self.resolve_id(&self.contexts[0].tables.clone())?;
+        let tableidx = match &self.lookahead {
+            nm!(Number::Integer(_)) |
+            tk!(TokenKind::Id(_)) => {
+                self.resolve_id(&self.contexts[0].tables.clone())?
+            },
+            _ => 0, 
+        };
 
         // offset
-        self.match_lparen()?;
-        let offset = self.parse_offset()?;
-
+        let offset = if self.is_lparen()? {
+            self.match_lparen()?;
+            self.parse_offset()?
+        } else {
+            let instr = self.parse_instr()?;
+            Expr(vec![instr])
+        };
+        
         // func indices
         let mut func_indices = vec![];
 

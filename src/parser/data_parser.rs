@@ -9,11 +9,22 @@ impl<R> Parser<R> where R: Read + Seek {
         self.match_keyword(Keyword::Data)?;
 
         // mem id
-        let memidx = self.resolve_id(&self.contexts[0].mems.clone())?;
+        let memidx = match &self.lookahead {
+            nm!(Number::Integer(_)) |
+            tk!(TokenKind::Id(_)) => {
+                self.resolve_id(&self.contexts[0].mems.clone())?
+            },
+            _ => 0, 
+        };
 
         // offset
-        self.match_lparen()?;
-        let offset = self.parse_offset()?;
+        let offset = if self.is_lparen()? {
+            self.match_lparen()?;
+            self.parse_offset()?
+        } else {
+            let instr = self.parse_instr()?;
+            Expr(vec![instr])
+        };
 
         // data string
         let datastring = self.parse_data_string()?;
@@ -28,6 +39,5 @@ impl<R> Parser<R> where R: Read + Seek {
 
         Ok(())
     }
-
 }
 

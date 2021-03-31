@@ -14,9 +14,14 @@ mod elem_parser;
 mod data_parser;
 mod expr_parser;
 
-mod lexer;
+pub mod lexer;
 mod context;
 mod annot;
+
+mod rewriter;
+pub use rewriter::{
+    Rewriter,
+};
 
 use std::io::{Read, Seek};
 use std::convert::TryFrom;
@@ -68,13 +73,26 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn parse_module(&mut self) -> Result<(), ParseError> {
 
-        self.match_keyword(Keyword::Module)?;
-
-        if let tk!(TokenKind::Id(s)) = &self.lookahead {
-            self.module.id = Some(s.clone());
+        // self.match_keyword(Keyword::Module)?;
+        if let kw!(Keyword::Module) = &self.lookahead {
             self.consume()?;
+
+            if let tk!(TokenKind::Id(s)) = &self.lookahead {
+                self.module.id = Some(s.clone());
+                self.consume()?;
+            }
+
+            self.parse_modulefields()?;
+
+            self.match_rparen()?;
+        } else {
+            self.parse_modulefields()?;
         }
 
+        Ok(())
+    }
+
+    fn parse_modulefields(&mut self) -> Result<(), ParseError> {
         parse_field!(self, Type, self.parse_type()?);
         parse_field!(self, Import, self.parse_import()?);
         parse_field!(self, Table, self.parse_table()?);
@@ -92,9 +110,7 @@ impl<R> Parser<R> where R: Read + Seek {
             }
         }
         parse_field!(self, Elem, self.parse_elem()?);
-        parse_field!(self, Data, self.parse_data()?);        
-
-        self.match_rparen()?;
+        parse_field!(self, Data, self.parse_data()?); 
 
         Ok(())
     }

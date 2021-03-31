@@ -157,6 +157,7 @@ use decoder::{
 mod parser;
 use parser::{
     Parser,
+    Rewriter,
 };
 
 mod encoder;
