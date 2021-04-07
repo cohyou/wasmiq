@@ -174,7 +174,22 @@ fn next_token_internal(&mut self) -> LexResult {
             },
 
             // reserved
-            _ if is_idchar(self.current) => return Ok(Token::reserved(vec![], self.loc)),
+            _ if is_idchar(self.current) => {
+                let current = self.current;
+                let mut reserved = vec![current];
+                let mut id_c = self.read()?;
+                loop {
+                    if is_idchar(id_c) {
+                        self.loc.add_pos();
+                        reserved.push(id_c);
+                    } else {
+                        self.current = id_c;
+                        break;
+                    }
+                    id_c = self.read()?;
+                }
+                return Ok(Token::reserved(reserved, self.loc));
+            },
 
             // EOF
             0xFF => return Ok(Token::empty(self.loc)),
