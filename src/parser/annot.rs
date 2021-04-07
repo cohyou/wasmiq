@@ -13,6 +13,7 @@ impl Loc {
     pub fn added(&self, offset: usize) -> Loc {
         Loc(self.0, self.1 + offset)
     }
+    pub fn zero() -> Self { Loc(0, 0) }
 }
 
 impl Default for Loc {

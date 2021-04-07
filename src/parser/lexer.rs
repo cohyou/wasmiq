@@ -52,13 +52,13 @@ pub fn next_token(&mut self) -> LexResult {
     }
 }
 
-pub fn peek_token(&mut self) -> LexResult {
-    if self.peeked_token.is_none() {
-        self.peeked_token = Some(self.next_token_internal()?);
-    }
-    let result = self.peeked_token.clone();
-    Ok(result.unwrap())
-}
+// pub fn peek_token(&mut self) -> LexResult {
+//     if self.peeked_token.is_none() {
+//         self.peeked_token = Some(self.next_token_internal()?);
+//     }
+//     let result = self.peeked_token.clone();
+//     Ok(result.unwrap())
+// }
 
 fn next_token_internal(&mut self) -> LexResult {
 

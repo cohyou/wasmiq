@@ -18,6 +18,8 @@ mod lexer;
 mod context;
 mod annot;
 
+mod rewriter;
+
 use std::io::{Read, Seek};
 use std::convert::TryFrom;
 
@@ -35,6 +37,11 @@ use crate::{
     Limits,
 };
 
+use rewriter::{
+    Rewriter,
+    // RewriteError,
+};
+
 pub use self::error::*;
 // pub use self::module::*;
 pub use self::typeuse_parser::*;
@@ -44,7 +51,7 @@ pub use self::expr_parser::*;
 
 pub struct Parser<R>
 where R: Read + Seek {
-    lexer: Lexer<R>,
+    rewriter: Rewriter<R>,  // lexer: Lexer<R>,
     lookahead: Token,
     pub contexts: Vec<Context>,
     pub module: Module,
@@ -52,8 +59,10 @@ where R: Read + Seek {
 
 impl<R> Parser<R> where R: Read + Seek {
     pub fn new(reader: R) -> Self {
+        let mut rewriter = Rewriter::new(reader);
+        let _ = rewriter.rewrite();
         Self {
-            lexer: Lexer::new(reader),
+            rewriter: rewriter,
             lookahead: Token::empty(Loc::default()),
             contexts: vec![Context::default()],
             module: Module::default(),
@@ -61,7 +70,7 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 
     pub fn parse(&mut self) -> Result<(), ParseError> {
-        self.lookahead = self.lexer.next_token()?;
+        self.lookahead = self.rewriter.next_token()?;
         self.match_lparen()?;
         self.parse_module()
     }
@@ -245,12 +254,12 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 
     fn peek(&mut self) -> Result<Token, ParseError> {
-        let peeked = self.lexer.peek_token()?;
+        let peeked = self.rewriter.peek_token()?;
         Ok(peeked)
     }
 
     fn consume(&mut self) -> Result<(), ParseError> {
-        self.lookahead = self.lexer.next_token()?;
+        self.lookahead = self.rewriter.next_token()?;
         // p!(self.lookahead);
         Ok(())
     }

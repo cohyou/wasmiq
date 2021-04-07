@@ -14,6 +14,7 @@ pub enum ParseError {
     CantResolveId(Token),
     InvalidTypeuseDef(Token, FuncType, FuncType),
     InvalidMessage(Token, String),
+    Rewrite(RewriteError)
     // LastItem,    
 }
 
@@ -27,4 +28,9 @@ impl From<TryFromIntError> for ParseError {
     fn from(_e: TryFromIntError) -> Self {
         ParseError::NumCast(Token::empty(Loc::default()))
     }
+}
+
+use super::rewriter::RewriteError;
+impl From<RewriteError> for ParseError {
+    fn from(e: RewriteError) -> Self { ParseError::Rewrite(e) }
 }
