@@ -14,6 +14,7 @@ use crate::parser::{
 #[derive(Debug)]
 pub enum RewriteError {
     Invalid,
+    Break,
 }
 
 impl From<LexError> for RewriteError {
@@ -57,37 +58,116 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
     
     pub fn rewrite(&mut self) -> Result<(), RewriteError> {
+        self.rewrite_module()
+    }
+
+    fn rewrite_module(&mut self) -> Result<(), RewriteError> {
         let first_lparen = self.lookahead.clone();
         self.match_lparen()?;
         if let kw!(Keyword::Module) = &self.lookahead {
             self.ast.push(first_lparen);
             self.ast.push(self.lookahead.clone());
-            // self.rewrite_modulefields()?;
-            self.make_ast()?;
+            self.rewrite_module_internal()?;
             let lookahead = self.lookahead.clone();
             self.match_rparen()?;
             self.ast.push(lookahead);
             Ok(())
         } else {
-
             let token_lparen = Token::left_paren(Loc::zero());
             let token_module = Token::keyword(Keyword::Module, Loc::zero());
             self.ast = vec![token_lparen, token_module];
-            // self.rewrite_modulefields()
             self.ast.push(first_lparen);
-            self.ast.push(self.lookahead.clone());
-            self.make_ast()?;
+            // self.ast.push(self.lookahead.clone());
+            self.rewrite_list_internal(self.lookahead.clone())?;
+            self.rewrite_module_internal()?;
             self.ast.insert(self.ast.len()-2, Token::right_paren(Loc::zero()));
             Ok(())
         }
     }
 
-    fn make_ast(&mut self) -> Result<(), RewriteError> {
+    fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
         while let Ok(lookahead) = self.lexer.next_token() {
-            self.ast.push(lookahead.clone());
+            match lookahead.value {
+                TokenKind::LeftParen => {
+                    self.ast.push(lookahead.clone());
+                    match self.rewrite_list() {
+                        Err(RewriteError::Break) => break,
+                        _ => {},
+                    }
+                },
+                _ => {
+                    self.ast.push(lookahead.clone());
+                },
+            }
+            
             if lookahead.value == TokenKind::Empty {
                 break;
             }
+        }
+
+        Ok(())
+    }
+
+    fn rewrite_list(&mut self) -> Result<(), RewriteError> {
+        match self.lexer.next_token() {
+            Err(_) => Err(RewriteError::Break),
+            Ok(la) => {
+                self.rewrite_list_internal(la)
+            },
+        }
+    }
+
+    fn rewrite_list_internal(&mut self, token: Token) -> Result<(), RewriteError> {
+        match token {
+            lookahead @ tk!(TokenKind::Empty) => {
+                self.ast.push(lookahead.clone());
+                Err(RewriteError::Break)
+            },
+            lookahead @ kw!(Keyword::Param) => {
+                self.ast.push(lookahead.clone());
+                self.rewrite_param()
+            },
+            _ => {
+                Ok(())
+            },
+        }
+    }
+
+    fn rewrite_param(&mut self) -> Result<(), RewriteError> {
+        let mut valtypes = vec![];
+        let mut right_paren: Option<Token> = None;
+        while let Ok(token) = self.lexer.next_token() {
+            match token {
+                lookahead @ tk!(TokenKind::RightParen) => { 
+                    right_paren = Some(lookahead.clone());
+                    break;
+                },
+                lookahead @ kw!(Keyword::ValType(_)) => {
+                    valtypes.push(lookahead)
+                },
+                lookahead @ _ => {
+                    for valtype in &valtypes {
+                        self.ast.push(valtype.clone());
+                    }
+                    self.ast.push(lookahead);
+                    break;
+                },
+            }
+        }
+
+        for (i, valtype) in valtypes.iter().enumerate() {
+            if i == 0 {
+                self.ast.push(valtype.clone());
+            } else {
+                self.ast.push(Token::right_paren(Loc::zero()));
+                self.ast.push(Token::left_paren(Loc::zero()));
+                self.ast.push(Token::keyword(Keyword::Param, Loc::zero()));
+                self.ast.push(valtype.clone());
+            }
+        }
+
+        if let Some(right_paren) = right_paren {
+            self.ast.push(right_paren.clone());
         }
 
         Ok(())
@@ -206,19 +286,37 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
 #[test]
 fn test_rewriter3() {
-    // rewrite_tokens("(module (type $void (func)) (import \"wasi\" \"log\" (func (type 1))) (table $tab 5 anyfunc))");
-
-    fn rewrite_tokens(src: &str) {
+    fn rewrite_tokens(src: &str) -> Vec<Token> {
         let cursor = std::io::Cursor::new(src);
         let reader = std::io::BufReader::new(cursor);
         let mut rewriter = Rewriter::new(reader);
         
         let _ = rewriter.rewrite();
     
-        println!("{:?}", rewriter.ast);
+        // println!("{:?}", rewriter.ast);
+        rewriter.ast
     }
-    
-    rewrite_tokens("(module (type $void (func)))");
-    rewrite_tokens("(type $void (func))");
+
+    // rewrite_tokens("(module (type $void (func)))");
+    // rewrite_tokens("(type $void (func))");
+
+    // assert_eq!(rewrite_tokens("(param i32)"), vec![]);
+    assert_eq!(rewrite_tokens("(param f32 i32 i64)"), vec![]);
 }
 
+#[test]
+fn test_param() {
+    fn print_tokens(src: &str) {
+        let cursor = std::io::Cursor::new(src);
+        let reader = std::io::BufReader::new(cursor);
+        let mut lexer = Lexer::new(reader);
+        while let Ok(token) = lexer.next_token() {
+            println!("{:?}", token);
+            if let tk!(TokenKind::Empty) = token {
+                break;
+            }
+        }
+    }
+    // print_tokens("(param i32)");
+    print_tokens("(param F32 i32 i64)");
+}
