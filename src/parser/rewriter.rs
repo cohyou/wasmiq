@@ -127,6 +127,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.ast.push(lookahead.clone());
                 self.rewrite_param()
             },
+            lookahead @ kw!(Keyword::Result) => {
+                self.ast.push(lookahead.clone());
+                self.rewrite_param()
+            },
             _ => {
                 Ok(())
             },
@@ -134,6 +138,14 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
 
     fn rewrite_param(&mut self) -> Result<(), RewriteError> {
+        self.rewrite_valtypes(Keyword::Param)
+    }
+
+    fn rewrite_result(&mut self) -> Result<(), RewriteError> {
+        self.rewrite_valtypes(Keyword::Result)
+    }
+
+    fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<(), RewriteError> {
         let mut valtypes = vec![];
         let mut right_paren: Option<Token> = None;
         while let Ok(token) = self.lexer.next_token() {
@@ -161,7 +173,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             } else {
                 self.ast.push(Token::right_paren(Loc::zero()));
                 self.ast.push(Token::left_paren(Loc::zero()));
-                self.ast.push(Token::keyword(Keyword::Param, Loc::zero()));
+                self.ast.push(Token::keyword(keyword.clone(), Loc::zero()));
                 self.ast.push(valtype.clone());
             }
         }
