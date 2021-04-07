@@ -129,7 +129,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             },
             lookahead @ kw!(Keyword::Result) => {
                 self.ast.push(lookahead.clone());
-                self.rewrite_param()
+                self.rewrite_result()
             },
             _ => {
                 Ok(())
@@ -313,7 +313,7 @@ fn test_rewriter3() {
     // rewrite_tokens("(type $void (func))");
 
     // assert_eq!(rewrite_tokens("(param i32)"), vec![]);
-    assert_eq!(rewrite_tokens("(param f32 i32 i64)"), vec![]);
+    assert_eq!(rewrite_tokens("(result f32 i32 i64)"), vec![]);
 }
 
 #[test]
