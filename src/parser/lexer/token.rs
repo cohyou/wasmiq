@@ -1,4 +1,10 @@
-use std::fmt::Debug;
+use std::fmt::{
+    Debug,
+    Display,
+};
+// use crate::{
+//     // ValType,
+// };
 use super::super::annot::{Annot, Loc};
 use super::keyword::*;
 
@@ -9,11 +15,20 @@ pub enum Number {
 }
 
 impl Debug for Number {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        match &self {
            Number::Integer(num) => write!(f, "{:?}", num),
            Number::FloatingPoint(num) => write!(f, "{:?}", num),        
        }        
+    }
+}
+
+impl Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Number::Integer(num) => write!(f, "{}", num),
+            Number::FloatingPoint(num) => write!(f, "{}", num),        
+        }        
     }
 }
 
@@ -28,6 +43,7 @@ pub enum TokenKind {
     LeftParen,
     RightParen,
     Reserved(String),
+    GenSym,
 }
 
 pub type Token = Annot<TokenKind>;
@@ -47,6 +63,7 @@ impl Token {
     pub fn left_paren(loc: Loc) -> Self { Self::new(TokenKind::LeftParen, loc) }
     pub fn right_paren(loc: Loc) -> Self { Self::new(TokenKind::RightParen, loc) }
     pub fn reserved(s: Vec<u8>, loc: Loc) -> Self { Self::new(TokenKind::Reserved(String::from_utf8(s).unwrap()), loc) }
+    pub fn gensym(loc: Loc) -> Self { Self::new(TokenKind::GenSym, loc) }
 }
 
 impl Debug for Token {
@@ -61,3 +78,20 @@ impl Debug for Token {
        }        
     }
 }
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.value {
+            TokenKind::Empty => write!(f, ""),
+            TokenKind::LeftParen => write!(f, "("),
+            TokenKind::RightParen => write!(f, ")"),
+            TokenKind::Keyword(kw) => write!(f, "{}", kw),
+            TokenKind::Number(num) => write!(f, "{}", num),
+            TokenKind::String(s) => write!(f, "{:?}", s),
+            TokenKind::Id(id) => write!(f, "${}", id),
+            TokenKind::Reserved(r) => write!(f, "Reserved({})<{:?}>", r, self.loc),
+            TokenKind::GenSym => write!(f, "<#:gensym>"),
+            // _ => write!(f, "{:?}<{:?}>", self.value, self.loc)
+        }        
+     }
+ }

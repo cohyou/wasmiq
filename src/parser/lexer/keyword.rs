@@ -293,3 +293,41 @@ fn vec_to_frelop(s: &[u8]) -> Option<FRelOp> {
 
 // fn default_result_type() -> ResultType { vec![] }
 fn default_br_table() -> Vec<LabelIdx> { vec![] }
+
+use std::fmt::Display;
+impl Display for Keyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Keyword::Module => write!(f, "module"),
+            Keyword::Param => write!(f, "param"),
+            Keyword::Result => write!(f, "result"),
+            Keyword::Else => write!(f, "else"),
+            Keyword::End => write!(f, "end"),
+            Keyword::Type => write!(f, "type"),
+            Keyword::Func => write!(f, "func"),
+            Keyword::Import => write!(f, "import"),
+            Keyword::Mutable => write!(f, "mut"),
+            Keyword::Global => write!(f, "global"),
+            Keyword::Elem => write!(f, "elem"),
+            Keyword::Data => write!(f, "data"),
+            Keyword::Offset => write!(f, "offset"),
+            Keyword::Export => write!(f, "export"),
+            Keyword::Table => write!(f, "table"),
+            Keyword::Memory => write!(f, "memory"),
+            Keyword::FuncRef => write!(f, "funcref"),
+            Keyword::Local => write!(f, "local"),
+            Keyword::ValType(ValType::I32) => write!(f, "i32"),
+            Keyword::ValType(ValType::I64) => write!(f, "i64"),
+            Keyword::ValType(ValType::F32) => write!(f, "f32"),
+            Keyword::ValType(ValType::F64) => write!(f, "f64"),
+            Keyword::Instr(Instr::Nop) => write!(f, "nop"),
+            Keyword::Instr(Instr::If(_, _, _)) => write!(f, "if"),
+            Keyword::Instr(Instr::I32Const(_)) => write!(f, "i32.const"),
+            Keyword::Instr(Instr::I64Const(_)) => write!(f, "i64.const"),
+            Keyword::Instr(Instr::F32Const(_)) => write!(f, "f32.const"),
+            Keyword::Instr(Instr::F64Const(_)) => write!(f, "f64.const"),
+            Keyword::Instr(instr) => write!(f, "{:?}", instr),
+            _ => write!(f, "{:?}", self),
+        }
+    }
+}

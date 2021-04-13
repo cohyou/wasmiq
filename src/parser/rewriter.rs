@@ -1,3 +1,10 @@
+mod func;
+mod table;
+mod mem;
+mod global;
+mod dataelem;
+
+
 use std::io::{Read, Seek};
 use crate::parser::lexer::{
     Lexer,
@@ -5,12 +12,15 @@ use crate::parser::lexer::{
     Token,
     TokenKind,
     Keyword,
+    Number,
 };
 use crate::parser::{
     Annot,
     Loc,
 };
-
+use crate::{
+    Instr,
+};
 #[derive(Debug)]
 pub enum RewriteError {
     Invalid,
@@ -30,17 +40,6 @@ where R: Read + Seek {
     pub ast: Vec<Token>,
     current: usize,
 }
-
-// macro_rules! find_segment {
-//     ($this:ident, $kw:ident, $func:ident) => {
-//         loop {
-//             if let kw!(Keyword::$kw) = &$this.lookahead {
-//                 let segment = $this.$func()?;
-//                 return Ok(segment);
-//             }
-//         }
-//     };
-// }
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn new(reader: R) -> Self {
@@ -111,30 +110,225 @@ impl<R> Rewriter<R> where R: Read + Seek {
     fn rewrite_list(&mut self) -> Result<(), RewriteError> {
         match self.lexer.next_token() {
             Err(_) => Err(RewriteError::Break),
-            Ok(la) => {
-                self.rewrite_list_internal(la)
+            Ok(lookahead) => {
+                self.rewrite_list_internal(lookahead)
             },
         }
     }
 
     fn rewrite_list_internal(&mut self, token: Token) -> Result<(), RewriteError> {
         match token {
-            lookahead @ tk!(TokenKind::Empty) => {
-                self.ast.push(lookahead.clone());
+            tk!(TokenKind::Empty) => {
+                self.ast.push(token.clone());
                 Err(RewriteError::Break)
             },
-            lookahead @ kw!(Keyword::Param) => {
-                self.ast.push(lookahead.clone());
+            kw!(Keyword::Param) => {
+                self.ast.push(token.clone());
                 self.rewrite_param()
             },
-            lookahead @ kw!(Keyword::Result) => {
-                self.ast.push(lookahead.clone());
+            kw!(Keyword::Result) => {
+                self.ast.push(token.clone());
                 self.rewrite_result()
             },
+            kw!(Keyword::Local) => {
+                self.ast.push(token.clone());
+                self.rewrite_local()
+            },
+            kw!(Keyword::Import) => {
+                self.ast.push(token.clone());
+                self.rewrite_import()
+            },
+            kw!(Keyword::Func) => {
+                self.rewrite_func(token)
+            },
+            kw!(Keyword::Table) => {
+                self.rewrite_table(token)
+            },
+            kw!(Keyword::Memory) => {
+                self.rewrite_memory(token)
+            },
+            kw!(Keyword::Global) => {
+                self.rewrite_global(token)
+            },
+            kw!(Keyword::Elem) => {
+                self.ast.push(token.clone());
+                self.rewrite_elem()
+            },
+            kw!(Keyword::Data) => {
+                self.ast.push(token.clone());
+                self.rewrite_data()
+            },
             _ => {
+                self.ast.push(token.clone());
                 Ok(())
             },
         }
+    }
+
+    fn rewrite_import(&mut self) -> Result<(), RewriteError> {
+        self.rewrite_typeuse()?;
+        unimplemented!()
+    }
+
+}
+
+
+
+impl<R> Rewriter<R> where R: Read + Seek {
+    fn rewrite_id(&mut self, token_keyword: Token) -> Result<Option<(Vec<Token>, Token)>, RewriteError> {
+        let mut tokens = vec![];
+        let token = self.lexer.next_token()?;
+        let token_type1 = match &token {
+            tk!(TokenKind::Empty) => {
+                self.ast.push(token_keyword);
+                self.ast.push(token.clone());
+                return Ok(None);    
+            },
+            token_id @ tk!(TokenKind::Id(_)) => {
+                tokens.push(token_keyword);
+                tokens.push(token_id.clone());
+                self.lexer.next_token()?
+            },
+            tk!(TokenKind::LeftParen) => {
+                tokens.push(token_keyword);
+                token
+            },
+            _ => {
+                self.ast.push(token_keyword);
+                self.ast.push(token.clone());
+                return Ok(None);
+            },
+        };
+
+        Ok(Some((tokens, token_type1)))
+    }
+
+    fn rewrite_inline_export_import(&mut self, token_keyword: Token) -> Result<(), RewriteError> {
+        let (tokens, token_type1) =
+        if let Some((tokens, token_type1)) = self.rewrite_id(token_keyword)? {
+            (tokens, token_type1)
+        } else {
+            return Ok(());
+        };
+
+        match token_type1 {
+            tk!(TokenKind::LeftParen) => {
+                self.rewrite_inline_export_import_internal(tokens, token_type1)?
+            },
+            _ => {
+                for t in tokens { self.ast.push(t); }
+                self.ast.push(token_type1);
+                return Ok(());
+            },
+        }
+
+        Ok(())
+    }
+
+    fn rewrite_inline_export_import_internal(&mut self, tokens: Vec<Token>, token_type1: Token) -> Result<(), RewriteError> {
+        loop {
+            let token = self.lexer.next_token()?;
+            match token {
+                token_import @ kw!(Keyword::Import) => {
+                    self.ast.push(token_import.clone());
+                    let token_name1 = self.lexer.next_token()?;
+                    self.ast.push(token_name1.clone());
+                    let token_name2 = self.lexer.next_token()?;
+                    self.ast.push(token_name2.clone());
+            
+                    let token_rightparen1 = self.lexer.next_token()?;
+            
+                    self.ast.push(Token::left_paren(Loc::zero()));
+                    for t in &tokens { self.ast.push(t.clone()); }
+            
+                    let token = self.lexer.next_token()?;
+                    match &token {
+                        token_type1 @ kw!(Keyword::ValType(_)) => {
+                            self.ast.push(token_type1.clone());
+                            let token_rightparen2 = self.lexer.next_token()?;
+                            self.ast.push(token_rightparen2);
+                        },
+                        token_leftparen @ tk!(TokenKind::LeftParen) => {
+                            self.ast.push(token_leftparen.clone());
+                            let token_leftparen_mut = self.lexer.next_token()?;
+                            self.ast.push(token_leftparen_mut);
+                            let token_type = self.lexer.next_token()?;
+                            self.ast.push(token_type);
+                            let token_rightparen_mut = self.lexer.next_token()?;
+                            self.ast.push(token_rightparen_mut);                  
+                            let token_rightparen2 = self.lexer.next_token()?;
+                            self.ast.push(token_rightparen2);
+                        },
+                        token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                            self.ast.push(token_num1.clone());
+                            let token = self.lexer.next_token()?;
+                            match token {
+                                token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                                    self.ast.push(token_num2.clone());
+                                    let token_rightparen2 = self.lexer.next_token()?;
+                                    self.ast.push(token_rightparen2);
+                                },
+                                _ => {
+                                    self.ast.push(token);
+                                },
+                            }
+                        },
+                        _ => {
+                            self.ast.push(token.clone());
+                        },
+                    }                      
+            
+                    self.ast.push(token_rightparen1);
+
+                    break;
+                }, 
+                token_export @ kw!(Keyword::Export) => {
+                    self.ast.push(token_export.clone());
+                    let token_name1 = self.lexer.next_token()?;
+                    self.ast.push(token_name1.clone());
+                    self.ast.push(Token::left_paren(Loc::zero()));
+                    if tokens.len() == 1 {
+                        for t in &tokens { self.ast.push(t.clone()); }
+                        self.ast.push(Token::gensym(Loc::zero()))
+                    } else {
+                        for t in &tokens { self.ast.push(t.clone()); }
+                    }
+                    let token_rightparen_keyword = self.lexer.next_token()?;
+                    self.ast.push(token_rightparen_keyword);
+
+                    let token = self.lexer.next_token()?;
+                    match token {
+                        token_leftparen @ tk!(TokenKind::LeftParen) => {
+                            self.ast.push(Token::right_paren(Loc::zero()));
+                            self.ast.push(token_leftparen);
+                        },
+                        _ => {
+                            self.ast.push(token);
+                            break;
+                        }
+                    }
+                },
+                token_mutable @ kw!(Keyword::Mutable) => {
+                    for t in &tokens { self.ast.push(t.clone()); }
+                    self.ast.push(token_type1.clone());
+                    self.ast.push(token_mutable.clone());
+                    break;
+                },
+                _ => {
+                    for t in &tokens { self.ast.push(t.clone()); }
+                    self.ast.push(token.clone());
+                    break;
+                },
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl<R> Rewriter<R> where R: Read + Seek {
+    fn rewrite_typeuse(&mut self) -> Result<(), RewriteError> {
+        unimplemented!()
     }
 
     fn rewrite_param(&mut self) -> Result<(), RewriteError> {
@@ -143,6 +337,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_result(&mut self) -> Result<(), RewriteError> {
         self.rewrite_valtypes(Keyword::Result)
+    }
+
+    fn rewrite_local(&mut self) -> Result<(), RewriteError> {
+        self.rewrite_valtypes(Keyword::Local)
     }
 
     fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<(), RewriteError> {
@@ -184,7 +382,19 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         Ok(())
     }
+}
 
+#[test]
+fn test_rewrite_valtypes() {
+    assert_eq_rewrite("(param f32)", "(module (param f32))");
+    assert_eq_rewrite("(param i32 i64)", "(module (param i32) (param i64))");
+    assert_eq_rewrite("(result f64)", "(module (result f64))");
+    assert_eq_rewrite("(result i64 f32)", "(module (result i64) (result f32))");
+    assert_eq_rewrite("(local f64)", "(module (local f64))");
+    assert_eq_rewrite("(module (local i64 f32))", "(module (local i64) (local f32))");
+}
+
+impl<R> Rewriter<R> where R: Read + Seek {
     pub fn next_token(&mut self) -> Result<Token, RewriteError> {
         if let Some(token) = self.ast.get(self.current) {
             self.current += 1;
@@ -201,78 +411,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
             Err(RewriteError::Invalid)
         }
     }
-
-    // fn rewrite_modulefields(&mut self) -> Result<(), RewriteError> {
-    //     let mut segments = vec![];
-
-    //     segments.push(self.find_type_segment()?);
-    //     segments.push(self.find_import_segment()?);
-    //     segments.push(self.find_table_segment()?);
-    //     segments.push(self.find_memory_segment()?);
-    //     segments.push(self.find_global_segment()?);
-    //     segments.push(self.find_export_segment()?);
-    //     segments.push(self.find_start_segment()?);
-    //     segments.push(self.find_elem_segment()?);
-    //     segments.push(self.find_data_segment()?);
-
-    //     Ok(())
-    // }
-
-    // fn find_type_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Type, rewrite_type)
-    // }
-    // fn find_import_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Import, rewrite_import)
-    // }
-    // fn find_table_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Table, rewrite_table)
-    // }
-    // fn find_memory_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Memory, rewrite_memory)
-    // }
-    // fn find_global_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Global, rewrite_global)
-    // }
-    // fn find_export_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Export, rewrite_export)
-    // }
-    // fn find_start_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Start, rewrite_start)
-    // }
-    // fn find_elem_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Elem, rewrite_start)
-    // }
-    // fn find_data_segment(&mut self) -> Result<AST, RewriteError> {
-    //     find_segment!(self, Data, rewrite_start)
-    // }
-
-    // fn rewrite_type(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_import(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_table(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_memory(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_global(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_export(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_start(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_elem(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
-    // fn rewrite_data(&mut self) -> Result<AST, RewriteError> {
-    //     unimplemented!()
-    // }
 
     fn match_lparen(&mut self) -> Result<(), RewriteError> {
         self.match_token(TokenKind::LeftParen)
@@ -296,39 +434,80 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
 }
 
-#[test]
-fn test_rewriter3() {
-    fn rewrite_tokens(src: &str) -> Vec<Token> {
-        let cursor = std::io::Cursor::new(src);
-        let reader = std::io::BufReader::new(cursor);
-        let mut rewriter = Rewriter::new(reader);
-        
-        let _ = rewriter.rewrite();
-    
-        // println!("{:?}", rewriter.ast);
-        rewriter.ast
-    }
-
-    // rewrite_tokens("(module (type $void (func)))");
-    // rewrite_tokens("(type $void (func))");
-
-    // assert_eq!(rewrite_tokens("(param i32)"), vec![]);
-    assert_eq!(rewrite_tokens("(result f32 i32 i64)"), vec![]);
-}
-
-#[test]
-fn test_param() {
-    fn print_tokens(src: &str) {
-        let cursor = std::io::Cursor::new(src);
-        let reader = std::io::BufReader::new(cursor);
-        let mut lexer = Lexer::new(reader);
-        while let Ok(token) = lexer.next_token() {
-            println!("{:?}", token);
-            if let tk!(TokenKind::Empty) = token {
-                break;
-            }
+#[allow(dead_code)]
+fn print_tokens(src: &str) {
+    let cursor = std::io::Cursor::new(src);
+    let reader = std::io::BufReader::new(cursor);
+    let mut lexer = Lexer::new(reader);
+    while let Ok(token) = lexer.next_token() {
+        println!("{:?}", token);
+        if let tk!(TokenKind::Empty) = token {
+            break;
         }
     }
-    // print_tokens("(param i32)");
-    print_tokens("(param F32 i32 i64)");
+}
+
+#[allow(dead_code)]
+fn rewrite_tokens(src: &str) -> Vec<Token> {
+    let cursor = std::io::Cursor::new(src);
+    let reader = std::io::BufReader::new(cursor);
+    let mut rewriter = Rewriter::new(reader);
+    
+    let _ = rewriter.rewrite();
+
+    // println!("{:?}", rewriter.ast);
+    rewriter.ast
+}
+
+#[allow(dead_code)]
+fn tokens_to_string(tokens: Vec<Token>) -> String {
+    let mut result = String::new();
+    let mut prev = Token::empty(Loc::zero());
+    let mut nospace = false;
+    // print!("[");
+    for token in tokens {
+        match token {
+            tk!(TokenKind::Empty) => {
+                result.push_str(format!("{}", prev).as_ref());
+            },
+            tk!(TokenKind::LeftParen) => {
+                result.push_str(format!("{}", prev).as_ref());
+                match prev {
+                    tk!(TokenKind::Empty) => {},
+                    tk!(TokenKind::LeftParen) => {},
+                    tk!(TokenKind::RightParen) => {
+                        result.push_str(" ");
+                    },
+                    _ => {
+                        if !nospace {
+                            result.push_str(" ")  // print!("_");
+                        }
+                    },
+                }
+                nospace = true;
+            },
+            tk!(TokenKind::RightParen) => {
+                result.push_str(format!("{}", prev).as_ref());
+            },
+            _ => {
+                result.push_str(format!("{}", prev).as_ref());
+                if let tk!(TokenKind::LeftParen) = prev {
+                } else {
+                    if !nospace { 
+                        result.push_str(" ");  // print!("~");
+                    }
+                }
+
+                nospace = false;
+            },
+        };
+        prev = token;
+    }
+    // print!("]");
+    result
+}
+
+#[allow(dead_code)]
+fn assert_eq_rewrite(before: &str, after:&str) {
+    assert_eq!(tokens_to_string(rewrite_tokens(before)), after.to_string());
 }
