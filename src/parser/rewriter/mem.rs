@@ -2,7 +2,43 @@ use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_memory(&mut self, token_mem: Token) -> Result<(), RewriteError> {
-        self.rewrite_inline_export_import(token_mem)
+        let mut tokens = vec![token_mem];
+        let token = self.lexer.next_token()?;
+        let token1 = self.scan_id(token, &mut tokens)?;
+        let token2 = self.lexer.next_token()?;
+
+        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
+            let token_leftparen = token1.clone();
+            self.rewrite_inline_export_import_internal(tokens, token_leftparen.clone(), token2)?;
+            let token_rightparen = self.lexer.next_token()?;
+            let token = self.lexer.next_token()?;
+            match &token {
+                token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                    self.ast.push(token_num1.clone());
+                    let token = self.lexer.next_token()?;
+                    match token {
+                        token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                            self.ast.push(token_num2.clone());
+                            let token_rightparen2 = self.lexer.next_token()?;
+                            self.ast.push(token_rightparen2);
+                        },
+                        _ => {
+                            self.ast.push(token);
+                        },
+                    }
+                },
+                _ => {
+                    self.ast.push(token.clone());
+                },
+            }
+            self.ast.push(token_rightparen);
+        } else {
+            for t in &tokens { self.ast.push(t.clone()); }
+            self.ast.push(token1);
+            self.ast.push(token2);
+        }
+        
+        Ok(())
     }
 }
 

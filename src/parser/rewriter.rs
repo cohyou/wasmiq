@@ -1,4 +1,6 @@
 mod func;
+mod func_if;
+mod func_folded;
 mod table;
 mod mem;
 mod global;
@@ -118,26 +120,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_list_internal(&mut self, token: Token) -> Result<(), RewriteError> {
         match token {
-            tk!(TokenKind::Empty) => {
-                self.ast.push(token.clone());
-                Err(RewriteError::Break)
-            },
-            kw!(Keyword::Param) => {
-                self.ast.push(token.clone());
-                self.rewrite_param()
-            },
-            kw!(Keyword::Result) => {
-                self.ast.push(token.clone());
-                self.rewrite_result()
-            },
-            kw!(Keyword::Local) => {
-                self.ast.push(token.clone());
-                self.rewrite_local()
-            },
-            kw!(Keyword::Import) => {
-                self.ast.push(token.clone());
-                self.rewrite_import()
-            },
             kw!(Keyword::Func) => {
                 self.rewrite_func(token)
             },
@@ -158,76 +140,52 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.ast.push(token.clone());
                 self.rewrite_data()
             },
+            kw!(Keyword::Param) => {
+                self.ast.push(token.clone());
+                self.rewrite_param()
+            },
+            kw!(Keyword::Result) => {
+                self.ast.push(token.clone());
+                self.rewrite_result()
+            },
+            kw!(Keyword::Local) => {
+                self.ast.push(token.clone());
+                self.rewrite_local()
+            },
+            tk!(TokenKind::Empty) => {
+                self.ast.push(token.clone());
+                Err(RewriteError::Break)
+            },
             _ => {
                 self.ast.push(token.clone());
                 Ok(())
             },
         }
     }
-
-    fn rewrite_import(&mut self) -> Result<(), RewriteError> {
-        self.rewrite_typeuse()?;
-        unimplemented!()
-    }
-
 }
 
 
-
 impl<R> Rewriter<R> where R: Read + Seek {
-    fn rewrite_id(&mut self, token_keyword: Token) -> Result<Option<(Vec<Token>, Token)>, RewriteError> {
-        let mut tokens = vec![];
-        let token = self.lexer.next_token()?;
-        let token_type1 = match &token {
-            tk!(TokenKind::Empty) => {
-                self.ast.push(token_keyword);
-                self.ast.push(token.clone());
-                return Ok(None);    
-            },
-            token_id @ tk!(TokenKind::Id(_)) => {
-                tokens.push(token_keyword);
-                tokens.push(token_id.clone());
-                self.lexer.next_token()?
-            },
-            tk!(TokenKind::LeftParen) => {
-                tokens.push(token_keyword);
-                token
-            },
-            _ => {
-                self.ast.push(token_keyword);
-                self.ast.push(token.clone());
-                return Ok(None);
-            },
-        };
-
-        Ok(Some((tokens, token_type1)))
-    }
-
-    fn rewrite_inline_export_import(&mut self, token_keyword: Token) -> Result<(), RewriteError> {
-        let (tokens, token_type1) =
-        if let Some((tokens, token_type1)) = self.rewrite_id(token_keyword)? {
-            (tokens, token_type1)
+    fn scan_id(&mut self, token_maybe_id: Token, tokens: &mut Vec<Token>) -> Result<Token, RewriteError> {
+        if let token_id @ tk!(TokenKind::Id(_)) = token_maybe_id {
+            tokens.push(token_id.clone());
+            let next = self.lexer.next_token()?;
+            Ok(next)
         } else {
-            return Ok(());
-        };
-
-        match token_type1 {
-            tk!(TokenKind::LeftParen) => {
-                self.rewrite_inline_export_import_internal(tokens, token_type1)?
-            },
-            _ => {
-                for t in tokens { self.ast.push(t); }
-                self.ast.push(token_type1);
-                return Ok(());
-            },
+            Ok(token_maybe_id)
         }
-
-        Ok(())
     }
 
-    fn rewrite_inline_export_import_internal(&mut self, tokens: Vec<Token>, token_type1: Token) -> Result<(), RewriteError> {
+    fn is_import_or_export(token1: &Token, token2: &Token) -> bool {
+        token1.value == TokenKind::LeftParen &&
+        (token2.value == TokenKind::Keyword(Keyword::Import) ||
+         token2.value == TokenKind::Keyword(Keyword::Export) )
+    }
+
+    fn rewrite_inline_export_import_internal(&mut self, tokens: Vec<Token>, token_leftparen: Token, token2: Token)
+     -> Result<(), RewriteError> {
+        let mut token = token2;
         loop {
-            let token = self.lexer.next_token()?;
             match token {
                 token_import @ kw!(Keyword::Import) => {
                     self.ast.push(token_import.clone());
@@ -236,49 +194,8 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     let token_name2 = self.lexer.next_token()?;
                     self.ast.push(token_name2.clone());
             
-                    let token_rightparen1 = self.lexer.next_token()?;
-            
-                    self.ast.push(Token::left_paren(Loc::zero()));
+                    self.ast.push(token_leftparen);
                     for t in &tokens { self.ast.push(t.clone()); }
-            
-                    let token = self.lexer.next_token()?;
-                    match &token {
-                        token_type1 @ kw!(Keyword::ValType(_)) => {
-                            self.ast.push(token_type1.clone());
-                            let token_rightparen2 = self.lexer.next_token()?;
-                            self.ast.push(token_rightparen2);
-                        },
-                        token_leftparen @ tk!(TokenKind::LeftParen) => {
-                            self.ast.push(token_leftparen.clone());
-                            let token_leftparen_mut = self.lexer.next_token()?;
-                            self.ast.push(token_leftparen_mut);
-                            let token_type = self.lexer.next_token()?;
-                            self.ast.push(token_type);
-                            let token_rightparen_mut = self.lexer.next_token()?;
-                            self.ast.push(token_rightparen_mut);                  
-                            let token_rightparen2 = self.lexer.next_token()?;
-                            self.ast.push(token_rightparen2);
-                        },
-                        token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                            self.ast.push(token_num1.clone());
-                            let token = self.lexer.next_token()?;
-                            match token {
-                                token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                                    self.ast.push(token_num2.clone());
-                                    let token_rightparen2 = self.lexer.next_token()?;
-                                    self.ast.push(token_rightparen2);
-                                },
-                                _ => {
-                                    self.ast.push(token);
-                                },
-                            }
-                        },
-                        _ => {
-                            self.ast.push(token.clone());
-                        },
-                    }                      
-            
-                    self.ast.push(token_rightparen1);
 
                     break;
                 }, 
@@ -308,18 +225,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         }
                     }
                 },
-                token_mutable @ kw!(Keyword::Mutable) => {
-                    for t in &tokens { self.ast.push(t.clone()); }
-                    self.ast.push(token_type1.clone());
-                    self.ast.push(token_mutable.clone());
-                    break;
-                },
                 _ => {
-                    for t in &tokens { self.ast.push(t.clone()); }
-                    self.ast.push(token.clone());
                     break;
                 },
             }
+            token = self.lexer.next_token()?;
         }
 
         Ok(())
@@ -327,9 +237,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    fn rewrite_typeuse(&mut self) -> Result<(), RewriteError> {
-        unimplemented!()
-    }
 
     fn rewrite_param(&mut self) -> Result<(), RewriteError> {
         self.rewrite_valtypes(Keyword::Param)
@@ -347,7 +254,16 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let mut valtypes = vec![];
         let mut right_paren: Option<Token> = None;
         while let Ok(token) = self.lexer.next_token() {
+            println!("rewrite_valtypes: {:?}", token);
             match token {
+                token_id @ tk!(TokenKind::Id(_)) => {
+                    self.ast.push(token_id);
+                    let token_valtype = self.lexer.next_token()?;
+                    self.ast.push(token_valtype);
+                    let token_rightparen = self.lexer.next_token()?;
+                    self.ast.push(token_rightparen);
+                    return Ok(());
+                },
                 lookahead @ tk!(TokenKind::RightParen) => { 
                     right_paren = Some(lookahead.clone());
                     break;

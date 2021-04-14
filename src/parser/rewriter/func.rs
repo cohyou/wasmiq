@@ -2,134 +2,141 @@ use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_func(&mut self, token_func: Token) -> Result<(), RewriteError> {
-        let mut tokens = vec![];
+        let mut tokens = vec![token_func];
         let token = self.lexer.next_token()?;
-        tokens.push(token_func);
-        let token = match token {
-            token_id @ tk!(TokenKind::Id(_)) => {
-                tokens.push(token_id.clone());
-                self.lexer.next_token()?
-            },
-            _ => token,
-        };
+        let token1 = self.scan_id(token, &mut tokens)?;
+        let token2 = self.lexer.next_token()?;
 
-        match token {
-            token_rightparen @ tk!(TokenKind::RightParen) => {
-                for t in &tokens { self.ast.push(t.clone()); }
+        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
+            let token_leftparen = token1.clone();
+            self.rewrite_inline_export_import_internal(tokens, token_leftparen.clone(), token2.clone())?;
+            let token_rightparen = self.lexer.next_token()?;
+            if Rewriter::<R>::is_for_typeuse(&token2) {
+                self.rewrite_typeuse(token_leftparen, token2)?;
+            }
+            self.ast.push(token_rightparen);
+        } else {
+            for t in &tokens { self.ast.push(t.clone()); }
+            let (token1, token2) =
+            if Rewriter::<R>::is_type_list(&token1, &token2) {
+                self.scan_typeidx(token1.clone(), token2.clone())?;
+                let token1 = self.lexer.next_token()?;
+                let token2 = self.lexer.next_token()?;
+
+                (token1, token2)
+            } else {
                 self.add_typeidx();
-                self.ast.push(token_rightparen);
-                return Ok(());
-            },
-            token_instr @ instr!(_) => {
-                for t in &tokens { self.ast.push(t.clone()); }
-                self.add_typeidx();
-                self.ast.push(token_instr);
-                return Ok(());
-            },
-            token_leftparen @ tk!(TokenKind::LeftParen) => {
-                let token = self.lexer.next_token()?;
-                match &token {
-                    kw!(Keyword::Import) => {
-                        self.rewrite_inline_export_import_internal(tokens.clone(), token_leftparen.clone())?;
-                    },
-                    kw!(Keyword::Export) => {
-                        self.rewrite_inline_export_import_internal(tokens.clone(), token_leftparen.clone())?;
-                    },
-                    _ => {},
-                }
-                let token_keyword = match &token {
-                    token_type @ kw!(Keyword::Type) => {
-                        for t in &tokens { self.ast.push(t.clone()); }
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_type.clone());
-                        let token_typeidx = self.lexer.next_token()?;
-                        self.ast.push(token_typeidx);
-                        let token_rightparen = self.lexer.next_token()?;
-                        self.ast.push(token_rightparen);
+                (token1, token2)
+            };
 
-
-                        let token_leftparen = self.lexer.next_token()?;
-                        self.ast.push(token_leftparen);
-
-                        let token = self.lexer.next_token()?;
-                        match &token {
-                            token_param @ kw!(Keyword::Param) => {
-                                self.ast.push(token_param.clone());
-                            },
-                            token_result @ kw!(Keyword::Result) => {
-                                self.ast.push(token_result.clone());
-                            },
-                            token_local @ kw!(Keyword::Local) => {
-                                self.ast.push(token_local.clone());
-                            },
-                            _ => {
-                                self.ast.push(token.clone());
-                            },
-                        }
-                        token.clone()
-                    },
-                    token_param @ kw!(Keyword::Param) => {
-                        for t in &tokens { self.ast.push(t.clone()); }
-                        
-                        self.ast.push(Token::left_paren(Loc::zero()));
-                        self.ast.push(Token::keyword(Keyword::Type, Loc::zero()));
-                        self.ast.push(Token::gensym(Loc::zero()));
-                        self.ast.push(Token::right_paren(Loc::zero()));
-
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_param.clone());
-                        token_param.clone()
-                    },
-                    token_result @ kw!(Keyword::Result) => {
-                        for t in &tokens { self.ast.push(t.clone()); }
-                        
-                        self.ast.push(Token::left_paren(Loc::zero()));
-                        self.ast.push(Token::keyword(Keyword::Type, Loc::zero()));
-                        self.ast.push(Token::gensym(Loc::zero()));
-                        self.ast.push(Token::right_paren(Loc::zero()));
-
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_result.clone());
-                        token_result.clone()
-                    },
-                    token_local @ kw!(Keyword::Local) => {
-                        for t in &tokens { self.ast.push(t.clone()); }
-                        
-                        self.ast.push(Token::left_paren(Loc::zero()));
-                        self.ast.push(Token::keyword(Keyword::Type, Loc::zero()));
-                        self.ast.push(Token::gensym(Loc::zero()));
-                        self.ast.push(Token::right_paren(Loc::zero()));
-
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_local.clone());
-                        token_local.clone()
-                    },
-                    _ => {
-                        self.ast.push(token_leftparen.clone());
-                        token.clone()
-                    },
-                };
-
-                match &token_keyword {
-                    kw!(Keyword::Param) => self.rewrite_param()?,
-                    _ => {},
-                }
-                match &token_keyword {
-                    kw!(Keyword::Result) => self.rewrite_result()?,
-                    _ => {},
-                }
-                match &token_keyword {
-                    kw!(Keyword::Local) => self.rewrite_local()?,
-                    _ => {},
-                }
-            },
-            _ => {
-                for t in &tokens { self.ast.push(t.clone()); }
-                return Ok(());
-            },
+            if Rewriter::<R>::is_for_typeuse(&token2) {
+                let (token1, token2) = self.rewrite_typeuse(token1.clone(), token2.clone())?;
+                self.rewrite_func_body(token1, token2)?;
+            } else {
+                self.rewrite_func_body(token1, token2)?;
+            }
         }
 
         Ok(())
+    }
+
+    fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+        self.ast.push(token1);
+        self.ast.push(token2.clone());
+        let token_typeidx = self.lexer.next_token()?;
+        self.ast.push(token_typeidx);
+        let token_rightparen = self.lexer.next_token()?;
+        self.ast.push(token_rightparen);
+        Ok(())
+    }
+
+    fn rewrite_typeuse(&mut self, token_leftparen: Token, token_keyword: Token) -> Result<(Token, Token), RewriteError> {
+
+        match &token_keyword {
+            token_param @ kw!(Keyword::Param) => {                
+
+                self.ast.push(token_leftparen);
+                self.ast.push(token_param.clone());
+                self.rewrite_param()?;
+
+                let token = self.lexer.next_token()?;
+                match token {
+                    token_leftparen @ tk!(TokenKind::LeftParen) => {
+                        
+                        let token = self.lexer.next_token()?;
+                        match &token {
+                            token_result @ kw!(Keyword::Result) => {
+                                self.ast.push(token_leftparen);
+                                self.ast.push(token_result.clone());
+                                self.rewrite_result()?;
+
+                                let token1 = self.lexer.next_token()?;
+                                let token2 = self.lexer.next_token()?;
+                                return Ok((token1, token2));
+                            },
+                            _ => {
+                                return Ok((token_leftparen.clone(), token.clone()));
+                            },
+                        }
+                    },
+                    _ => {
+                        self.ast.push(token.clone());
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return Ok((token1, token2));
+                    },
+                }
+            },
+            token_result @ kw!(Keyword::Result) => {
+
+                self.ast.push(token_leftparen);
+                self.ast.push(token_result.clone());
+                self.rewrite_result()?;
+                let token1 = self.lexer.next_token()?;
+                let token2 = self.lexer.next_token()?;
+                return Ok((token1, token2));
+            },
+            _ => {
+                return Ok((token_leftparen.clone(), token_keyword.clone()));
+            },
+        }
+    }
+
+    fn rewrite_func_body(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+        match &token1 {
+            tk!(TokenKind::LeftParen) => {
+                match &token2 {
+                    token_local @ kw!(Keyword::Local) => {
+                        self.ast.push(token1);
+                        self.ast.push(token_local.clone());
+                        self.rewrite_local()?;
+                    },
+                    _ => {},
+                }
+            },
+            token_instr @ instr!(_) => {
+                self.rewrite_instrs(vec![token_instr.clone(), token2.clone()])?;
+            },
+            tk!(TokenKind::RightParen) => {
+                self.ast.push(token1.clone());
+                self.ast.push(token2.clone());
+                return Ok(());
+            },
+            _ => {},
+        }
+
+        Ok(())
+    }
+
+    fn is_for_typeuse(token: &Token) -> bool {
+        token.value == TokenKind::Keyword(Keyword::Type) ||
+        token.value == TokenKind::Keyword(Keyword::Param) ||
+        token.value == TokenKind::Keyword(Keyword::Result)
+    }
+
+    fn is_type_list(token1: &Token, token2: &Token) -> bool {
+        token1.value == TokenKind::LeftParen &&
+        token2.value == TokenKind::Keyword(Keyword::Type)
     }
 
     fn add_typeidx(&mut self) {
@@ -144,10 +151,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
 fn test_rewrite_func_normal1() {
     assert_eq_rewrite("(func)", "(module (func (type <#:gensym>)))");
     assert_eq_rewrite("(func nop)", "(module (func (type <#:gensym>) nop))");
-    assert_eq_rewrite("(func nop nop)", "(module (func (type <#:gensym>) nop nop))");
+    assert_eq_rewrite("(func nop unreachable)", "(module (func (type <#:gensym>) nop unreachable))");
     assert_eq_rewrite("(func $id)", "(module (func $id (type <#:gensym>)))");
     assert_eq_rewrite("(func $id nop)", "(module (func $id (type <#:gensym>) nop))");
-    assert_eq_rewrite("(func $id nop nop)", "(module (func $id (type <#:gensym>) nop nop))");
+    assert_eq_rewrite("(func $id nop unreachable)", "(module (func $id (type <#:gensym>) nop unreachable))");
 }
 
 #[test]
@@ -205,12 +212,20 @@ fn test_rewrite_func_normal4() {
 #[test]
 fn test_rewrite_func_normal5() {
     assert_eq_rewrite(
-        "(func (param $pr i32))", 
+        "(func (type 0) (param $pr i32))",
+        "(module (func (type 0) (param $pr i32)))"
+    );
+    assert_eq_rewrite(
+        "(func (param $pr i32))",
         "(module (func (type <#:gensym>) (param $pr i32)))"
     );
     assert_eq_rewrite(
         "(func $id (local $lcl i32))", 
         "(module (func $id (type <#:gensym>) (local $lcl i32)))"
+    );
+    assert_eq_rewrite(
+        "(func $id (local $lcl i32) nop)", 
+        "(module (func $id (type <#:gensym>) (local $lcl i32) nop))"
     );
     assert_eq_rewrite(
         "(func (param i32 i32) (result i32) (local $l1 i64) (local i64 f64))", 
@@ -222,70 +237,3 @@ fn test_rewrite_func_normal5() {
     );
 }
 
-impl<R> Rewriter<R> where R: Read + Seek {
-    fn rewrite_instrs(&mut self) -> Result<(), RewriteError> {
-        while let Ok(token) = self.lexer.next_token() {
-            match token {
-                tk!(TokenKind::Empty) => {
-                    self.ast.push(token.clone());
-                    break;
-                },
-                instr!(Instr::If(_, _, _)) => {
-                    self.ast.push(token.clone());
-                    self.rewrite_if()?;
-                },
-                tk!(TokenKind::LeftParen) => {
-                    self.ast.push(token.clone());
-                    self.rewrite_folded_instrs()?;
-                },
-                _ => {
-                    self.ast.push(token.clone());
-                },
-            }
-        }
-        Ok(())
-    }
-
-    fn rewrite_folded_instrs(&mut self) -> Result<(), RewriteError> {
-        // plaininstr
-        // block
-        // loop
-        // if
-        unimplemented!()
-    }
-}
-
-impl<R> Rewriter<R> where R: Read + Seek {
-    fn rewrite_if(&mut self) -> Result<(), RewriteError> {
-        let mut else_exists = false;
-        while let Ok(token) = self.lexer.next_token() {
-            match token {
-                tk!(TokenKind::Empty) => {
-                    self.ast.push(token.clone());
-                    break;
-                },
-                kw!(Keyword::End) => {
-                    if else_exists {
-                        self.ast.push(Token::keyword(Keyword::Else, Loc::zero()));
-                    }
-                    self.ast.push(token.clone());
-                    break;
-                },
-                kw!(Keyword::Else) => {
-                    self.ast.push(token.clone());
-                    else_exists = true;
-                },
-                _ => {
-                    self.ast.push(token.clone());
-                },
-            }
-        }
-        Ok(())
-    }
-}
-
-#[test]
-#[ignore]
-fn test_rewrite_if() {
-    assert_eq_rewrite("(func (type 0) i32.const 0 if nop else end)", "");
-}

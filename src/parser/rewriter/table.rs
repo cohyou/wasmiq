@@ -2,7 +2,43 @@ use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_table(&mut self, token_table: Token) -> Result<(), RewriteError> {
-        self.rewrite_inline_export_import(token_table)
+        let mut tokens = vec![token_table];
+        let token = self.lexer.next_token()?;
+        let token1 = self.scan_id(token, &mut tokens)?;
+        let token2 = self.lexer.next_token()?;
+
+        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
+            let token_leftparen = token1.clone();
+            self.rewrite_inline_export_import_internal(tokens, token_leftparen.clone(), token2)?;
+            let token_rightparen = self.lexer.next_token()?;
+            let token = self.lexer.next_token()?;
+            match &token {
+                token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                    self.ast.push(token_num1.clone());
+                    let token = self.lexer.next_token()?;
+                    match token {
+                        token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                            self.ast.push(token_num2.clone());
+                            let token_funcref = self.lexer.next_token()?;
+                            self.ast.push(token_funcref);
+                        },
+                        _ => {
+                            self.ast.push(token);
+                        },
+                    }
+                },
+                _ => {
+                    self.ast.push(token.clone());
+                },
+            }
+            self.ast.push(token_rightparen);
+        } else {
+            for t in &tokens { self.ast.push(t.clone()); }
+            self.ast.push(token1);
+            self.ast.push(token2);
+        }
+
+        Ok(())
     }
 }
 
@@ -17,8 +53,8 @@ fn test_rewrite_table_normal() {
 #[test]
 fn test_rewrite_table_import() {
     assert_eq_rewrite(
-        r#"(table (import "name1" "name2") 2 funcref)"#, 
-        r#"(module (import "name1" "name2" (table 2 funcref)))"#
+        r#"(table (import "n1" "n2") 2 funcref)"#, 
+        r#"(module (import "n1" "n2" (table 2 funcref)))"#
     );
     assert_eq_rewrite(
         r#"(table (import "name3" "name4") 20 40 funcref)"#, 
@@ -55,6 +91,7 @@ fn test_rewrite_table_export() {
 }
 
 #[test]
+// #[ignore]
 fn test_rewrite_table_import_export() {
     assert_eq_rewrite(
         r#"(table $expimpid (export "expname3") (import "impname1" "impname2") 1234 funcref)"#, 

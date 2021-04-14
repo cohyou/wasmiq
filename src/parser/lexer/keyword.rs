@@ -321,6 +321,7 @@ impl Display for Keyword {
             Keyword::ValType(ValType::F32) => write!(f, "f32"),
             Keyword::ValType(ValType::F64) => write!(f, "f64"),
             Keyword::Instr(Instr::Nop) => write!(f, "nop"),
+            Keyword::Instr(Instr::Unreachable) => write!(f, "unreachable"),
             Keyword::Instr(Instr::If(_, _, _)) => write!(f, "if"),
             Keyword::Instr(Instr::I32Const(_)) => write!(f, "i32.const"),
             Keyword::Instr(Instr::I64Const(_)) => write!(f, "i64.const"),
