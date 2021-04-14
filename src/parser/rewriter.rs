@@ -182,7 +182,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
          token2.value == TokenKind::Keyword(Keyword::Export) )
     }
 
-    fn rewrite_inline_export_import_internal(&mut self, tokens: Vec<Token>, token_leftparen: Token, token2: Token)
+    fn rewrite_inline_export_import(&mut self, tokens: Vec<Token>, token_leftparen: Token, token2: Token)
      -> Result<(), RewriteError> {
         let mut token = token2;
         loop {

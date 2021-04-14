@@ -12,6 +12,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         };
         
         loop {
+            // println!("token loop: {:?}", token);
             match token {
                 tk!(TokenKind::Empty) => {
                     self.ast.push(token.clone());
@@ -22,9 +23,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     self.rewrite_if()?;
                 },
                 tk!(TokenKind::LeftParen) => {
-                    self.ast.push(Token::keyword(Keyword::Instr(Instr::Unreachable), Loc::zero()));
-                    self.ast.push(token.clone());
-                    self.rewrite_folded_instrs()?;
+                    self.rewrite_folded_instrs(&mut tokens)?;
                 },
                 tk!(TokenKind::RightParen) => {
                     self.ast.push(token.clone());
@@ -49,24 +48,93 @@ impl<R> Rewriter<R> where R: Read + Seek {
         Ok(())
     }
 
-    fn rewrite_folded_instrs(&mut self) -> Result<(), RewriteError> {
-        // plaininstr
-        // block
-        // loop
-        // if
+    fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
+        let token = if let Some(token) = first.pop_front() {
+            token
+        } else {
+            self.lexer.next_token()?
+        };
+        
+        match &token {
+            
+            instr_block @ instr!(Instr::Block(_, _)) => {
+                self.ast.push(instr_block.clone());
+                self.rewrite_folded_instrs_internal(first)?;
+                self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
+            },
+            instr_loop @ instr!(Instr::Loop(_, _)) => {
+                self.ast.push(instr_loop.clone());
+                self.rewrite_folded_instrs_internal(first)?;
+                self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
+            },
+            instr_if @ instr!(Instr::If(_, _, _)) => {
+                self.ast.push(instr_if.clone());
+                // (if label blocktype foldedinstr* (then instr*1) (else instr*2)? )
+                // foldedinstr* ‘if’ label blocktype instr*1 ‘else’ (instr*2)? ‘end’
+                self.rewrite_folded_if()?;
+                self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
+            },
+            instr @ instr!(_) => {
+                // plaininstr
+                self.rewrite_folded_instrs_internal(first)?;
+                self.ast.push(instr.clone());
+            },
+            _ => unimplemented!(),
+        }
+        
+        Ok(())
+    }
+
+    fn rewrite_folded_if(&mut self) -> Result<(), RewriteError> {
         unimplemented!()
+    }
+
+    fn rewrite_folded_instrs_internal(&mut self, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
+        let mut token;
+        loop {
+            if let Some(new_token) = first.pop_front() {
+                token = new_token
+            } else {
+                if let Ok(new_token) = self.lexer.next_token() {
+                    token = new_token
+                } else {
+                    break;
+                }
+            }
+            // println!("token folded: {:?}", token);
+            match token {
+                tk!(TokenKind::RightParen) => {                    
+                    break;
+                },
+                tk!(TokenKind::LeftParen) => {
+                    self.rewrite_folded_instrs(first)?;
+                },
+                tk!(TokenKind::Empty) => {
+                    self.ast.push(token);
+                    break;
+                },
+                _ => {
+                    self.ast.push(token);
+                },
+            }
+        }
+
+        Ok(())
     }
 }
 
 #[test]
-fn test_rewrite_instrs1() {
-    assert_eq_rewrite("(func nop)", "(module (func (type <#:gensym>) nop))");
-}
-
-#[test]
-fn test_rewrite_func_import() {
+fn test_rewrite_instrs_folded() {
     assert_eq_rewrite(
-        r#"(func (import "n1" "n2"))"#, 
-        r#"(module (import "n1" "n2" (func)))"#
+        "(func (block nop i32.const 0 unreachable))", 
+        "(module (func (type <#:gensym>) block nop i32.const 0 unreachable end))"
     );
+    assert_eq_rewrite(
+        "(func (loop nop i32.const 0 unreachable))", 
+        "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
+    );
+    // assert_eq_rewrite(
+    //     "(func (i32.add (local.get 0) (i32.const 2)) )", 
+    //     "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
+    // );
 }

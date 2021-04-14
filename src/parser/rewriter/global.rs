@@ -9,7 +9,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         if Rewriter::<R>::is_import_or_export(&token1, &token2) {
             let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import_internal(tokens, token_leftparen.clone(), token2)?;
+            self.rewrite_inline_export_import(tokens, token_leftparen.clone(), token2)?;
             let token_rightparen = self.lexer.next_token()?;
             let token = self.lexer.next_token()?;
             match &token {

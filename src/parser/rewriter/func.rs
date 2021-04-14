@@ -9,7 +9,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         if Rewriter::<R>::is_import_or_export(&token1, &token2) {
             let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import_internal(tokens, token_leftparen.clone(), token2.clone())?;
+            self.rewrite_inline_export_import(tokens, token_leftparen.clone(), token2.clone())?;
             let token_rightparen = self.lexer.next_token()?;
             if Rewriter::<R>::is_for_typeuse(&token2) {
                 self.rewrite_typeuse(token_leftparen, token2)?;
@@ -110,6 +110,9 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         self.ast.push(token1);
                         self.ast.push(token_local.clone());
                         self.rewrite_local()?;
+                    },
+                    token_instr @ instr!(_) => {
+                        self.rewrite_instrs(vec![token1.clone(), token_instr.clone()])?;
                     },
                     _ => {},
                 }
