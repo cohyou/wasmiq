@@ -137,4 +137,5 @@ fn test_rewrite_instrs_folded() {
     //     "(func (i32.add (local.get 0) (i32.const 2)) )", 
     //     "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
     // );
+    print_tokens("(func i32.load offset=1234 align=45679)");
 }

@@ -35,6 +35,9 @@ pub enum Keyword {
     ValType(ValType),
 
     Instr(Instr),
+
+    MemArgOffset(u32),
+    MemArgAlign(u32),
 }
 
 pub(super) fn vec_to_keyword(s: &[u8]) -> Option<Keyword> {
@@ -63,6 +66,30 @@ pub(super) fn vec_to_keyword(s: &[u8]) -> Option<Keyword> {
         b"end" => Some(Keyword::End),
 
         b"i32" | b"i64" | b"f32" | b"f64" => vec_to_valtype(s).map(|vt| Keyword::ValType(vt)),
+
+
+        _ if s.starts_with(b"offset=") => {
+            let mut s_iter = s.split(|&b| b == b'=');
+            let _ = s_iter.next();
+            s_iter.next().and_then(|offset|
+                String::from_utf8(offset.to_vec()).ok().and_then(|offset|
+                    offset.parse::<u32>().ok().and_then(|offset|
+                        Some(Keyword::MemArgOffset(offset))
+                    )
+                )
+            )
+        },
+        _ if s.starts_with(b"align=") => {
+            let mut s_iter = s.split(|&b| b == b'=');
+            let _ = s_iter.next();
+            s_iter.next().and_then(|align|
+                String::from_utf8(align.to_vec()).ok().and_then(|align|
+                    align.parse::<u32>().ok().and_then(|align|
+                        Some(Keyword::MemArgAlign(align))
+                    )
+                )
+            )
+        },
 
         _ => vec_to_instr(s).map(|instr| Keyword::Instr(instr)),
     }

@@ -44,7 +44,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
     fn rewrite_instr_for_offset(&mut self) -> Result<(), RewriteError> {
         let token = self.lexer.next_token()?;
         match &token {
-            // tk!(TokenKind::Empty) => { self.ast.push(token.clone()); },
             instr!(instr) => {
                 self.ast.push(Token::left_paren(Loc::zero()));
                 self.ast.push(Token::keyword(Keyword::Offset, Loc::zero()));
@@ -88,7 +87,28 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     Instr::IStore8(_, _) |
                     Instr::IStore16(_, _) |
                     Instr::I64Store32(_) => {
-                        unimplemented!();
+                        self.ast.push(token.clone());
+                        let token2 = self.lexer.next_token()?;
+                        match token2 {
+                            kw!(Keyword::MemArgOffset(_)) => {
+                                self.ast.push(token2.clone());
+                                let token3 = self.lexer.next_token()?;
+                                match token3 {
+                                    kw!(Keyword::MemArgAlign(_)) => {
+                                        self.ast.push(token3.clone());
+                                        let token4 = self.lexer.next_token()?;
+                                        self.ast.push(token4.clone());
+                                    }
+                                    _ => self.ast.push(token3.clone()),
+                                }
+                            },
+                            kw!(Keyword::MemArgAlign(_)) => {
+                                self.ast.push(token2.clone());
+                                let token3 = self.lexer.next_token()?;
+                                self.ast.push(token3.clone());
+                            },
+                            _ => self.ast.push(token2.clone()),
+                        }
                     },
 
                     Instr::Unreachable |
@@ -104,9 +124,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 }
                 self.ast.push(Token::right_paren(Loc::zero()));
             },
-            _ => {
-                self.ast.push(token.clone());
-            },
+            _ => self.ast.push(token.clone()),
         }
         Ok(())
     }
