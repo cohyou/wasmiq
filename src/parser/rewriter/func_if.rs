@@ -121,6 +121,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 #[test]
+#[ignore]
 fn test_rewrite_if1() {
     assert_eq_rewrite(
         "(func i32.const 0 if nop else end)", 
@@ -153,6 +154,7 @@ fn test_rewrite_if1() {
 }
 
 #[test]
+#[ignore]
 fn test_rewrite_if2() {
     assert_eq_rewrite(
         "(func i32.const 0 if (type 0) (param i64 f32) nop else end)", 
@@ -181,6 +183,7 @@ fn test_rewrite_if2() {
 }
 
 #[test]
+#[ignore]
 fn test_rewrite_if_no_else() {
     assert_eq_rewrite(
         "(func i32.const 0 if nop end)", 
@@ -213,6 +216,7 @@ fn test_rewrite_if_no_else() {
 }
 
 #[test]
+#[ignore]
 fn test_rewrite_if_nested() {
     assert_eq_rewrite(
         "(func i32.const 0 if (result f64) if (result f32) end end)", 

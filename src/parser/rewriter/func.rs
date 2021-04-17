@@ -1,257 +1,164 @@
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    // pub fn rewrite_func(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
-    //     let mut header = vec![lparen_global, global];
-    //     let maybe_id = self.lexer.next_token()?;
-    //     let token1 = self.scan_id(maybe_id, &mut header)?;
-    //     let token2 = self.lexer.next_token()?;
-    //     // let  (token1, token2) = if Rewriter::<R>::is_type_list(&token1, &token2) {
-    //     //     self.scan_typeidx(token1.clone(), token2.clone())?;
-    //     //     let token1 = self.lexer.next_token()?;
-    //     //     let token2 = self.lexer.next_token()?;
-
-    //     //     (token1, token2)
-    //     // } else {
-    //     //     self.add_typeidx();
-    //     //     (token1, token2)
-    //     // };
-
-    //     self.rewrite_func_internal(header, token1, token2, false)
-    // }
-
-    // fn rewrite_func_internal(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
-    //     match token1 {
-    //         lparen @ tk!(TokenKind::LeftParen) => {
-    //             match token2 {
-    //                 import @ kw!(Keyword::Import) => {
-    //                     self.ast.push(lparen);
-    //                     self.ast.push(import);
-    //                     let name1 = self.lexer.next_token()?;
-    //                     self.ast.push(name1);
-    //                     let name2 = self.lexer.next_token()?;
-    //                     self.ast.push(name2);
-
-    //                     for t in header.clone() { self.ast.push(t); }
-    //                     if exporting && header.len() == 2 {
-    //                         self.ast.push(Token::gensym(Loc::zero()))
-    //                     }
-
-    //                     let rparen = self.lexer.next_token()?;
-
-    //                     match self.lexer.next_token()? {
-    //                         num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-    //                             self.ast.push(num1);
-    //                             match self.lexer.next_token()? {
-    //                                 num2 @ tk!(TokenKind::Number(Number::Integer(_))) => { 
-    //                                     self.ast.push(num2);
-    //                                     let rparen = self.lexer.next_token()?;
-    //                                     self.ast.push(rparen);
-    //                                 },
-    //                                 rparen_memory @ _ => {
-    //                                     // let rparen = self.lexer.next_token()?;
-    //                                     self.ast.push(rparen_memory);
-    //                                 },
-    //                             }      
-    //                         },
-    //                         token @ _ => self.ast.push(token),
-    //                     }
-    //                     self.ast.push(rparen);
-    //                 },
-    //                 export @ kw!(Keyword::Export) => {
-    //                     self.ast.push(lparen);
-    //                     self.ast.push(export);
-    //                     let name = self.lexer.next_token()?;
-    //                     self.ast.push(name);
-
-    //                     for t in header.clone() { self.ast.push(t); }
-    //                     if header.len() == 2 {
-    //                         self.ast.push(Token::gensym(Loc::zero()))
-    //                     }
-
-    //                     self.ast.push(Token::right_paren(Loc::zero()));
-    //                     let rparen_global = self.lexer.next_token()?;
-    //                     self.ast.push(rparen_global);
-
-    //                     let token1 = self.lexer.next_token()?;
-    //                     let token2 = self.lexer.next_token()?;
-    //                     return self.rewrite_func_internal(header, token1, token2, true);
-    //                 },
-    //                 // tp @ kw!(Keyword::Type) => {
-    //                 //     for t in header.clone() { self.ast.push(t); }
-    //                 //     if header.len() == 2 {
-    //                 //         self.ast.push(Token::gensym(Loc::zero()))
-    //                 //     }
-    //                 //     self.scan_typeidx(lparen, tp)?;
-    //                 //     let token1 = self.lexer.next_token()?;
-    //                 //     let token2 = self.lexer.next_token()?;
-    //                 // },
-    //                 _ => {
-    //                     for t in header { self.ast.push(t); }
-    //                     self.ast.push(lparen);
-    //                     self.ast.push(token2);
-    //                 },
-    //             }
-    //         },
-    //         // num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-    //         //     for t in header.clone() { self.ast.push(t); }
-    //         //     if exporting && header.len() == 2 {
-    //         //         self.ast.push(Token::gensym(Loc::zero()))
-    //         //     }
-
-    //         //     self.ast.push(num1);
-    //         //     self.ast.push(token2);
-    //         // },
-    //         _ => {
-    //             for t in header { self.ast.push(t); }
-    //             self.ast.push(token1);
-    //             self.ast.push(token2);
-    //         },
-    //     }
-
-    //     Ok(())
-    // }
-
-    pub fn rewrite_func(&mut self, lparen_global: Token, token_func: Token) -> Result<(), RewriteError> {
-        self.ast.push(lparen_global);
-        let mut tokens = vec![token_func];
-        let token = self.lexer.next_token()?;
-        let token1 = self.scan_id(token, &mut tokens)?;
+    pub fn rewrite_func(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
+        let mut header = vec![lparen_global, global];
+        let maybe_id = self.lexer.next_token()?;
+        let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
 
-        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
-            let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import(tokens, token_leftparen.clone(), token2.clone())?;
-            let token_rightparen = self.lexer.next_token()?;
-            if Rewriter::<R>::is_for_typeuse(&token2) {
-                self.rewrite_typeuse(token_leftparen, token2)?;
-            }
-            self.ast.push(token_rightparen);
-        } else {
-            for t in &tokens { self.ast.push(t.clone()); }
-            let (token1, token2) =
-            if Rewriter::<R>::is_type_list(&token1, &token2) {
-                self.scan_typeidx(token1.clone(), token2.clone())?;
-                let token1 = self.lexer.next_token()?;
-                let token2 = self.lexer.next_token()?;
+        self.rewrite_func_first(header, token1, token2, false)
+    }
 
-                (token1, token2)
-            } else {
+    fn rewrite_func_first(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
+        match token1 {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    import @ kw!(Keyword::Import) => {
+                        self.ast.push(lparen);
+                        self.ast.push(import);
+                        let name1 = self.lexer.next_token()?;
+                        self.ast.push(name1);
+                        let name2 = self.lexer.next_token()?;
+                        self.ast.push(name2);
+
+                        let rparen = self.lexer.next_token()?;
+
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        self.rewrite_func_first(header, token1, token2, exporting)?;
+
+                        self.ast.push(rparen);
+                    },
+                    export @ kw!(Keyword::Export) => {
+                        self.ast.push(lparen);
+                        self.ast.push(export);
+                        let name = self.lexer.next_token()?;
+                        self.ast.push(name);
+
+                        self.push_header(header.clone(), true);
+
+                        self.ast.push(Token::right_paren(Loc::zero()));
+                        let rparen_func = self.lexer.next_token()?;
+                        self.ast.push(rparen_func);
+
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return self.rewrite_func_first(header, token1, token2, true);
+                    },
+                    tp @ kw!(Keyword::Type) => {
+                        self.push_header(header.clone(), false);
+
+                        self.scan_typeidx(lparen, tp)?;
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return self.rewrite_func_rest(token1, token2);
+                    },
+                    param @ kw!(Keyword::Param) => {
+                        self.rewrite_func_valtypes_first(header, lparen, param, exporting)?;
+                    },
+                    result @ kw!(Keyword::Result) => {
+                        self.rewrite_func_valtypes_first(header, lparen, result, exporting)?;
+                    },
+                    local @ kw!(Keyword::Local) => {
+                        self.rewrite_func_valtypes_first(header, lparen, local, exporting)?;
+                    },
+
+                    _ => self.push_others_first(header, lparen, token2),
+                }
+            },
+            instr @ instr!(_) => {
+                self.push_header(header, exporting);
                 self.add_typeidx();
-                (token1, token2)
-            };
-
-            if Rewriter::<R>::is_for_typeuse(&token2) {
-                let (token1, token2) = self.rewrite_typeuse(token1.clone(), token2.clone())?;
-                self.rewrite_func_body(token1, token2)?;
-            } else {
-                self.rewrite_func_body(token1, token2)?;
-            }
+                self.rewrite_instrs(vec![instr, token2])?;
+            },
+            rparen @ tk!(TokenKind::RightParen) => {
+                self.push_header(header, exporting);
+                self.add_typeidx();
+                self.ast.push(rparen);
+            },
+            _ => self.push_others_first(header, token1, token2),
         }
 
         Ok(())
+    }
+
+    fn rewrite_func_valtypes_first(&mut self, header: Vec<Token>, lparen: Token, valtype: Token, exporting: bool) -> Result<(), RewriteError> {
+        self.push_header(header.clone(), exporting);
+        self.add_typeidx();
+        self.rewrite_func_valtypes(lparen, valtype)
+    }
+
+    fn rewrite_func_rest(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+        match token1 {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    param @ kw!(Keyword::Param) => {
+                        self.rewrite_func_valtypes_rest(lparen, param)?;
+                    },
+                    result @ kw!(Keyword::Result) => {
+                        self.rewrite_func_valtypes_rest(lparen, result)?;
+                    },
+                    local @ kw!(Keyword::Local) => {
+                        self.rewrite_func_valtypes_rest(lparen, local)?;
+                    },
+                    instr @ instr!(_) => {
+                        self.rewrite_instrs(vec![lparen, instr])?;
+                    },
+                    _ => self.push_others_rest(lparen, token2),
+                }
+            }
+            _ => self.push_others_rest(token1, token2),
+        }
+
+        Ok(())
+    }
+
+    fn rewrite_func_valtypes_rest(&mut self, lparen: Token, valtype: Token) -> Result<(), RewriteError> {
+        self.rewrite_func_valtypes(lparen, valtype)
+    }
+
+    fn rewrite_func_valtypes(&mut self, lparen: Token, valtype: Token) -> Result<(), RewriteError> {
+        self.ast.push(lparen);
+        self.ast.push(valtype.clone());
+        if let kw!(keyword) = valtype {
+            self.rewrite_valtypes(keyword)?;
+        }
+        
+        let token1 = self.lexer.next_token()?;
+        let token2 = self.lexer.next_token()?;
+        self.rewrite_func_rest(token1, token2)
+    }
+
+    fn push_header(&mut self, header: Vec<Token>, exporting: bool) {
+        for t in header.clone() { self.ast.push(t); }
+        if exporting && header.len() == 2 {
+            self.ast.push(Token::gensym(Loc::zero()))
+        }
+    }
+
+    fn push_others_first(&mut self, header: Vec<Token>, token1: Token, token2: Token) {
+        for t in header { self.ast.push(t); }
+        self.push_others(token1, token2);
+    }
+
+    fn push_others_rest(&mut self, token1: Token, token2: Token) {
+        self.push_others(token1, token2);
+    }
+
+    fn push_others(&mut self, token1: Token, token2: Token) {
+        self.ast.push(token1);
+        self.ast.push(token2);
     }
 
     fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
         self.ast.push(token1);
-        self.ast.push(token2.clone());
-        let token_typeidx = self.lexer.next_token()?;
-        self.ast.push(token_typeidx);
-        let token_rightparen = self.lexer.next_token()?;
-        self.ast.push(token_rightparen);
+        self.ast.push(token2);
+        let typeidx = self.lexer.next_token()?;
+        self.ast.push(typeidx);
+        let rparen = self.lexer.next_token()?;
+        self.ast.push(rparen);
         Ok(())
-    }
-
-    fn rewrite_typeuse(&mut self, token_leftparen: Token, token_keyword: Token) -> Result<(Token, Token), RewriteError> {
-
-        match &token_keyword {
-            token_param @ kw!(Keyword::Param) => {                
-
-                self.ast.push(token_leftparen);
-                self.ast.push(token_param.clone());
-                self.rewrite_param()?;
-
-                let token = self.lexer.next_token()?;
-                match token {
-                    token_leftparen @ tk!(TokenKind::LeftParen) => {
-                        
-                        let token = self.lexer.next_token()?;
-                        match &token {
-                            token_result @ kw!(Keyword::Result) => {
-                                self.ast.push(token_leftparen);
-                                self.ast.push(token_result.clone());
-                                self.rewrite_result()?;
-
-                                let token1 = self.lexer.next_token()?;
-                                let token2 = self.lexer.next_token()?;
-                                return Ok((token1, token2));
-                            },
-                            _ => {
-                                return Ok((token_leftparen.clone(), token.clone()));
-                            },
-                        }
-                    },
-                    _ => {
-                        self.ast.push(token.clone());
-                        let token1 = self.lexer.next_token()?;
-                        let token2 = self.lexer.next_token()?;
-                        return Ok((token1, token2));
-                    },
-                }
-            },
-            token_result @ kw!(Keyword::Result) => {
-
-                self.ast.push(token_leftparen);
-                self.ast.push(token_result.clone());
-                self.rewrite_result()?;
-                let token1 = self.lexer.next_token()?;
-                let token2 = self.lexer.next_token()?;
-                return Ok((token1, token2));
-            },
-            _ => {
-                return Ok((token_leftparen.clone(), token_keyword.clone()));
-            },
-        }
-    }
-
-    fn rewrite_func_body(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
-        match &token1 {
-            tk!(TokenKind::LeftParen) => {
-                match &token2 {
-                    token_local @ kw!(Keyword::Local) => {
-                        self.ast.push(token1);
-                        self.ast.push(token_local.clone());
-                        self.rewrite_local()?;
-                    },
-                    token_instr @ instr!(_) => {
-                        self.rewrite_instrs(vec![token1.clone(), token_instr.clone()])?;
-                    },
-                    _ => {},
-                }
-            },
-            token_instr @ instr!(_) => {
-                self.rewrite_instrs(vec![token_instr.clone(), token2.clone()])?;
-            },
-            tk!(TokenKind::RightParen) => {
-                self.ast.push(token1.clone());
-                self.ast.push(token2.clone());
-                return Ok(());
-            },
-            _ => {},
-        }
-
-        Ok(())
-    }
-
-    fn is_for_typeuse(token: &Token) -> bool {
-        token.value == TokenKind::Keyword(Keyword::Type) ||
-        token.value == TokenKind::Keyword(Keyword::Param) ||
-        token.value == TokenKind::Keyword(Keyword::Result)
-    }
-
-    fn is_type_list(token1: &Token, token2: &Token) -> bool {
-        token1.value == TokenKind::LeftParen &&
-        token2.value == TokenKind::Keyword(Keyword::Type)
     }
 
     fn add_typeidx(&mut self) {
@@ -352,3 +259,54 @@ fn test_rewrite_func_normal5() {
     );
 }
 
+#[test]
+fn test_rewrite_func_import() {
+    assert_eq_rewrite(
+        r#"(func (import "n1" "n2"))"#, 
+        r#"(module (import "n1" "n2" (func (type <#:gensym>))))"#
+    );
+    assert_eq_rewrite(
+        r#"(func (import "n1" "n2") (type 0))"#,
+        r#"(module (import "n1" "n2" (func (type 0))))"#
+    );
+    assert_eq_rewrite(
+        r#"(func $id (import "n1" "n2") (param i32 i64))"#, 
+        r#"(module (import "n1" "n2" (func $id (type <#:gensym>) (param i32) (param i64))))"#
+    );
+    assert_eq_rewrite(
+        r#"(func $id (import "n1" "n2") (param i32 i32) (result i32))"#, 
+        r#"(module (import "n1" "n2" (func $id (type <#:gensym>) (param i32) (param i32) (result i32))))"#
+    );
+}
+
+#[test]
+fn test_rewrite_func_export() {
+    assert_eq_rewrite(
+        r#"(func (export "n1"))"#, 
+        r#"(module (export "n1" (func <#:gensym>)) (func <#:gensym> (type <#:gensym>)))"#
+    );
+    assert_eq_rewrite(
+        r#"(func $id (export "e2") (type 1) nop)"#, 
+        r#"(module (export "e2" (func $id)) (func $id (type 1) nop))"#
+    );
+    assert_eq_rewrite(
+        r#"(func (export "e3") (export "e4") (param $p1 i64) (param i32 i32) (result i32))"#, 
+        r#"(module (export "e3" (func <#:gensym>)) (export "e4" (func <#:gensym>)) (func <#:gensym> (type <#:gensym>) (param $p1 i64) (param i32) (param i32) (result i32)))"#
+    );
+    assert_eq_rewrite(
+        r#"(func $id (export "e5") (export "e6") (type 256) (result f64))"#, 
+        r#"(module (export "e5" (func $id)) (export "e6" (func $id)) (func $id (type 256) (result f64)))"#
+    );
+}
+
+#[test]
+fn test_rewrite_global_import_export() {
+    assert_eq_rewrite(
+        r#"(func (export "e3") (import "n1" "n2") (type 1))"#, 
+        r#"(module (export "e3" (func <#:gensym>)) (import "n1" "n2" (func (type 1))))"#
+    );
+    assert_eq_rewrite(
+        r#"(func $id (export "e3") (import "n1" "n2") (param $p i32) (result i32))"#, 
+        r#"(module (export "e3" (func $id)) (import "n1" "n2" (func $id (type <#:gensym>) (param $p i32) (result i32))))"#
+    );
+}
