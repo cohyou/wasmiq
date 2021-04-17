@@ -1,7 +1,119 @@
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_func(&mut self, token_func: Token) -> Result<(), RewriteError> {
+    // pub fn rewrite_func(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
+    //     let mut header = vec![lparen_global, global];
+    //     let maybe_id = self.lexer.next_token()?;
+    //     let token1 = self.scan_id(maybe_id, &mut header)?;
+    //     let token2 = self.lexer.next_token()?;
+    //     // let  (token1, token2) = if Rewriter::<R>::is_type_list(&token1, &token2) {
+    //     //     self.scan_typeidx(token1.clone(), token2.clone())?;
+    //     //     let token1 = self.lexer.next_token()?;
+    //     //     let token2 = self.lexer.next_token()?;
+
+    //     //     (token1, token2)
+    //     // } else {
+    //     //     self.add_typeidx();
+    //     //     (token1, token2)
+    //     // };
+
+    //     self.rewrite_func_internal(header, token1, token2, false)
+    // }
+
+    // fn rewrite_func_internal(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
+    //     match token1 {
+    //         lparen @ tk!(TokenKind::LeftParen) => {
+    //             match token2 {
+    //                 import @ kw!(Keyword::Import) => {
+    //                     self.ast.push(lparen);
+    //                     self.ast.push(import);
+    //                     let name1 = self.lexer.next_token()?;
+    //                     self.ast.push(name1);
+    //                     let name2 = self.lexer.next_token()?;
+    //                     self.ast.push(name2);
+
+    //                     for t in header.clone() { self.ast.push(t); }
+    //                     if exporting && header.len() == 2 {
+    //                         self.ast.push(Token::gensym(Loc::zero()))
+    //                     }
+
+    //                     let rparen = self.lexer.next_token()?;
+
+    //                     match self.lexer.next_token()? {
+    //                         num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+    //                             self.ast.push(num1);
+    //                             match self.lexer.next_token()? {
+    //                                 num2 @ tk!(TokenKind::Number(Number::Integer(_))) => { 
+    //                                     self.ast.push(num2);
+    //                                     let rparen = self.lexer.next_token()?;
+    //                                     self.ast.push(rparen);
+    //                                 },
+    //                                 rparen_memory @ _ => {
+    //                                     // let rparen = self.lexer.next_token()?;
+    //                                     self.ast.push(rparen_memory);
+    //                                 },
+    //                             }      
+    //                         },
+    //                         token @ _ => self.ast.push(token),
+    //                     }
+    //                     self.ast.push(rparen);
+    //                 },
+    //                 export @ kw!(Keyword::Export) => {
+    //                     self.ast.push(lparen);
+    //                     self.ast.push(export);
+    //                     let name = self.lexer.next_token()?;
+    //                     self.ast.push(name);
+
+    //                     for t in header.clone() { self.ast.push(t); }
+    //                     if header.len() == 2 {
+    //                         self.ast.push(Token::gensym(Loc::zero()))
+    //                     }
+
+    //                     self.ast.push(Token::right_paren(Loc::zero()));
+    //                     let rparen_global = self.lexer.next_token()?;
+    //                     self.ast.push(rparen_global);
+
+    //                     let token1 = self.lexer.next_token()?;
+    //                     let token2 = self.lexer.next_token()?;
+    //                     return self.rewrite_func_internal(header, token1, token2, true);
+    //                 },
+    //                 // tp @ kw!(Keyword::Type) => {
+    //                 //     for t in header.clone() { self.ast.push(t); }
+    //                 //     if header.len() == 2 {
+    //                 //         self.ast.push(Token::gensym(Loc::zero()))
+    //                 //     }
+    //                 //     self.scan_typeidx(lparen, tp)?;
+    //                 //     let token1 = self.lexer.next_token()?;
+    //                 //     let token2 = self.lexer.next_token()?;
+    //                 // },
+    //                 _ => {
+    //                     for t in header { self.ast.push(t); }
+    //                     self.ast.push(lparen);
+    //                     self.ast.push(token2);
+    //                 },
+    //             }
+    //         },
+    //         // num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+    //         //     for t in header.clone() { self.ast.push(t); }
+    //         //     if exporting && header.len() == 2 {
+    //         //         self.ast.push(Token::gensym(Loc::zero()))
+    //         //     }
+
+    //         //     self.ast.push(num1);
+    //         //     self.ast.push(token2);
+    //         // },
+    //         _ => {
+    //             for t in header { self.ast.push(t); }
+    //             self.ast.push(token1);
+    //             self.ast.push(token2);
+    //         },
+    //     }
+
+    //     Ok(())
+    // }
+
+    pub fn rewrite_func(&mut self, lparen_global: Token, token_func: Token) -> Result<(), RewriteError> {
+        self.ast.push(lparen_global);
         let mut tokens = vec![token_func];
         let token = self.lexer.next_token()?;
         let token1 = self.scan_id(token, &mut tokens)?;

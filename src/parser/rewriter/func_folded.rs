@@ -113,10 +113,97 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     self.ast.push(token);
                     break;
                 },
+                instr!(_) => {
+                    self.scan_one_instr(token)?;
+                },
                 _ => {
                     self.ast.push(token);
                 },
             }
+        }
+
+        Ok(())
+    }
+
+    fn scan_one_instr(&mut self, token: Token) -> Result<(), RewriteError> {
+        if let instr!(ref instr) = token {
+            match instr {
+                Instr::Block(_, _) |
+                Instr::Loop(_, _) => {
+                    unreachable!();
+                },
+    
+                Instr::If(_, _, _) => {
+                    unreachable!();
+                },
+    
+                Instr::BrTable(_, _) => {
+                    unimplemented!();
+                },
+    
+                Instr::Br(_) |
+                Instr::BrIf(_) |
+                Instr::Call(_) |
+                Instr::CallIndirect(_) |
+                Instr::LocalGet(_) |
+                Instr::LocalSet(_) |
+                Instr::LocalTee(_) |
+                Instr::GlobalGet(_) |
+                Instr::GlobalSet(_) |
+                Instr::I32Const(_) |
+                Instr::I64Const(_) |
+                Instr::F32Const(_) |
+                Instr::F64Const(_) => {
+                    let token2 = self.lexer.next_token()?;
+                    self.ast.push(token.clone());
+                    self.ast.push(token2.clone());
+                },
+    
+                Instr::Load(_, _) |
+                Instr::ILoad8(_, _, _) |
+                Instr::ILoad16(_, _, _) |
+                Instr::I64Load32(_, _) |
+                Instr::Store(_, _) |
+                Instr::IStore8(_, _) |
+                Instr::IStore16(_, _) |
+                Instr::I64Store32(_) => {
+                    self.ast.push(token.clone());
+                    let token2 = self.lexer.next_token()?;
+                    match token2 {
+                        kw!(Keyword::MemArgOffset(_)) => {
+                            self.ast.push(token2.clone());
+                            let token3 = self.lexer.next_token()?;
+                            match token3 {
+                                kw!(Keyword::MemArgAlign(_)) => {
+                                    self.ast.push(token3.clone());
+                                    let token4 = self.lexer.next_token()?;
+                                    self.ast.push(token4.clone());
+                                }
+                                _ => self.ast.push(token3.clone()),
+                            }
+                        },
+                        kw!(Keyword::MemArgAlign(_)) => {
+                            self.ast.push(token2.clone());
+                            let token3 = self.lexer.next_token()?;
+                            self.ast.push(token3.clone());
+                        },
+                        _ => self.ast.push(token2.clone()),
+                    }
+                },
+    
+                Instr::Unreachable |
+                Instr::Nop |
+                Instr::Return |
+                Instr::Drop(_) |
+                Instr::Select(_) |
+                Instr::MemorySize |
+                Instr::MemoryGrow => {
+                    self.ast.push(token.clone());
+                },
+                _ => { self.ast.push(token.clone()); }
+            }
+        } else {
+            unreachable!();
         }
 
         Ok(())
@@ -133,9 +220,9 @@ fn test_rewrite_instrs_folded() {
         "(func (loop nop i32.const 0 unreachable))", 
         "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
     );
-    // assert_eq_rewrite(
-    //     "(func (i32.add (local.get 0) (i32.const 2)) )", 
-    //     "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
-    // );
+    assert_eq_rewrite(
+        "(func (i32.add (local.get 0) (i32.const 2)) )", 
+        "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
+    );
     print_tokens("(func i32.load offset=1234 align=45679)");
 }

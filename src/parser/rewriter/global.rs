@@ -1,44 +1,99 @@
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_global(&mut self, token_global: Token) -> Result<(), RewriteError> {
-        let mut tokens = vec![token_global];
-        let token = self.lexer.next_token()?;
-        let token1 = self.scan_id(token, &mut tokens)?;
+    pub fn rewrite_global(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
+        let mut header = vec![lparen_global, global];
+        let maybe_id = self.lexer.next_token()?;
+        let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
+        self.rewrite_global_internal(header, token1, token2, false)
+    }
 
-        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
-            let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import(tokens, token_leftparen.clone(), token2)?;
-            let token_rightparen = self.lexer.next_token()?;
-            let token = self.lexer.next_token()?;
-            match &token {
-                token_type1 @ kw!(Keyword::ValType(_)) => {
-                    self.ast.push(token_type1.clone());
-                    let token_rightparen2 = self.lexer.next_token()?;
-                    self.ast.push(token_rightparen2);
-                },
-                token_leftparen @ tk!(TokenKind::LeftParen) => {
-                    self.ast.push(token_leftparen.clone());
-                    let token_leftparen_mut = self.lexer.next_token()?;
-                    self.ast.push(token_leftparen_mut);
-                    let token_type = self.lexer.next_token()?;
-                    self.ast.push(token_type);
-                    let token_rightparen_mut = self.lexer.next_token()?;
-                    self.ast.push(token_rightparen_mut);                  
-                    let token_rightparen2 = self.lexer.next_token()?;
-                    self.ast.push(token_rightparen2);
-                },
+    fn rewrite_global_internal(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
+        match token1 {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    import @ kw!(Keyword::Import) => {
+                        self.ast.push(lparen);
+                        self.ast.push(import);
+                        let name1 = self.lexer.next_token()?;
+                        self.ast.push(name1);
+                        let name2 = self.lexer.next_token()?;
+                        self.ast.push(name2);
 
-                _ => {
-                    self.ast.push(token.clone());
-                },
-            } 
-            self.ast.push(token_rightparen);
-        } else {
-            for t in &tokens { self.ast.push(t.clone()); }
-            self.ast.push(token1);
-            self.ast.push(token2);
+                        for t in header.clone() { self.ast.push(t); }
+                        if exporting && header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        let rparen = self.lexer.next_token()?;
+
+                        match self.lexer.next_token()? {
+                            lparen @ tk!(TokenKind::LeftParen) => {
+                                self.ast.push(lparen);
+                                self.ast.push(self.lexer.next_token()?);
+                                self.ast.push(self.lexer.next_token()?);
+                                self.ast.push(self.lexer.next_token()?);
+                            },
+                            valtype @ kw!(Keyword::ValType(_)) => {
+                                self.ast.push(valtype);
+                            },
+                            _ => {},
+                        }
+                        self.ast.push(rparen);
+                    },
+                    export @ kw!(Keyword::Export) => {
+                        self.ast.push(lparen);
+                        self.ast.push(export);
+                        let name = self.lexer.next_token()?;
+                        self.ast.push(name);
+
+                        for t in header.clone() { self.ast.push(t); }
+                        if header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        self.ast.push(Token::right_paren(Loc::zero()));
+                        let rparen_global = self.lexer.next_token()?;
+                        self.ast.push(rparen_global);
+
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return self.rewrite_global_internal(header, token1, token2, true);
+                    },
+                    mutable @ kw!(Keyword::Mutable) => {
+                        for t in header.clone() { self.ast.push(t); }
+                        if exporting && header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+                        self.ast.push(lparen.clone());
+                        self.ast.push(mutable);
+                        let valtype = self.lexer.next_token()?;
+                        self.ast.push(valtype);
+                        let rparen = self.lexer.next_token()?;
+                        self.ast.push(rparen);
+                    },
+                    _ => {
+                        for t in header { self.ast.push(t); }
+
+                        self.ast.push(lparen);
+                        self.ast.push(token2);
+                    },
+                }
+            },
+            valtype @ kw!(Keyword::ValType(_)) => {
+                for t in header.clone() { self.ast.push(t); }
+                if exporting && header.len() == 2 {
+                    self.ast.push(Token::gensym(Loc::zero()))
+                }
+                self.ast.push(valtype);
+                self.ast.push(token2);
+            },
+            _ => {
+                for t in header { self.ast.push(t); }
+                self.ast.push(token1);
+                self.ast.push(token2);
+            },
         }
 
         Ok(())
@@ -48,28 +103,32 @@ impl<R> Rewriter<R> where R: Read + Seek {
 #[test]
 fn test_rewrite_global() {
     assert_eq_rewrite(
-        "(global i32 end)", 
-        "(module (global i32 end))"
+        "(module (global i32))", 
+        "(module (global i32))"
     );
     assert_eq_rewrite(
-        "(global i32 i64.const 8128 end)", 
-        "(module (global i32 i64.const 8128 end))"
+        "(global i32 nop)", 
+        "(module (global i32 nop))"
     );
     assert_eq_rewrite(
-        "(global (mut f32) i64.const 8128 end)", 
-        "(module (global (mut f32) i64.const 8128 end))"
+        "(global i32 i64.const 8128)", 
+        "(module (global i32 i64.const 8128))"
     );
     assert_eq_rewrite(
-        "(global $id1 i32 end)", 
-        "(module (global $id1 i32 end))"
+        "(global (mut f32) i64.const 8128)", 
+        "(module (global (mut f32) i64.const 8128))"
     );
     assert_eq_rewrite(
-        "(global $id2 i32 i64.const 8128 end)", 
-        "(module (global $id2 i32 i64.const 8128 end))"
+        "(global $id1 i32)", 
+        "(module (global $id1 i32))"
     );
     assert_eq_rewrite(
-        "(global $id3 (mut f32) i64.const 8128 end)", 
-        "(module (global $id3 (mut f32) i64.const 8128 end))"
+        "(global $id2 i32 i64.const 8128)", 
+        "(module (global $id2 i32 i64.const 8128))"
+    );
+    assert_eq_rewrite(
+        "(global $id3 (mut f32) i64.const 8128)", 
+        "(module (global $id3 (mut f32) i64.const 8128))"
     );
 }
     
@@ -80,47 +139,47 @@ fn test_rewrite_global_import() {
         r#"(module (import "n1" "n2" (global i32)))"#
     );
     assert_eq_rewrite(
-        r#"(global (import "name1" "name2") (mut f64))"#,
-        r#"(module (import "name1" "name2" (global (mut f64))))"#
+        r#"(global (import "n1" "n2") (mut f64))"#,
+        r#"(module (import "n1" "n2" (global (mut f64))))"#
     );
     assert_eq_rewrite(
-        r#"(global $imp_global_const1 (import "name1" "name2") i64)"#, 
-        r#"(module (import "name1" "name2" (global $imp_global_const1 i64)))"#
+        r#"(global $imp_global_const1 (import "n1" "n2") i64)"#, 
+        r#"(module (import "n1" "n2" (global $imp_global_const1 i64)))"#
     );
     assert_eq_rewrite(
-        r#"(global $imp_global_const2 (import "name1" "name2") (mut f32))"#, 
-        r#"(module (import "name1" "name2" (global $imp_global_const2 (mut f32))))"#
+        r#"(global $imp_global_const2 (import "n1" "n2") (mut f32))"#, 
+        r#"(module (import "n1" "n2" (global $imp_global_const2 (mut f32))))"#
     );
 }
 
 #[test]
 fn test_rewrite_global_export() {
     assert_eq_rewrite(
-        r#"(global (export "n1"))"#, 
-        r#"(module (export "n1" (global <#:gensym>)))"#
+        r#"(global (export "n1") i32)"#, 
+        r#"(module (export "n1" (global <#:gensym>)) (global <#:gensym> i32))"#
     );
     assert_eq_rewrite(
-        r#"(global $expid1 (export "expname2"))"#, 
-        r#"(module (export "expname2" (global $expid1)))"#
+        r#"(global $id (export "e2") (mut f64) nop)"#, 
+        r#"(module (export "e2" (global $id)) (global $id (mut f64) nop))"#
     );
     assert_eq_rewrite(
-        r#"(global (export "expname3") (export "expname4"))"#, 
-        r#"(module (export "expname3" (global <#:gensym>)) (export "expname4" (global <#:gensym>)))"#
+        r#"(global (export "e3") (export "e4") i64 nop)"#, 
+        r#"(module (export "e3" (global <#:gensym>)) (export "e4" (global <#:gensym>)) (global <#:gensym> i64 nop))"#
     );
     assert_eq_rewrite(
-        r#"(global $expid2 (export "expname5") (export "expname6"))"#, 
-        r#"(module (export "expname5" (global $expid2)) (export "expname6" (global $expid2)))"#
+        r#"(global $id (export "e5") (export "e6") (mut f32))"#, 
+        r#"(module (export "e5" (global $id)) (export "e6" (global $id)) (global $id (mut f32)))"#
     );
 }
 
 #[test]
 fn test_rewrite_global_import_export() {
     assert_eq_rewrite(
-        r#"(global (export "expname3") (import "impname1" "impname2") i32)"#, 
-        r#"(module (export "expname3" (global <#:gensym>)) (import "impname1" "impname2" (global i32)))"#
+        r#"(global (export "e3") (import "n1" "n2") i32)"#, 
+        r#"(module (export "e3" (global <#:gensym>)) (import "n1" "n2" (global <#:gensym> i32)))"#
     );
     assert_eq_rewrite(
-        r#"(global $expimpid (export "expname3") (import "impname1" "impname2") (mut f64))"#, 
-        r#"(module (export "expname3" (global $expimpid)) (import "impname1" "impname2" (global $expimpid (mut f64))))"#
+        r#"(global $id (export "e3") (import "n1" "n2") (mut f64))"#, 
+        r#"(module (export "e3" (global $id)) (import "n1" "n2" (global $id (mut f64))))"#
     );
 }

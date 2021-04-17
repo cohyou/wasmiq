@@ -1,53 +1,99 @@
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_memory(&mut self, token_mem: Token) -> Result<(), RewriteError> {
-        let mut tokens = vec![token_mem];
-        let token = self.lexer.next_token()?;
-        let token1 = self.scan_id(token, &mut tokens)?;
+    pub fn rewrite_memory(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
+        let mut header = vec![lparen_global, global];
+        let maybe_id = self.lexer.next_token()?;
+        let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
+        self.rewrite_memory_internal(header, token1, token2, false)
+    }
 
-        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
-            let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import(tokens, token_leftparen.clone(), token2)?;
-            let token_rightparen = self.lexer.next_token()?;
-            let token = self.lexer.next_token()?;
-            match &token {
-                token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                    self.ast.push(token_num1.clone());
-                    let token = self.lexer.next_token()?;
-                    match token {
-                        token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                            self.ast.push(token_num2.clone());
-                            let token_rightparen2 = self.lexer.next_token()?;
-                            self.ast.push(token_rightparen2);
-                        },
-                        _ => {
-                            self.ast.push(token);
-                        },
-                    }
-                },
-                _ => {
-                    self.ast.push(token.clone());
-                },
-            }
-            self.ast.push(token_rightparen);
-        } else {
-            for t in &tokens { self.ast.push(t.clone()); }
-            if let tk!(TokenKind::LeftParen) = token1 {
-                match &token2 {
-                    kw!(Keyword::Data) => {
-                        self.rewrite_memory_data(&tokens, token1, token2)?;
+    fn rewrite_memory_internal(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
+        match token1 {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    import @ kw!(Keyword::Import) => {
+                        self.ast.push(lparen);
+                        self.ast.push(import);
+                        let name1 = self.lexer.next_token()?;
+                        self.ast.push(name1);
+                        let name2 = self.lexer.next_token()?;
+                        self.ast.push(name2);
+
+                        for t in header.clone() { self.ast.push(t); }
+                        if exporting && header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        let rparen = self.lexer.next_token()?;
+
+                        match self.lexer.next_token()? {
+                            num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                                self.ast.push(num1);
+                                match self.lexer.next_token()? {
+                                    num2 @ tk!(TokenKind::Number(Number::Integer(_))) => { 
+                                        self.ast.push(num2);
+                                        let rparen = self.lexer.next_token()?;
+                                        self.ast.push(rparen);
+                                    },
+                                    rparen_memory @ _ => {
+                                        // let rparen = self.lexer.next_token()?;
+                                        self.ast.push(rparen_memory);
+                                    },
+                                }      
+                            },
+                            token @ _ => self.ast.push(token),
+                        }
+                        self.ast.push(rparen);
+                    },
+                    export @ kw!(Keyword::Export) => {
+                        self.ast.push(lparen);
+                        self.ast.push(export);
+                        let name = self.lexer.next_token()?;
+                        self.ast.push(name);
+
+                        for t in header.clone() { self.ast.push(t); }
+                        if header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        self.ast.push(Token::right_paren(Loc::zero()));
+                        let rparen_global = self.lexer.next_token()?;
+                        self.ast.push(rparen_global);
+
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return self.rewrite_memory_internal(header, token1, token2, true);
+                    },
+                    data @ kw!(Keyword::Data) => {
+                        for t in header.clone() { self.ast.push(t); }
+                        if header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+                        return self.rewrite_memory_data(&header, lparen, data);
                     },
                     _ => {
-                        self.ast.push(token1);
-                        self.ast.push(token2);        
+                        for t in header { self.ast.push(t); }
+                        self.ast.push(lparen);
+                        self.ast.push(token2);
                     },
                 }
-            } else {
+            },
+            num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                for t in header.clone() { self.ast.push(t); }
+                if exporting && header.len() == 2 {
+                    self.ast.push(Token::gensym(Loc::zero()))
+                }
+
+                self.ast.push(num1);
+                self.ast.push(token2);
+            },
+            _ => {
+                for t in header { self.ast.push(t); }
                 self.ast.push(token1);
                 self.ast.push(token2);
-            }
+            },
         }
 
         Ok(())
@@ -55,16 +101,16 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_memory_data(&mut self, tokens: &Vec<Token>, token1: Token, token2: Token) -> Result<(), RewriteError> {
         let mut tokens_data = vec![];
-        // tokens_data.push(token1);
+
         tokens_data.push(Token::right_paren(Loc::zero()));
 
         tokens_data.push(token1);  
         tokens_data.push(token2);                  
-        // let token_elem = self.lexer.next_token()?;
-        // tokens_data.push(token_elem); 
         
-        if tokens.len() == 2 {
-            tokens_data.push(tokens[1].clone());
+        match tokens.len() {
+            2 => tokens_data.push(Token::gensym(Loc::zero())),
+            3 => tokens_data.push(tokens[2].clone()),
+            _ => {},
         }
 
         tokens_data.push(Token::left_paren(Loc::zero()));
@@ -137,37 +183,37 @@ fn test_rewrite_mem_import() {
 #[test]
 fn test_rewrite_mem_export() {
     assert_eq_rewrite(
-        r#"(memory (export "expname1"))"#, 
-        r#"(module (export "expname1" (memory <#:gensym>)))"#
+        r#"(memory (export "e1") 5)"#, 
+        r#"(module (export "e1" (memory <#:gensym>)) (memory <#:gensym> 5))"#
     );
     assert_eq_rewrite(
-        r#"(memory $expid1 (export "expname2"))"#, 
-        r#"(module (export "expname2" (memory $expid1)))"#
+        r#"(memory $id (export "e2") 50 100)"#, 
+        r#"(module (export "e2" (memory $id)) (memory $id 50 100))"#
     );
     assert_eq_rewrite(
-        r#"(memory (export "expname3") (export "expname4"))"#, 
-        r#"(module (export "expname3" (memory <#:gensym>)) (export "expname4" (memory <#:gensym>)))"#
+        r#"(memory (export "e3") (export "e4") 512)"#, 
+        r#"(module (export "e3" (memory <#:gensym>)) (export "e4" (memory <#:gensym>)) (memory <#:gensym> 512))"#
     );
     assert_eq_rewrite(
-        r#"(memory $expid2 (export "expname5") (export "expname6"))"#, 
-        r#"(module (export "expname5" (memory $expid2)) (export "expname6" (memory $expid2)))"#
+        r#"(memory $id2 (export "e5") (export "e6") 10000 20000)"#, 
+        r#"(module (export "e5" (memory $id2)) (export "e6" (memory $id2)) (memory $id2 10000 20000))"#
     );
 }
 
 #[test]
 fn test_rewrite_mem_import_export() {
     assert_eq_rewrite(
-        r#"(memory (export "expname3") (import "impname1" "impname2") 1234)"#, 
-        r#"(module (export "expname3" (memory <#:gensym>)) (import "impname1" "impname2" (memory 1234)))"#
+        r#"(memory (export "e3") (import "n1" "n2") 1234)"#, 
+        r#"(module (export "e3" (memory <#:gensym>)) (import "n1" "n2" (memory <#:gensym> 1234)))"#
     );
     assert_eq_rewrite(
-        r#"(memory $expimpid (export "expname3") (import "impname1" "impname2") 4321 5678)"#, 
-        r#"(module (export "expname3" (memory $expimpid)) (import "impname1" "impname2" (memory $expimpid 4321 5678)))"#
+        r#"(memory $id (export "e3") (import "n1" "n2") 4321 5678)"#, 
+        r#"(module (export "e3" (memory $id)) (import "n1" "n2" (memory $id 4321 5678)))"#
     );
 }
 
 #[test]
-fn test_rewrite_table_elem() {
+fn test_rewrite_table_data() {
     assert_eq_rewrite(
         r#"(module (memory (data "abcd" "wowow" "wasmiq")))"#, 
         r#"(module (memory <#:gensym> 1 1) (data <#:gensym> (i32.const 0) "abcd" "wowow" "wasmiq")))"#
@@ -176,12 +222,12 @@ fn test_rewrite_table_elem() {
         r#"(module (memory $id (data "abcd" "wowow" "wasmiq")))"#, 
         r#"(module (memory $id 1 1) (data $id (i32.const 0) "abcd" "wowow" "wasmiq")))"#
     );
-    // assert_eq_rewrite(
-    //     r#"(module (memory (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
-    //     r#"(module (export "n1" (memory <#:gensym>)) (memory <#:gensym> 1 1) (data <#:gensym> (i32.const 0) "abcd" "wowow" "wasmiq")))"#
-    // );
-    // assert_eq_rewrite(
-    //     r#"(module (memory $id (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
-    //     r#"(module (export "n1" (memory $id)) (memory $id 1 1) (data $id (i32.const 0) "abcd" "wowow" "wasmiq")))"#
-    // );
+    assert_eq_rewrite(
+        r#"(module (memory (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
+        r#"(module (export "n1" (memory <#:gensym>)) (memory <#:gensym> 1 1) (data <#:gensym> (i32.const 0) "abcd" "wowow" "wasmiq")))"#
+    );
+    assert_eq_rewrite(
+        r#"(module (memory $id (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
+        r#"(module (export "n1" (memory $id)) (memory $id 1 1) (data $id (i32.const 0) "abcd" "wowow" "wasmiq")))"#
+    );
 }

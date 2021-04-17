@@ -1,56 +1,104 @@
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_table(&mut self, token_table: Token) -> Result<(), RewriteError> {
-        let mut tokens = vec![token_table];
-        let token = self.lexer.next_token()?;
-        let token1 = self.scan_id(token, &mut tokens)?;
+    pub fn rewrite_table(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
+        let mut header = vec![lparen_global, global];
+        let maybe_id = self.lexer.next_token()?;
+        let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
+        self.rewrite_table_internal(header, token1, token2, false)
+    }
 
-        if Rewriter::<R>::is_import_or_export(&token1, &token2) {
-            let token_leftparen = token1.clone();
-            self.rewrite_inline_export_import(tokens.clone(), token_leftparen.clone(), token2.clone())?;
-            let token_rightparen = self.lexer.next_token()?;
-            let token = self.lexer.next_token()?;
-            match &token {
-                token_num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                    self.ast.push(token_num1.clone());
-                    let token = self.lexer.next_token()?;
-                    match token {
-                        token_num2 @ tk!(TokenKind::Number(Number::Integer(_))) => {
-                            self.ast.push(token_num2.clone());
-                            let token_funcref = self.lexer.next_token()?;
-                            self.ast.push(token_funcref);
-                        },
-                        _ => {
-                            self.ast.push(token);
-                        },
-                    }
-                },
-                // kw!(Keyword::FuncRef) => {
-                //     self.rewrite_table_elem(&tokens, token1, token2)?;
-                // },
-                _ => {
-                    self.ast.push(token.clone());
-                },
-            }
-            self.ast.push(token_rightparen);
-        } else {
-            for t in &tokens { self.ast.push(t.clone()); }
-            match &token1 {
-                kw!(Keyword::FuncRef) => {                    
-                    self.rewrite_table_elem(&tokens, token1, token2)?;
-                },
-                _ => {
-                    self.ast.push(token1);
-                    self.ast.push(token2);        
-                },
-            }
+    fn rewrite_table_internal(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
+        match token1 {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    import @ kw!(Keyword::Import) => {
+                        self.ast.push(lparen);
+                        self.ast.push(import);
+                        let name1 = self.lexer.next_token()?;
+                        self.ast.push(name1);
+                        let name2 = self.lexer.next_token()?;
+                        self.ast.push(name2);
+
+                        for t in header.clone() { self.ast.push(t); }
+                        if exporting && header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        let rparen = self.lexer.next_token()?;
+
+                        match self.lexer.next_token()? {
+                            num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                                self.ast.push(num1);
+                                match self.lexer.next_token()? {
+                                    num2 @ tk!(TokenKind::Number(Number::Integer(_))) => { 
+                                        self.ast.push(num2);
+                                        let rparen = self.lexer.next_token()?;
+                                        self.ast.push(rparen);
+                                    },
+                                    rparen_memory @ _ => {
+                                        // let rparen = self.lexer.next_token()?;
+                                        self.ast.push(rparen_memory);
+                                    },
+                                }      
+                            },
+                            token @ _ => self.ast.push(token),
+                        }
+                        self.ast.push(rparen);
+                    },
+                    export @ kw!(Keyword::Export) => {
+                        self.ast.push(lparen);
+                        self.ast.push(export);
+                        let name = self.lexer.next_token()?;
+                        self.ast.push(name);
+
+                        for t in header.clone() { self.ast.push(t); }
+                        if header.len() == 2 {
+                            self.ast.push(Token::gensym(Loc::zero()))
+                        }
+
+                        self.ast.push(Token::right_paren(Loc::zero()));
+                        let rparen_global = self.lexer.next_token()?;
+                        self.ast.push(rparen_global);
+
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        return self.rewrite_table_internal(header, token1, token2, true);
+                    },
+                    _ => {
+                        for t in header { self.ast.push(t); }
+                        self.ast.push(lparen);
+                        self.ast.push(token2);
+                    },
+                }
+            },
+            num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
+                for t in header.clone() { self.ast.push(t); }
+                if exporting && header.len() == 2 {
+                    self.ast.push(Token::gensym(Loc::zero()))
+                }
+
+                self.ast.push(num1);
+                self.ast.push(token2);
+            },
+            data @ kw!(Keyword::FuncRef) => {
+                for t in header.clone() { self.ast.push(t); }
+                if header.len() == 2 {
+                    self.ast.push(Token::gensym(Loc::zero()))
+                }
+                return self.rewrite_table_elem(&header, data, token2);
+            },
+            _ => {
+                for t in header { self.ast.push(t); }
+                self.ast.push(token1);
+                self.ast.push(token2);
+            },
         }
 
         Ok(())
     }
-
+    
     fn rewrite_table_elem(&mut self, tokens: &Vec<Token>, token1: Token, token2: Token) -> Result<(), RewriteError> {
         let mut tokens_elem = vec![];
         tokens_elem.push(token1);
@@ -60,8 +108,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let token_elem = self.lexer.next_token()?;
         tokens_elem.push(token_elem); 
         
-        if tokens.len() == 2 {
-            tokens_elem.push(tokens[1].clone());
+        match tokens.len() {
+            2 => tokens_elem.push(Token::gensym(Loc::zero())),
+            3 => tokens_elem.push(tokens[2].clone()),
+            _ => {},
         }
 
         tokens_elem.push(Token::left_paren(Loc::zero()));
@@ -132,28 +182,28 @@ fn test_rewrite_table_export() {
         r#"(module (export "expname1" (table <#:gensym>)) (table <#:gensym> 100 200 funcref))"#
     );
     assert_eq_rewrite(
-        r#"(table $expid1 (export "expname2"))"#, 
-        r#"(module (export "expname2" (table $expid1)))"#
+        r#"(table $expid1 (export "expname2") 15 funcref)"#, 
+        r#"(module (export "expname2" (table $expid1)) (table $expid1 15 funcref))"#
     );
     assert_eq_rewrite(
-        r#"(table (export "expname3") (export "expname4"))"#, 
-        r#"(module (export "expname3" (table <#:gensym>)) (export "expname4" (table <#:gensym>)))"#
+        r#"(table (export "e3") (export "e4") 32786 funcref)"#, 
+        r#"(module (export "e3" (table <#:gensym>)) (export "e4" (table <#:gensym>)) (table <#:gensym> 32786 funcref))"#
     );
     assert_eq_rewrite(
-        r#"(table $expid2 (export "expname5") (export "expname6"))"#, 
-        r#"(module (export "expname5" (table $expid2)) (export "expname6" (table $expid2)))"#
+        r#"(table $id (export "e5") (export "e6") 0 0 funcref)"#, 
+        r#"(module (export "e5" (table $id)) (export "e6" (table $id)) (table $id 0 0 funcref))"#
     );
 }
 
 #[test]
 fn test_rewrite_table_import_export() {
     assert_eq_rewrite(
-        r#"(table $expimpid (export "expname3") (import "impname1" "impname2") 1234 funcref)"#, 
-        r#"(module (export "expname3" (table $expimpid)) (import "impname1" "impname2" (table $expimpid 1234 funcref)))"#
+        r#"(table $id (export "e3") (import "n1" "n2") 1234 funcref)"#, 
+        r#"(module (export "e3" (table $id)) (import "n1" "n2" (table $id 1234 funcref)))"#
     );
     assert_eq_rewrite(
-        r#"(table (export "expname3") (import "impname1" "impname2") 4321 5678 funcref)"#, 
-        r#"(module (export "expname3" (table <#:gensym>)) (import "impname1" "impname2" (table 4321 5678 funcref)))"#
+        r#"(table (export "e3") (import "n1" "n2") 4321 5678 funcref)"#, 
+        r#"(module (export "e3" (table <#:gensym>)) (import "n1" "n2" (table <#:gensym> 4321 5678 funcref)))"#
     );
 }
 
@@ -167,12 +217,12 @@ fn test_rewrite_table_elem() {
         r#"(module (table $id funcref (elem 0 1 2 3 100)))"#, 
         r#"(module (table $id 5 5 funcref) (elem $id (i32.const 0) 0 1 2 3 100)))"#
     );
-    // assert_eq_rewrite(
-    //     r#"(module (table (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 
-    //     r#"(module (export "n1" (table <#:gensym>)) (table 11 11 funcref) (elem (i32.const 0) 1 2 4 8 16 32 64 128 256 512)))"#
-    // );
-    // assert_eq_rewrite(
-    //     r#"(module (table $id (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 
-    //     r#"(module (export "n1" (table $id )) (table $id 11 11 funcref) (elem $id (i32.const 0) 1 2 4 8 16 32 64 128 256 512)))"#
-    // );
+    assert_eq_rewrite(
+        r#"(module (table (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 
+        r#"(module (export "n1" (table <#:gensym>)) (table <#:gensym> 10 10 funcref) (elem <#:gensym> (i32.const 0) 1 2 4 8 16 32 64 128 256 512)))"#
+    );
+    assert_eq_rewrite(
+        r#"(module (table $id (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 
+        r#"(module (export "n1" (table $id)) (table $id 10 10 funcref) (elem $id (i32.const 0) 1 2 4 8 16 32 64 128 256 512)))"#
+    );
 }
