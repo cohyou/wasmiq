@@ -20,7 +20,7 @@ use crate::{
     ModuleInst,
 };
 
-#[derive(PartialEq, Clone, Default)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Expr(pub Vec<Instr>);
 
 impl Expr {

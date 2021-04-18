@@ -27,7 +27,7 @@ use crate::{
     ExternType,
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Module {
     pub id: Option<String>,
     pub types: Vec<FuncType>,
@@ -50,42 +50,49 @@ pub type GlobalIdx = u32;
 pub type LabelIdx = u32;
 pub type LocalIdx = u32;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Func {
     pub tp: TypeIdx,
     pub locals: Vec<ValType>,
     pub body: Expr,
 }
 
+#[derive(Debug)]
 pub struct Table(pub TableType);
 
+#[derive(Debug)]
 pub struct Mem(pub MemType);
 
+#[derive(Debug)]
 pub struct Global {
     pub tp: GlobalType,
     pub init: Expr,
 }
 
+#[derive(Debug)]
 pub struct Elem {
     pub table: TableIdx,
     pub offset: Expr,
     pub init: Vec<FuncIdx>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Data {
     pub data: MemIdx,
     pub offset: Expr,
     pub init: Vec<Byte>,
 }
 
+#[derive(Debug)]
 pub struct Start(pub FuncIdx);
 
+#[derive(Debug)]
 pub struct Export {
     pub name: Name,
     pub desc: ExportDesc,
 }
 
+#[derive(Debug)]
 pub enum ExportDesc {
     Func(FuncIdx),
     Table(TableIdx),
@@ -93,12 +100,14 @@ pub enum ExportDesc {
     Global(GlobalIdx),
 }
 
+#[derive(Debug)]
 pub struct Import {
     pub module: Name,
     pub name: Name,
     pub desc: ImportDesc,
 }
 
+#[derive(Debug)]
 pub enum ImportDesc {
     Func(TypeIdx),
     Table(TableType),
@@ -108,10 +117,11 @@ pub enum ImportDesc {
 
 pub use validate::Context;
 
-use std::io::Read;
+use std::io::{Read, Seek};
 use crate::{
     decode_module,
 };
+
 pub fn module_decode(reader: &mut impl Read) -> Result<Module, Error> {
     if let Ok(module) = decode_module(reader) {
         Ok(module)
@@ -120,21 +130,16 @@ pub fn module_decode(reader: &mut impl Read) -> Result<Module, Error> {
     }
 }
 
-use std::env;
-use std::fs::File;
-
-pub fn module_parse() {
-    let args = env::args().collect::<Vec<String>>();
-    let file_name = &args[1];
-    let reader = File::open(file_name).unwrap();
+pub fn module_parse(reader: &mut (impl Read + Seek)) -> Result<Module, Error> {
     let mut parser = Parser::new(reader);
     match parser.parse() {
         Err(err) => {
             println!("PARSE ERROR: {:?}", err);
-            return;
+            return Err(Error::Invalid);
         },
         _ => {},
     }
+    Ok(parser.module)
 }
 
 pub fn module_validate(module: Module) -> Result<(), Error> {

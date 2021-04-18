@@ -49,8 +49,6 @@ use module::{
 
 mod instance;
 pub use instance::instance_export;
-// use instance::{   
-// };
 
 mod func;
 pub use func::{
@@ -163,3 +161,26 @@ mod encoder;
 pub use encoder::{
     module_encode,
 };
+
+
+
+#[test]
+fn test() {
+    let s = r#"
+    (module
+        (type $i32ret (func (type 0) (result i32)))
+    )
+    "#;
+    parse_str(s);
+}
+
+#[allow(dead_code)]
+fn parse_str(s: &str) {
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    if let Ok(module) = module_parse(&mut reader) {
+        println!("module: {:?}", module);
+    }
+    
+}
