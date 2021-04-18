@@ -1,4 +1,9 @@
+mod ifelse;
+mod folded;
+
+
 use super::*;
+
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_func(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
@@ -63,18 +68,25 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     local @ kw!(Keyword::Local) => {
                         self.rewrite_func_valtypes_first(header, lparen, local, exporting)?;
                     },
-
+                    instr @ instr!(_) => {
+                        self.push_header(header, exporting);
+                        let typeidx = self.add_typeidx();
+                        self.ast.extend(typeidx);
+                        self.rewrite_instrs(vec![lparen, instr])?;
+                    },
                     _ => self.push_others_first(header, lparen, token2),
                 }
             },
             instr @ instr!(_) => {
                 self.push_header(header, exporting);
-                self.add_typeidx();
+                let typeidx = self.add_typeidx();
+                self.ast.extend(typeidx);
                 self.rewrite_instrs(vec![instr, token2])?;
             },
             rparen @ tk!(TokenKind::RightParen) => {
                 self.push_header(header, exporting);
-                self.add_typeidx();
+                let typeidx = self.add_typeidx();
+                self.ast.extend(typeidx);
                 self.ast.push(rparen);
             },
             _ => self.push_others_first(header, token1, token2),
@@ -85,11 +97,13 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_func_valtypes_first(&mut self, header: Vec<Token>, lparen: Token, valtype: Token, exporting: bool) -> Result<(), RewriteError> {
         self.push_header(header.clone(), exporting);
-        self.add_typeidx();
+        let typeidx = self.add_typeidx();
+        self.ast.extend(typeidx);
         self.rewrite_func_valtypes(lparen, valtype)
     }
 
     fn rewrite_func_rest(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+
         match token1 {
             lparen @ tk!(TokenKind::LeftParen) => {
                 match token2 {
@@ -107,7 +121,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     },
                     _ => self.push_others_rest(lparen, token2),
                 }
-            }
+            },
+            instr @ instr!(_) => {
+                self.rewrite_instrs(vec![instr, token2])?;
+            },
             _ => self.push_others_rest(token1, token2),
         }
 
@@ -122,7 +139,8 @@ impl<R> Rewriter<R> where R: Read + Seek {
         self.ast.push(lparen);
         self.ast.push(valtype.clone());
         if let kw!(keyword) = valtype {
-            self.rewrite_valtypes(keyword)?;
+            let holding = self.rewrite_valtypes(keyword)?;
+            self.ast.extend(holding);
         }
         
         let token1 = self.lexer.next_token()?;
@@ -150,22 +168,97 @@ impl<R> Rewriter<R> where R: Read + Seek {
         self.ast.push(token1);
         self.ast.push(token2);
     }
+}
 
-    fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
-        self.ast.push(token1);
-        self.ast.push(token2);
-        let typeidx = self.lexer.next_token()?;
-        self.ast.push(typeidx);
-        let rparen = self.lexer.next_token()?;
-        self.ast.push(rparen);
-        Ok(())
+impl<R> Rewriter<R> where R: Read + Seek {
+    fn rewrite_blocktype_if_first(&mut self, token: Token) -> Result<(Vec<Token>, Vec<Token>), RewriteError> {
+        let mut holding = vec![];
+        let token = match token {
+            lparen @ tk!(TokenKind::LeftParen) => {
+
+                match self.lexer.next_token()? {
+                    result @ kw!(Keyword::Result) => {
+                        holding.push(lparen);
+                        holding.push(result);
+
+                        let holding_result = self.rewrite_valtypes(Keyword::Result)?;
+                        holding.extend(holding_result);
+                    },
+                    tp @ kw!(Keyword::Type) => {
+                        let holding_typeidx = self.scan_typeidx_holding(lparen.clone(), tp)?;
+                        holding.extend(holding_typeidx);
+
+                        let token1 = self.lexer.next_token()?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        holding.extend(holding_blocktype);
+                        
+                        return Ok((holding, vec![token2.clone()]));
+                    },
+                    param @ kw!(Keyword::Param) => {
+                        let holding_typeidx = self.add_typeidx();
+                        holding.extend(holding_typeidx);
+
+                        holding.push(lparen.clone());
+                        holding.push(param);
+
+                        let holding_param = self.rewrite_valtypes(Keyword::Param)?;
+                        holding.extend(holding_param);
+
+                        let token1 = self.lexer.next_token()?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        holding.extend(holding_blocktype);
+
+                        return Ok((holding, vec![token2]));
+                    },
+                    instr @ instr!(_) => return Ok((holding, vec![lparen, instr])),
+                    t @ _ => return Ok((holding, vec![lparen, t])),
+                }
+                self.lexer.next_token()?
+            },
+            _ => token,
+        };
+
+        Ok((holding, vec![token]))
     }
 
-    fn add_typeidx(&mut self) {
-        self.ast.push(Token::left_paren(Loc::zero()));
-        self.ast.push(Token::keyword(Keyword::Type, Loc::zero()));
-        self.ast.push(Token::gensym(Loc::zero()));
-        self.ast.push(Token::right_paren(Loc::zero()));
+    fn rewrite_blocktype_if_rest(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
+        let mut holding = vec![];
+
+        let token = match token {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                
+                let token = match self.lexer.next_token()? {
+                    param @ kw!(Keyword::Param) => {
+                        holding.push(lparen.clone());
+                        holding.push(param);
+                        let holding_param = self.rewrite_valtypes(Keyword::Param)?;
+                        holding.extend(holding_param);
+
+                        let token1 = self.lexer.next_token()?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        holding.extend(holding_blocktype);
+
+                        return Ok((holding, token2));
+                    },
+                    t @ _ => t,
+                };
+
+                let token = match token {
+                    result @ kw!(Keyword::Result) => {
+                        holding.push(lparen);
+                        holding.push(result);
+                        let holding_result = self.rewrite_valtypes(Keyword::Result)?;
+                        holding.extend(holding_result);
+                        self.lexer.next_token()?
+                    },
+                    _ => token,
+                };
+                token
+            },
+            _ => token,
+        };
+
+        Ok((holding, token))
     }
 }
 

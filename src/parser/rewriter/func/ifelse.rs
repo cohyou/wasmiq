@@ -1,118 +1,51 @@
+use std::collections::VecDeque;
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_if(&mut self) -> Result<(), RewriteError> {
-        // label
-        let token = self.lexer.next_token()?;
-        let token = match token {
-            token_id @ tk!(TokenKind::Id(_)) => {
-                self.ast.push(token_id);
-                self.lexer.next_token()?
-            },
-            _ => token,
-        };
+        let (holding, token) = self.scan_label()?;
+        self.ast.extend(holding);
 
-        // blocktype
-        let mut token = match token {
-            token_leftparen @ tk!(TokenKind::LeftParen) => {
-                let token = self.lexer.next_token()?;
-
-                match token {
-                    token_result @ kw!(Keyword::Result) => {
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_result);
-                        self.rewrite_result()?;
-                    },
-                    token_type @ kw!(Keyword::Type) => {
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_type);
-                        let token_typeidx = self.lexer.next_token()?;
-                        self.ast.push(token_typeidx);
-                        let token_rightparen = self.lexer.next_token()?;
-                        self.ast.push(token_rightparen);
-
-                        let token = self.lexer.next_token()?;
-                        match token {
-                            token_leftparen @ tk!(TokenKind::LeftParen) => {
-                                self.ast.push(token_leftparen);
-                                let token = self.lexer.next_token()?;
-
-                                let token = match token {
-                                    token_param @ kw!(Keyword::Param) => {
-                                        self.ast.push(token_param);
-                                        self.rewrite_param()?;
-                                        self.lexer.next_token()?
-                                    },
-                                    _ => token,
-                                };
-
-                                match token {
-                                    token_result @ kw!(Keyword::Result) => {
-                                        self.ast.push(token_result);
-                                        self.rewrite_result()?;
-                                    },
-                                    _ => {
-                                        self.ast.push(token);
-                                    },
-                                }
-                            },
-                            _ => {
-                                self.ast.push(token);
-                            },
-                        }
-                    },
-                    token_param @ kw!(Keyword::Param) => {
-                        self.ast.push(Token::left_paren(Loc::zero()));
-                        self.ast.push(Token::keyword(Keyword::Type, Loc::zero()));
-                        self.ast.push(Token::gensym(Loc::zero()));
-                        self.ast.push(Token::right_paren(Loc::zero()));
-
-                        self.ast.push(token_leftparen);
-                        self.ast.push(token_param);
-                        self.rewrite_param()?;
-                    },
-                    _ => {
-                        self.ast.push(token);
-                    },
-                }
-                self.lexer.next_token()?
-            },
-            _ => {
-                token
-            },
-        };
+        let (holding, tokens) = self.rewrite_blocktype_if_first(token)?;
+        self.ast.extend(holding);
+        let mut tokens = VecDeque::from(tokens);
+        let mut token = tokens.pop_front().unwrap();
 
         let mut else_exists = false; 
         loop {
             match token {
                 instr!(Instr::If(_, _, _)) => {
-                    self.ast.push(token.clone());
+                    self.ast.push(token);
                     self.rewrite_if()?;
                 },
                 kw!(Keyword::Else) => {
-                    self.ast.push(token.clone());
+                    self.ast.push(token);
                     else_exists = true;
                 },
                 kw!(Keyword::End) => {
                     if !else_exists {
                         self.ast.push(Token::keyword(Keyword::Else, Loc::zero()));
                     }
-                    self.ast.push(token.clone());
+                    self.ast.push(token);
                     break;
                 },
                 tk!(TokenKind::Empty) => {
-                    self.ast.push(token.clone());
+                    self.ast.push(token);
                     break;
                 },
                 _ => {
-                    self.ast.push(token.clone());
+                    self.ast.push(token);
                 },
             }
 
-            if let Ok(new_token) = self.lexer.next_token() {
+            if let Some(new_token) = tokens.pop_front() {
                 token = new_token
             } else {
-                break;
+                if let Ok(new_token) = self.lexer.next_token() {
+                    token = new_token
+                } else {
+                    break;
+                }
             }
         }
 
@@ -121,7 +54,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 #[test]
-#[ignore]
 fn test_rewrite_if1() {
     assert_eq_rewrite(
         "(func i32.const 0 if nop else end)", 
@@ -154,7 +86,6 @@ fn test_rewrite_if1() {
 }
 
 #[test]
-#[ignore]
 fn test_rewrite_if2() {
     assert_eq_rewrite(
         "(func i32.const 0 if (type 0) (param i64 f32) nop else end)", 
@@ -183,7 +114,6 @@ fn test_rewrite_if2() {
 }
 
 #[test]
-#[ignore]
 fn test_rewrite_if_no_else() {
     assert_eq_rewrite(
         "(func i32.const 0 if nop end)", 
@@ -216,7 +146,6 @@ fn test_rewrite_if_no_else() {
 }
 
 #[test]
-#[ignore]
 fn test_rewrite_if_nested() {
     assert_eq_rewrite(
         "(func i32.const 0 if (result f64) if (result f32) end end)", 

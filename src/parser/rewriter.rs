@@ -1,6 +1,4 @@
 mod func;
-mod func_if;
-mod func_folded;
 mod table;
 mod mem;
 mod global;
@@ -86,7 +84,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
         while let Ok(lookahead) = self.lexer.next_token() {
-            println!("lookahead: {:?}", lookahead);
+            // println!("lookahead: {:?}", lookahead);
             match lookahead.value {
                 TokenKind::LeftParen => {
                     match self.rewrite_list(lookahead) {
@@ -168,37 +166,83 @@ impl<R> Rewriter<R> where R: Read + Seek {
             Ok(token_maybe_id)
         }
     }
+
+    fn scan_label(&mut self) -> Result<(Vec<Token>, Token), RewriteError> {
+        self.scan_label_internal()
+    }
+
+    fn scan_label_internal(&mut self) -> Result<(Vec<Token>, Token), RewriteError> {
+        let mut holding = vec![];
+        let token = match self.lexer.next_token()? {
+            id_ @ tk!(TokenKind::Id(_)) => {
+                holding.push(id_);
+                self.lexer.next_token()?
+            },
+            t @ _ => t,
+        };
+        Ok((holding, token))
+    }
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
+    fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+        let holding = self.scan_typeidx_holding(token1, token2)?;
+        self.ast.extend(holding);
+        Ok(())
+    }
+
+    fn scan_typeidx_holding(&mut self, token1: Token, token2: Token) -> Result<Vec<Token>, RewriteError> {
+        let mut holding = vec![token1, token2];
+        let typeidx = self.lexer.next_token()?;
+        holding.push(typeidx);
+        let rparen = self.lexer.next_token()?;
+        holding.push(rparen);
+        Ok(holding)
+    }
+
+    fn add_typeidx(&mut self) -> Vec<Token> {
+        vec![
+            Token::left_paren(Loc::zero()),
+            Token::keyword(Keyword::Type, Loc::zero()),
+            Token::gensym(Loc::zero()),
+            Token::right_paren(Loc::zero()),
+        ]
+    }
 
     fn rewrite_param(&mut self) -> Result<(), RewriteError> {
-        self.rewrite_valtypes(Keyword::Param)
+        let holding = self.rewrite_valtypes(Keyword::Param)?;
+        self.ast.extend(holding);
+        Ok(())
     }
 
     fn rewrite_result(&mut self) -> Result<(), RewriteError> {
-        self.rewrite_valtypes(Keyword::Result)
+        let holding = self.rewrite_valtypes(Keyword::Result)?;
+        self.ast.extend(holding);
+        Ok(())
     }
 
     fn rewrite_local(&mut self) -> Result<(), RewriteError> {
-        self.rewrite_valtypes(Keyword::Local)
+        let holding = self.rewrite_valtypes(Keyword::Local)?;
+        self.ast.extend(holding);
+        Ok(())
     }
 
-    fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<(), RewriteError> {
+    fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<Vec<Token>, RewriteError> {
+        let mut holding = vec![];
         let mut valtypes = vec![];
         let mut right_paren: Option<Token> = None;
         while let Ok(token) = self.lexer.next_token() {
             match token {
                 id @ tk!(TokenKind::Id(_)) => {
-                    self.ast.push(id);
+                    holding.push(id);
                     let valtype = self.lexer.next_token()?;
-                    self.ast.push(valtype);
+                    holding.push(valtype);
                     let rparen = self.lexer.next_token()?;
-                    self.ast.push(rparen);
-                    return Ok(());
+                    holding.push(rparen);
+                    return Ok(holding);
                 },
                 lookahead @ tk!(TokenKind::RightParen) => { 
-                    right_paren = Some(lookahead.clone());
+                    right_paren = Some(lookahead);
                     break;
                 },
                 lookahead @ kw!(Keyword::ValType(_)) => {
@@ -206,9 +250,9 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 },
                 lookahead @ _ => {
                     for valtype in &valtypes {
-                        self.ast.push(valtype.clone());
+                        holding.push(valtype.clone());
                     }
-                    self.ast.push(lookahead);
+                    holding.push(lookahead);
                     break;
                 },
             }
@@ -216,20 +260,20 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         for (i, valtype) in valtypes.iter().enumerate() {
             if i == 0 {
-                self.ast.push(valtype.clone());
+                holding.push(valtype.clone());
             } else {
-                self.ast.push(Token::right_paren(Loc::zero()));
-                self.ast.push(Token::left_paren(Loc::zero()));
-                self.ast.push(Token::keyword(keyword.clone(), Loc::zero()));
-                self.ast.push(valtype.clone());
+                holding.push(Token::right_paren(Loc::zero()));
+                holding.push(Token::left_paren(Loc::zero()));
+                holding.push(Token::keyword(keyword.clone(), Loc::zero()));
+                holding.push(valtype.clone());
             }
         }
 
         if let Some(right_paren) = right_paren {
-            self.ast.push(right_paren.clone());
+            holding.push(right_paren);
         }
 
-        Ok(())
+        Ok(holding)
     }
 }
 
@@ -294,7 +338,6 @@ fn rewrite_tokens(src: &str) -> Vec<Token> {
     
     let _ = rewriter.rewrite();
 
-    // println!("{:?}", rewriter.ast);
     rewriter.ast
 }
 
@@ -343,6 +386,9 @@ fn tokens_to_string(tokens: Vec<Token>) -> String {
         prev = token;
     }
     // print!("]");
+
+    result.push_str(format!("{}", prev).as_ref());
+
     result
 }
 

@@ -32,6 +32,8 @@ pub enum Keyword {
     Else,
     End,
 
+    Then,
+
     ValType(ValType),
 
     Instr(Instr),
@@ -64,6 +66,8 @@ pub(super) fn vec_to_keyword(s: &[u8]) -> Option<Keyword> {
         b"funcref" => Some(Keyword::FuncRef),
         b"else" => Some(Keyword::Else),
         b"end" => Some(Keyword::End),
+
+        b"then" => Some(Keyword::Then),
 
         b"i32" | b"i64" | b"f32" | b"f64" => vec_to_valtype(s).map(|vt| Keyword::ValType(vt)),
 
@@ -357,7 +361,11 @@ impl Display for Keyword {
             Keyword::Instr(Instr::F32Const(_)) => write!(f, "f32.const"),
             Keyword::Instr(Instr::F64Const(_)) => write!(f, "f64.const"),
             Keyword::Instr(Instr::LocalGet(_)) => write!(f, "local.get"),
+            Keyword::Instr(Instr::Drop(_)) => write!(f, "drop"),
+            Keyword::Instr(Instr::Select(_)) => write!(f, "select"),
             Keyword::Instr(Instr::IBinOp(ValSize::V32, IBinOp::Add)) => write!(f, "i32.add"),
+            Keyword::Instr(Instr::IBinOp(ValSize::V32, IBinOp::Sub)) => write!(f, "i32.sub"),
+            Keyword::Instr(Instr::IRelOp(ValSize::V32, IRelOp::Lt(ValSign::S))) => write!(f, "i32.lt_s"),
             Keyword::Instr(instr) => write!(f, "{:?}", instr),
             _ => write!(f, "{:?}", self),
         }
