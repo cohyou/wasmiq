@@ -277,6 +277,22 @@ impl<R> Parser<R> where R: Read + Seek {
 fn test() {
     let s = r#"
     (type (func (param i32)))
+    (type $a (func (param i64) (param i64) (param i64) (result i64)))
+
+    (func $const (type 0) i32.const 42)
+    (func $tak (type 1) (param $x i64) (param $y i64) (param $z i64) (result i64)
+      local.get $x 
+      local.get $y 
+      i64.le_u
+      if (result i64) 
+        local.get $z
+      else    
+        local.get $x i64.const 1 i64.sub local.get $y local.get $z call $tak
+        local.get $y i64.const 1 i64.sub local.get $z local.get $x call $tak
+        local.get $z i64.const 1 i64.sub local.get $x local.get $y call $tak
+        call $tak
+      end
+    )
     "#;
     parse_str(s);
 }
