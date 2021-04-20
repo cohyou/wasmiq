@@ -6,8 +6,8 @@ use super::*;
 
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_func(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
-        let mut header = vec![lparen_global, global];
+    pub fn rewrite_func(&mut self, lparen_func: Token, func: Token) -> Result<(), RewriteError> {
+        let mut header = vec![lparen_func, func];
         let maybe_id = self.lexer.next_token()?;
         let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;

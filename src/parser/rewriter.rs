@@ -3,7 +3,7 @@ mod table;
 mod mem;
 mod global;
 mod dataelem;
-
+mod type_;
 
 use std::io::{Read, Seek};
 use crate::parser::lexer::{
@@ -132,6 +132,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_segment(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
         match segment {
+            kw!(Keyword::Type) => self.rewrite_type(lparen_segment, segment),
             kw!(Keyword::Func) => self.rewrite_func(lparen_segment, segment),
             kw!(Keyword::Table) => self.rewrite_table(lparen_segment, segment),
             kw!(Keyword::Memory) => self.rewrite_memory(lparen_segment, segment),

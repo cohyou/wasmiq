@@ -260,7 +260,7 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn consume(&mut self) -> Result<(), ParseError> {
         self.lookahead = self.rewriter.next_token()?;
-        // p!(self.lookahead);
+        p!(self.lookahead);
         Ok(())
     }
 
@@ -270,5 +270,25 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn err2(&self, mes: &'static str) -> ParseError {
         ParseError::InvalidMessage(self.lookahead.clone(), mes.to_string())
+    }
+}
+
+#[test]
+fn test() {
+    let s = r#"
+    (type (func (param i32)))
+    "#;
+    parse_str(s);
+}
+
+#[allow(dead_code)]
+fn parse_str(s: &str) {
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let reader = BufReader::new(cursor);
+    let mut parser = Parser::new(reader);
+    match parser.parse() {
+        Ok(_) => println!("module: {:?}", parser.module),
+        Err(err) => println!("parse error: {:?}", err),
     }
 }
