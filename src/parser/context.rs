@@ -17,14 +17,6 @@ pub struct Context {
 
 pub type Id = String;
 
-// pub type TypeIndex = u32;
-// pub type FuncIndex = u32;
-// pub type TableIndex = u32;
-// pub type MemIndex = u32;
-// pub type GlobalIndex = u32;
-
-// pub type LocalIndex = u32;
-// pub type LabelIndex = u32;
 
 impl Debug for Context {
 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

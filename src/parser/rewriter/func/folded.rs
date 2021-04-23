@@ -2,7 +2,8 @@ use std::collections::VecDeque;
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_instrs(&mut self, first: Vec<Token>) -> Result<(), RewriteError> {
+    pub fn rewrite_instrs(&mut self, first: Vec<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![]; 
         let mut tokens = VecDeque::from(first);
         let mut token = if let Some(token) = tokens.pop_front() {
             token
@@ -13,21 +14,23 @@ impl<R> Rewriter<R> where R: Read + Seek {
         loop {
             match token {
                 empty @ tk!(TokenKind::Empty) => {
-                    self.ast.push(empty);
+                    result.push(empty);
                     break;
                 },
                 if_ @ instr!(Instr::If(_, _, _)) => {
-                    self.ast.push(if_);
-                    self.rewrite_if()?;
+                    result.push(if_);
+                    let if_instrs = self.rewrite_if()?;
+                    result.extend(if_instrs);
                 },
                 tk!(TokenKind::LeftParen) => {
-                    self.rewrite_folded_instrs(&mut tokens)?;
+                    let folded_instrs = self.rewrite_folded_instrs(&mut tokens)?;
+                    result.extend(folded_instrs);
                 },
                 rparen @ tk!(TokenKind::RightParen) => {
-                    self.ast.push(rparen);
+                    result.push(rparen);
                     break;
                 },
-                _ => self.ast.push(token),
+                _ => result.push(token),
             }
 
             if let Some(new_token) = tokens.pop_front() {
@@ -41,10 +44,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 
-    fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
+    fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![]; 
         let token = if let Some(token) = first.pop_front() {
             token
         } else {
@@ -53,61 +57,76 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         match token {
             instr_block @ instr!(Instr::Block(_, _)) => {
-                self.rewrite_folded_block(instr_block, first)?;
+                let folded_block = self.rewrite_folded_block(instr_block, first)?;
+                result.extend(folded_block);
             },
             instr_loop @ instr!(Instr::Loop(_, _)) => {
-                self.rewrite_folded_loop(instr_loop, first)?;
+                let folded_loop = self.rewrite_folded_loop(instr_loop, first)?;
+                result.extend(folded_loop);
             },
             instr_if @ instr!(Instr::If(_, _, _)) => {
-                self.rewrite_folded_if(instr_if)?;
+                let folded_if = self.rewrite_folded_if(instr_if)?;
+                result.extend(folded_if);
             },
             instr!(_) => {
                 let mut new_first = vec![token];
                 for f in first { new_first.push(f.clone()); }
 
-                self.rewrite_folded_instrs_internal(&mut VecDeque::from(new_first))?;
+                let folded_instrs = self.rewrite_folded_instrs_internal(&mut VecDeque::from(new_first))?;
+                result.extend(folded_instrs);
             },
             tk!(TokenKind::LeftParen) => {
-                self.rewrite_folded_instrs(first)?;
+                let folded_instrs = self.rewrite_folded_instrs(first)?;
+                result.extend(folded_instrs);
             },
             _ => {
                 panic!("{:?} (rewrite_folded_instrs)", token);
             },
         }
         
-        Ok(())
+        Ok(result)
     }
 
-    fn rewrite_folded_block(&mut self, instr_block: Token, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
-        self.ast.push(instr_block);
+    fn rewrite_folded_block(&mut self, instr_block: Token, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
+        result.push(instr_block);
         let (label, token) = self.scan_label()?;
-        self.ast.extend(label);
+        result.extend(label);
         
         let (holding_if, tokens) = self.rewrite_blocktype_if_first(token)?;
-        self.ast.extend(holding_if);
+        result.extend(holding_if);
         first.extend(tokens);
 
-        self.rewrite_folded_block_loop_instrs(first)?;
-        self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
-        Ok(())
+        let folded_block_loop_instrs = self.rewrite_folded_block_loop_instrs(first)?;
+        result.extend(folded_block_loop_instrs);
+        result.push(Token::keyword(Keyword::End, Loc::zero()));
+
+        Ok(result)
     }
 
-    fn rewrite_folded_loop(&mut self, instr_loop: Token, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
-        self.ast.push(instr_loop);
+    fn rewrite_folded_loop(&mut self, instr_loop: Token, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
+        result.push(instr_loop);
         let (label, token) = self.scan_label()?;
-        self.ast.extend(label);
+        result.extend(label);
         
         let (holding_if, tokens) = self.rewrite_blocktype_if_first(token)?;
-        self.ast.extend(holding_if);
+        result.extend(holding_if);
 
         first.extend(tokens);
-        self.rewrite_folded_block_loop_instrs(first)?;
+        let folded_block_loop_instrs = self.rewrite_folded_block_loop_instrs(first)?;
+        result.extend(folded_block_loop_instrs);
 
-        self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
-        Ok(())
+        result.push(Token::keyword(Keyword::End, Loc::zero()));
+
+        Ok(result)
     }
 
-    fn rewrite_folded_if(&mut self, instr_if: Token) -> Result<(), RewriteError> {
+    fn rewrite_folded_if(&mut self, instr_if: Token) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
         let mut holding = vec![instr_if];
         let (label, token) = self.scan_label()?;
         holding.extend(label);
@@ -116,38 +135,42 @@ impl<R> Rewriter<R> where R: Read + Seek {
         holding.extend(holding_if);
 
         let mut tokens = VecDeque::from(tokens);
-        self.rewrite_folded_instrs(&mut tokens)?;
+        let folded_instrs = self.rewrite_folded_instrs(&mut tokens)?;
+        result.extend(folded_instrs);
 
-
-        self.ast.extend(holding);
+        result.extend(holding);
 
         let _lparen = self.lexer.next_token()?;
         let _then = self.lexer.next_token()?;
 
-        self.rewrite_folded_instrs_internal(&mut VecDeque::new())?;
+        let folded_instrs_internal = self.rewrite_folded_instrs_internal(&mut VecDeque::new())?;
+        result.extend(folded_instrs_internal);
 
         let elsezero = Token::keyword(Keyword::Else, Loc::zero());
         match self.lexer.next_token()? {
             tk!(TokenKind::LeftParen) => {
                 match self.lexer.next_token()? {
                     else_ @ kw!(Keyword::Else) => {
-                        self.ast.push(else_);
-                        self.rewrite_folded_instrs_internal(&mut VecDeque::new())?;
+                        result.push(else_);
+                        let folded_instrs_internal = self.rewrite_folded_instrs_internal(&mut VecDeque::new())?;
+                        result.extend(folded_instrs_internal);
                         let _rparen = self.lexer.next_token()?;
                     },
-                    tk!(TokenKind::RightParen) => self.ast.push(elsezero),
-                    t @ _ => self.ast.push(t),
+                    tk!(TokenKind::RightParen) => result.push(elsezero),
+                    t @ _ => result.push(t),
                 }
             },
-            tk!(TokenKind::RightParen) => self.ast.push(elsezero),
-            t @ _ => self.ast.push(t),
+            tk!(TokenKind::RightParen) => result.push(elsezero),
+            t @ _ => result.push(t),
         }
-        self.ast.push(Token::keyword(Keyword::End, Loc::zero()));
+        result.push(Token::keyword(Keyword::End, Loc::zero()));
 
-        Ok(())
+        Ok(result)
     }
 
-    fn rewrite_folded_block_loop_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
+    fn rewrite_folded_block_loop_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
         let mut token;
         loop {
             if let Some(new_token) = first.pop_front() {
@@ -162,17 +185,22 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
             match token {
                 tk!(TokenKind::RightParen) => break,
-                tk!(TokenKind::LeftParen) => self.rewrite_folded_instrs(first)?,
-                instr @ instr!(_) => self.ast.push(instr),
-                tk!(TokenKind::Empty) => { self.ast.push(token); break; },
-                token @ _ => self.ast.push(token),
+                tk!(TokenKind::LeftParen) => {
+                    let folded_instrs = self.rewrite_folded_instrs(first)?;
+                    result.extend(folded_instrs);
+                },
+                instr @ instr!(_) => result.push(instr),
+                tk!(TokenKind::Empty) => { result.push(token); break; },
+                token @ _ => result.push(token),
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 
-    fn rewrite_folded_instrs_internal(&mut self, first: &mut VecDeque<Token>) -> Result<(), RewriteError> {
+    fn rewrite_folded_instrs_internal(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
         let mut first_instr: Vec<Token> = vec![];
         let mut token;
         loop {
@@ -188,18 +216,21 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
             match token {
                 tk!(TokenKind::RightParen) => {   
-                    for instr in &first_instr { self.ast.push(instr.clone()); }
+                    for instr in &first_instr { result.push(instr.clone()); }
                     first_instr.clear();
                     break;
                 },
-                tk!(TokenKind::LeftParen) => self.rewrite_folded_instrs(first)?,
+                tk!(TokenKind::LeftParen) => {
+                    let folded_instrs = self.rewrite_folded_instrs(first)?;
+                    result.extend(folded_instrs);
+                },
                 instr @ instr!(_) => first_instr.push(instr),
-                tk!(TokenKind::Empty) => { self.ast.push(token); break; },
+                tk!(TokenKind::Empty) => { result.push(token); break; },
                 token @ _ => first_instr.push(token),
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }
 

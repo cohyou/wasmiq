@@ -37,6 +37,18 @@ pub struct Rewriter<R>
 where R: Read + Seek {
     lexer: Lexer<R>,
     lookahead: Token,
+
+    types: Vec<Token>,
+    imports: Vec<Token>,
+    funcs: Vec<Token>,
+    tables: Vec<Token>,
+    mems: Vec<Token>,
+    globals: Vec<Token>,
+    start: Vec<Token>,
+    exports: Vec<Token>,
+    elem: Vec<Token>,
+    data: Vec<Token>,
+
     pub ast: Vec<Token>,
     current: usize,
 }
@@ -48,6 +60,18 @@ impl<R> Rewriter<R> where R: Read + Seek {
             Rewriter {
                 lexer: lexer,
                 lookahead: lookahead,
+
+                types: Vec::default(),
+                imports: Vec::default(),
+                funcs: Vec::default(),
+                tables: Vec::default(),
+                mems: Vec::default(),
+                globals: Vec::default(),
+                start: Vec::default(),
+                exports: Vec::default(),
+                elem: Vec::default(),
+                data: Vec::default(),
+
                 ast: Vec::default(),
                 current: 0,
             }
@@ -67,6 +91,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             self.ast.push(first_lparen);
             self.ast.push(self.lookahead.clone());
             self.rewrite_module_internal()?;
+
             let lookahead = self.lookahead.clone();
             self.match_rparen()?;
             self.ast.push(lookahead);
@@ -78,11 +103,15 @@ impl<R> Rewriter<R> where R: Read + Seek {
             self.rewrite_segment(first_lparen, self.lookahead.clone())?;
             self.rewrite_module_internal()?;
             self.ast.insert(self.ast.len()-2, Token::right_paren(Loc::zero()));
+            
             Ok(())
         }
     }
 
     fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
+        // let mut rparen: Option<Token> = None;
+        let mut last: Option<Token> = None;
+
         while let Ok(lookahead) = self.lexer.next_token() {
             // println!("lookahead: {:?}", lookahead);
             match lookahead.value {
@@ -93,15 +122,42 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     }
                 },
                 TokenKind::Empty => {
-                    self.ast.push(lookahead);
+                    last = Some(lookahead);
                     break;
                 },
+                TokenKind::RightParen => {
+                    last = Some(lookahead);
+                    break;
+                }
                 _ => {
                     self.ast.push(lookahead);
                 },
             }
         }
 
+        println!("self.imports: {:?}", tokens_to_string(self.imports.clone()));
+        self.ast.extend(self.imports.clone());
+        self.ast.extend(self.types.clone());
+        println!("self.funcs: {:?}", tokens_to_string(self.funcs.clone()));
+        self.ast.extend(self.funcs.clone());
+        println!("self.tables: {:?}", tokens_to_string(self.tables.clone()));
+        self.ast.extend(self.tables.clone());
+        println!("self.mems: {:?}", tokens_to_string(self.mems.clone()));
+        self.ast.extend(self.mems.clone());
+        println!("self.globals: {:?}", tokens_to_string(self.globals.clone()));
+        self.ast.extend(self.globals.clone());
+        println!("self.exports: {:?}", tokens_to_string(self.exports.clone()));
+        self.ast.extend(self.exports.clone());
+        println!("self.elem: {:?}", tokens_to_string(self.elem.clone()));
+        self.ast.extend(self.elem.clone());
+        println!("self.data: {:?}", tokens_to_string(self.data.clone()));
+        self.ast.extend(self.data.clone());
+        self.ast.extend(self.start.clone());
+
+        if let Some(last) = last {
+            self.ast.push(last);
+        }
+        // println!("self.ast: {:?}", tokens_to_string(self.ast.clone()));
         Ok(())
     }
 
@@ -115,15 +171,21 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
             Ok(kw!(Keyword::Param)) => {
                 self.ast.push(lparen_segment);
-                self.rewrite_param()
+                let holding = self.rewrite_valtypes(Keyword::Param)?;
+                self.ast.extend(holding);
+                Ok(())
             },
             Ok(kw!(Keyword::Result)) => {
                 self.ast.push(lparen_segment);
-                self.rewrite_result()
+                let holding = self.rewrite_valtypes(Keyword::Result)?;
+                self.ast.extend(holding);
+                Ok(())
             },
             Ok(kw!(Keyword::Local)) => {
                 self.ast.push(lparen_segment);
-                self.rewrite_local()
+                let holding = self.rewrite_valtypes(Keyword::Local)?;
+                self.ast.extend(holding);
+                Ok(())
             },
  
             Ok(lookahead) => self.rewrite_segment(lparen_segment, lookahead),
@@ -132,27 +194,67 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_segment(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
         match segment {
+            kw!(Keyword::Import) => self.scan_import(lparen_segment, segment),
             kw!(Keyword::Type) => self.rewrite_type(lparen_segment, segment),
             kw!(Keyword::Func) => self.rewrite_func(lparen_segment, segment),
             kw!(Keyword::Table) => self.rewrite_table(lparen_segment, segment),
             kw!(Keyword::Memory) => self.rewrite_memory(lparen_segment, segment),
             kw!(Keyword::Global) => self.rewrite_global(lparen_segment, segment),
-            kw!(Keyword::Elem) => {
-                self.ast.push(lparen_segment);
-                self.ast.push(segment);
-                self.rewrite_elem()
-            },
-            kw!(Keyword::Data) => {
-                self.ast.push(lparen_segment);
-                self.ast.push(segment);
-                self.rewrite_data()
-            },
+            kw!(Keyword::Export) => self.scan_export(lparen_segment, segment),
+            kw!(Keyword::Elem) => self.rewrite_elem(lparen_segment, segment),
+            kw!(Keyword::Data) => self.rewrite_data(lparen_segment, segment),
             _ => {
                 self.ast.push(lparen_segment);
                 self.ast.push(segment);
                 Ok(())
             },
         }
+    }
+
+    fn scan_import(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
+        let imports = self.scan_imexport(lparen_segment, segment)?;
+        self.imports.extend(imports);
+        Ok(())
+    }
+
+    fn scan_export(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
+        let exports = self.scan_imexport(lparen_segment, segment)?;
+        self.exports.extend(exports);
+        Ok(())
+    }
+
+    fn scan_imexport(&mut self, lparen_segment: Token, segment: Token) -> Result<Vec<Token>, RewriteError> {
+        let mut tokens = vec![];
+        tokens.push(lparen_segment);
+        tokens.push(segment);
+        while let Ok(token) = self.lexer.next_token() {
+            tokens.push(token.clone());
+            match token {
+                tk!(TokenKind::LeftParen) => {
+                    let importdesc = self.scan_simple_list()?;
+                    tokens.extend(importdesc);
+                },
+                tk!(TokenKind::RightParen) => break,
+                _ => {},
+            }
+        }
+        Ok(tokens)
+    }
+
+    fn scan_simple_list(&mut self) -> Result<Vec<Token>, RewriteError> {
+        let mut tokens = vec![];
+        while let Ok(token) = self.lexer.next_token() {
+            tokens.push(token.clone());
+            match token {
+                tk!(TokenKind::RightParen) => break,
+                tk!(TokenKind::LeftParen) => {
+                    let child = self.scan_simple_list()?;
+                    tokens.extend(child);
+                },
+                _ => {},
+            }
+        }
+        Ok(tokens)
     }
 }
 
@@ -186,11 +288,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
-        let holding = self.scan_typeidx_holding(token1, token2)?;
-        self.ast.extend(holding);
-        Ok(())
-    }
+    // fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
+    //     let holding = self.scan_typeidx_holding(token1, token2)?;
+    //     self.ast.extend(holding);
+    //     Ok(())
+    // }
 
     fn scan_typeidx_holding(&mut self, token1: Token, token2: Token) -> Result<Vec<Token>, RewriteError> {
         let mut holding = vec![token1, token2];
@@ -210,23 +312,23 @@ impl<R> Rewriter<R> where R: Read + Seek {
         ]
     }
 
-    fn rewrite_param(&mut self) -> Result<(), RewriteError> {
-        let holding = self.rewrite_valtypes(Keyword::Param)?;
-        self.ast.extend(holding);
-        Ok(())
-    }
+    // fn rewrite_param(&mut self) -> Result<(), RewriteError> {
+    //     let holding = self.rewrite_valtypes(Keyword::Param)?;
+    //     self.ast.extend(holding);
+    //     Ok(())
+    // }
 
-    fn rewrite_result(&mut self) -> Result<(), RewriteError> {
-        let holding = self.rewrite_valtypes(Keyword::Result)?;
-        self.ast.extend(holding);
-        Ok(())
-    }
+    // fn rewrite_result(&mut self) -> Result<(), RewriteError> {
+    //     let holding = self.rewrite_valtypes(Keyword::Result)?;
+    //     self.ast.extend(holding);
+    //     Ok(())
+    // }
 
-    fn rewrite_local(&mut self) -> Result<(), RewriteError> {
-        let holding = self.rewrite_valtypes(Keyword::Local)?;
-        self.ast.extend(holding);
-        Ok(())
-    }
+    // fn rewrite_local(&mut self) -> Result<(), RewriteError> {
+    //     let holding = self.rewrite_valtypes(Keyword::Local)?;
+    //     self.ast.extend(holding);
+    //     Ok(())
+    // }
 
     fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<Vec<Token>, RewriteError> {
         let mut holding = vec![];
@@ -349,6 +451,7 @@ fn tokens_to_string(tokens: Vec<Token>) -> String {
     let mut nospace = false;
     // print!("[");
     for token in tokens {
+        // println!("token: {:?}", token);
         match token {
             tk!(TokenKind::Empty) => {
                 result.push_str(format!("{}", prev).as_ref());
@@ -396,4 +499,22 @@ fn tokens_to_string(tokens: Vec<Token>) -> String {
 #[allow(dead_code)]
 fn assert_eq_rewrite(before: &str, after:&str) {
     assert_eq!(tokens_to_string(rewrite_tokens(before)), after.to_string());
+}
+
+#[test]
+fn test_import() {
+    assert_eq_rewrite(r#"(import "n1" "n2" (func $f (type 0)))"#, r#"(module (import "n1" "n2" (func $f (type 0))))"#);
+    assert_eq_rewrite(
+        r#"(import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32)))"#, 
+        r#"(module (import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32))))"#
+    );
+}
+
+#[test]
+fn test_export() {
+    assert_eq_rewrite(r#"(export "n1" (func $fid))"#, r#"(module (export "n1" (func $fid)))"#);
+    assert_eq_rewrite(
+        r#"(export "n1" (func $fid)) (export "n2" (table $tid))"#, 
+        r#"(module (export "n1" (func $fid)) (export "n2" (table $tid)))"#
+    );
 }

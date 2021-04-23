@@ -5,39 +5,46 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let mut header = vec![lparen_type, type_];
         let maybe_id = self.lexer.next_token()?;
         let lparen = self.scan_id(maybe_id, &mut header)?;
-        for t in header { self.ast.push(t); }
-        self.ast.push(lparen);
+        for t in header { self.types.push(t); }
+        self.types.push(lparen);
         let func = self.lexer.next_token()?;
-        self.ast.push(func);
+        self.types.push(func);
 
         let token = self.lexer.next_token()?;
-        self.rewrite_type_first(token)
+        self.rewrite_type_first(token)?;
+
+        let rparen = self.lexer.next_token()?;
+        self.types.push(rparen);
+
+        Ok(())
     }
 
     fn rewrite_type_first(&mut self, token: Token) -> Result<(), RewriteError> {
         match token {
-            rparen @ tk!(TokenKind::RightParen) => self.ast.push(rparen),
+            rparen @ tk!(TokenKind::RightParen) => self.types.push(rparen),
             lparen @ tk!(TokenKind::LeftParen) => {                
-                self.ast.push(lparen);
+                self.types.push(lparen);
                 match self.lexer.next_token()? {
                     param @ kw!(Keyword::Param) => {
-                        self.ast.push(param);
-                        self.rewrite_param()?;
+                        self.types.push(param);
+                        let holding = self.rewrite_valtypes(Keyword::Param)?;
+                        self.types.extend(holding);
 
                         let token = self.lexer.next_token()?;
                         self.rewrite_type_first(token)?;
                     },
                     result @ kw!(Keyword::Result) => {
-                        self.ast.push(result);
-                        self.rewrite_result()?;
+                        self.types.push(result);
+                        let holding = self.rewrite_valtypes(Keyword::Result)?;
+                        self.types.extend(holding);
 
                         let token = self.lexer.next_token()?;
                         self.rewrite_type_rest(token)?;
                     },
-                    t @ _ => self.ast.push(t),
+                    t @ _ => self.types.push(t),
                 }
             },
-            t @ _ => self.ast.push(t),
+            t @ _ => self.types.push(t),
         }
 
         Ok(())
@@ -45,21 +52,22 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_type_rest(&mut self, token: Token) -> Result<(), RewriteError> {
         match token {
-            rparen @ tk!(TokenKind::RightParen) => self.ast.push(rparen),
+            rparen @ tk!(TokenKind::RightParen) => self.types.push(rparen),
             lparen @ tk!(TokenKind::LeftParen) => {                
-                self.ast.push(lparen);
+                self.types.push(lparen);
                 match self.lexer.next_token()? {
                     result @ kw!(Keyword::Result) => {
-                        self.ast.push(result);
-                        self.rewrite_result()?;
+                        self.types.push(result);
+                        let holding = self.rewrite_valtypes(Keyword::Result)?;
+                        self.types.extend(holding);
 
                         let token = self.lexer.next_token()?;
                         self.rewrite_type_rest(token)?;
                     },
-                    t @ _ => self.ast.push(t),
+                    t @ _ => self.types.push(t),
                 }
             },
-            t @ _ => self.ast.push(t),
+            t @ _ => self.types.push(t),
         }
 
         Ok(())

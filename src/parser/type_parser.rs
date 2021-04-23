@@ -38,5 +38,4 @@ impl<R> Parser<R> where R: Read + Seek {
 
         Ok(functype)
     }
-
 }

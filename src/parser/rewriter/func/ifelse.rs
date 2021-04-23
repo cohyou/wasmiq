@@ -2,12 +2,14 @@ use std::collections::VecDeque;
 use super::*;
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    pub fn rewrite_if(&mut self) -> Result<(), RewriteError> {
+    pub fn rewrite_if(&mut self) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
         let (holding, token) = self.scan_label()?;
-        self.ast.extend(holding);
+        result.extend(holding);
 
         let (holding, tokens) = self.rewrite_blocktype_if_first(token)?;
-        self.ast.extend(holding);
+        result.extend(holding);
         let mut tokens = VecDeque::from(tokens);
         let mut token = tokens.pop_front().unwrap();
 
@@ -15,27 +17,26 @@ impl<R> Rewriter<R> where R: Read + Seek {
         loop {
             match token {
                 instr!(Instr::If(_, _, _)) => {
-                    self.ast.push(token);
-                    self.rewrite_if()?;
+                    result.push(token);
+                    let if_ = self.rewrite_if()?;
+                    result.extend(if_);
                 },
                 kw!(Keyword::Else) => {
-                    self.ast.push(token);
+                    result.push(token);
                     else_exists = true;
                 },
                 kw!(Keyword::End) => {
                     if !else_exists {
-                        self.ast.push(Token::keyword(Keyword::Else, Loc::zero()));
+                        result.push(Token::keyword(Keyword::Else, Loc::zero()));
                     }
-                    self.ast.push(token);
+                    result.push(token);
                     break;
                 },
                 tk!(TokenKind::Empty) => {
-                    self.ast.push(token);
+                    result.push(token);
                     break;
                 },
-                _ => {
-                    self.ast.push(token);
-                },
+                _ => result.push(token),
             }
 
             if let Some(new_token) = tokens.pop_front() {
@@ -49,7 +50,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }
 
