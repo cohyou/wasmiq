@@ -8,10 +8,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let token2 = self.lexer.next_token()?;
         self.rewrite_table_internal(header, token1, token2, false)?;
 
-        // let rparen = self.lexer.next_token()?;
-        // println!("rparen: {:?}", rparen);
-        // self.tables.push(rparen);
-
         Ok(())
     }
 
@@ -122,7 +118,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
     fn rewrite_table_elem(&mut self, tokens: &Vec<Token>, token1: Token, token2: Token) -> Result<(), RewriteError> {
         let mut tokens_elem = vec![];
         tokens_elem.push(token1);
-        // tokens_elem.push(Token::right_paren(Loc::zero()));
 
         self.elem.push(token2);                  
         let token_elem = self.lexer.next_token()?;
@@ -157,12 +152,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
             }
         }
         let rparen_table = self.lexer.next_token()?;
-        println!("rparen_table: {:?}", rparen_table);
         tokens_elem.push(rparen_table);
-        println!("self.elem: {:?}", self.elem);
-        println!("tokens_elem: {:?}", tokens_elem);
+
         self.tables.push(Token::number_u(n, Loc::zero()));
         self.tables.push(Token::number_u(n, Loc::zero()));
+        
         for t in tokens_elem { self.tables.push(t); }
 
         Ok(())

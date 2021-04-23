@@ -109,7 +109,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
 
     fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
-        // let mut rparen: Option<Token> = None;
         let mut last: Option<Token> = None;
 
         while let Ok(lookahead) = self.lexer.next_token() {
@@ -134,30 +133,22 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 },
             }
         }
-
-        println!("self.imports: {:?}", tokens_to_string(self.imports.clone()));
-        self.ast.extend(self.imports.clone());
+        
         self.ast.extend(self.types.clone());
-        println!("self.funcs: {:?}", tokens_to_string(self.funcs.clone()));
+        self.ast.extend(self.imports.clone());
         self.ast.extend(self.funcs.clone());
-        println!("self.tables: {:?}", tokens_to_string(self.tables.clone()));
         self.ast.extend(self.tables.clone());
-        println!("self.mems: {:?}", tokens_to_string(self.mems.clone()));
         self.ast.extend(self.mems.clone());
-        println!("self.globals: {:?}", tokens_to_string(self.globals.clone()));
         self.ast.extend(self.globals.clone());
-        println!("self.exports: {:?}", tokens_to_string(self.exports.clone()));
         self.ast.extend(self.exports.clone());
-        println!("self.elem: {:?}", tokens_to_string(self.elem.clone()));
         self.ast.extend(self.elem.clone());
-        println!("self.data: {:?}", tokens_to_string(self.data.clone()));
         self.ast.extend(self.data.clone());
         self.ast.extend(self.start.clone());
 
         if let Some(last) = last {
             self.ast.push(last);
         }
-        // println!("self.ast: {:?}", tokens_to_string(self.ast.clone()));
+
         Ok(())
     }
 
@@ -288,12 +279,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    // fn scan_typeidx(&mut self, token1: Token, token2: Token) -> Result<(), RewriteError> {
-    //     let holding = self.scan_typeidx_holding(token1, token2)?;
-    //     self.ast.extend(holding);
-    //     Ok(())
-    // }
-
     fn scan_typeidx_holding(&mut self, token1: Token, token2: Token) -> Result<Vec<Token>, RewriteError> {
         let mut holding = vec![token1, token2];
         let typeidx = self.lexer.next_token()?;
@@ -311,24 +296,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
             Token::right_paren(Loc::zero()),
         ]
     }
-
-    // fn rewrite_param(&mut self) -> Result<(), RewriteError> {
-    //     let holding = self.rewrite_valtypes(Keyword::Param)?;
-    //     self.ast.extend(holding);
-    //     Ok(())
-    // }
-
-    // fn rewrite_result(&mut self) -> Result<(), RewriteError> {
-    //     let holding = self.rewrite_valtypes(Keyword::Result)?;
-    //     self.ast.extend(holding);
-    //     Ok(())
-    // }
-
-    // fn rewrite_local(&mut self) -> Result<(), RewriteError> {
-    //     let holding = self.rewrite_valtypes(Keyword::Local)?;
-    //     self.ast.extend(holding);
-    //     Ok(())
-    // }
 
     fn rewrite_valtypes(&mut self, keyword: Keyword) -> Result<Vec<Token>, RewriteError> {
         let mut holding = vec![];
