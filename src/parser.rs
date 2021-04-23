@@ -271,7 +271,7 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn consume(&mut self) -> Result<(), ParseError> {
         self.lookahead = self.rewriter.next_token()?;
-        p!(self.lookahead);
+        // p!(self.lookahead);
         Ok(())
     }
 

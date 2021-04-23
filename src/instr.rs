@@ -12,10 +12,6 @@ use crate::{
     GlobalIdx,
     LocalIdx,
     LabelIdx,
-    // FuncAddr,
-    // TableAddr,
-    // MemAddr,
-    // Frame,
     FuncType,
     ModuleInst,
 };

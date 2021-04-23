@@ -161,3 +161,23 @@ mod encoder;
 pub use encoder::{
     module_encode,
 };
+
+#[test]
+fn test_invoke() {
+    use std::io::{Cursor, BufReader};
+    let s = r#"
+    (type (func (result i32)))
+    (func $const (type 0) (result i32) i32.const 42)
+    "#;
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    if let Ok(module) = module_parse(&mut reader) {
+        let mut store = store_init();
+        if let Ok(moduleinst) = module_instanciate(&mut store, module, vec![]) {
+            println!("moduleinst: {:?}", moduleinst);
+            if let Ok(vals) = func_invoke(&mut store, 0, vec![]) {
+                println!("vals: {:?}", vals);
+            }
+        }
+    }
+}
