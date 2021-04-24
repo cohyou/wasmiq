@@ -52,7 +52,7 @@ impl Result {
     pub fn f64val(n: f64) -> Self { Result::Vals(vec![Val::F64Const(n)]) }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Store {
     pub funcs: Vec<FuncInst>,
     pub tables: Vec<TableInst>,
@@ -76,7 +76,7 @@ pub struct ModuleInst {
     pub exports: Vec<ExportInst>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FuncInst {
     User(UserFuncInst),
     Host(HostFuncInst),
@@ -91,32 +91,33 @@ impl FuncInst {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UserFuncInst {
     pub tp: FuncType,
     module: ModuleInst,
     code: Func,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HostFuncInst {
     pub tp: FuncType,
     pub hostcode: fn(),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TableInst {
     pub elem: Vec<FuncElem>,
     pub max: Option<u32>,
 }
 type FuncElem = Option<FuncAddr>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MemInst {
     pub data: Vec<Byte>,
     pub max: Option<u32>,
 }
 
+#[derive(Debug)]
 pub struct GlobalInst {
     pub value: Val,
     pub mutability: Mut, 

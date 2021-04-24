@@ -174,8 +174,10 @@ fn test_invoke() {
     if let Ok(module) = module_parse(&mut reader) {
         let mut store = store_init();
         if let Ok(moduleinst) = module_instanciate(&mut store, module, vec![]) {
+            println!("store1: {:?}", store);
             println!("moduleinst: {:?}", moduleinst);
-            if let Ok(vals) = func_invoke(&mut store, 0, vec![]) {
+            if let Ok(vals) = func_invoke(&mut store, 1, vec![]) {
+                println!("store2: {:?}", store);
                 println!("vals: {:?}", vals);
             }
         }

@@ -247,6 +247,7 @@ impl Module {
 
     fn alloc_module(&self, store: &mut Store, externvals: Vec<ExternVal>, vals: Vec<Val>) -> ModuleInst {
         let mut moduleinst = ModuleInst::default();
+        moduleinst.types = self.types.clone();
 
         fn hostfunc() {}
         alloc_hostfunc(store, (vec![], vec![]), hostfunc);
