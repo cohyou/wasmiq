@@ -1,5 +1,5 @@
 #[macro_use]mod util;
-mod error;
+pub mod error;
 
 mod typeuse_parser;
 mod type_parser;
@@ -38,11 +38,9 @@ use crate::{
 
 use rewriter::{
     Rewriter,
-    // RewriteError,
 };
 
 pub use self::error::*;
-// pub use self::module::*;
 pub use self::typeuse_parser::*;
 pub use self::table_parser::*;
 pub use self::global_parser::*;

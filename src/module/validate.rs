@@ -210,11 +210,11 @@ impl Module {
         }
 
         if let Some(tables) = context.tables {
-            if tables.len() > 1 { return Err(Error::Invalid); }
+            if tables.len() > 1 { return Err(Error::Invalid("Module::validate tables.len() > 1".to_owned())); }
         }
 
         if let Some(mems) = context.mems {
-            if mems.len() > 1 { return Err(Error::Invalid); }
+            if mems.len() > 1 { return Err(Error::Invalid("Module::validate mems.len() > 1".to_owned())); }
         }
 
         let names = &self.exports.iter()
@@ -222,7 +222,7 @@ impl Module {
         let mut names = names.clone();
         names.dedup();
         if &names.len() < &self.exports.len() {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Module::validate &names.len() < &self.exports.len()".to_owned()));
         } 
 
         Ok((its, ets))
@@ -251,7 +251,7 @@ impl Func {
         let expr_type = self.body.validate(context)?;
         let vts: Vec<ValType> = expr_type.0.iter().map(|v| vt_rev(v)).collect();
         if vts != functype.1 {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Func::validate vts != functype.1".to_owned()));
         }
 
         Ok(functype)
@@ -276,32 +276,32 @@ impl Global {
     fn validate(&self, context: &Context) -> Result<GlobalType, Error> {
         let rt = self.init.validate(context)?;
         let vts: Vec<ValType> = rt.0.iter().map(|v| vt_rev(v)).collect();
-        if vts != vec![self.tp.0] { return Err(Error::Invalid); }
-        if !self.init.is_constant(context) { return Err(Error::Invalid); } 
+        if vts != vec![self.tp.0] { return Err(Error::Invalid("Global::validate vts != vec![self.tp.0]".to_owned())); }
+        if !self.init.is_constant(context) { return Err(Error::Invalid("Global::validate !self.init.is_constant(context)".to_owned())); } 
         Ok(self.tp.clone())
     }
 }
 
 impl Elem {
     fn validate(&self, context: &Context) -> Result<(), Error> {
-        if self.table != 0 { return Err(Error::Invalid); } 
-        let TableType(_limits, elemtype) = context.table().ok_or(Error::Invalid)?;
+        if self.table != 0 { return Err(Error::Invalid("Elem::validate self.table != 0".to_owned())); } 
+        let TableType(_limits, elemtype) = context.table().ok_or(Error::Invalid("Elem::validate context.table()".to_owned()))?;
 
-        if elemtype != ElemType::FuncRef { return Err(Error::Invalid); }
+        if elemtype != ElemType::FuncRef { return Err(Error::Invalid("Elem::validate elemtype != ElemType::FuncRef".to_owned())); }
 
         let resulttype = self.offset.validate(context)?;
         let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
         if vts != vec![ValType::I32] {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Elem::validate vts != vec![ValType::I32]".to_owned()));
         }
 
         if !self.offset.is_constant(context) {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Elem::validate !self.offset.is_constant(context)".to_owned()));
         }
 
         for y in &self.init {
             if context.func(y.clone()).is_none() {
-                return Err(Error::Invalid);
+                return Err(Error::Invalid("Elem::validate context.func(y.clone()).is_none()".to_owned()));
             }
         }
 
@@ -311,16 +311,16 @@ impl Elem {
 
 impl Data {
     fn validate(&self, context: &Context) -> Result<(), Error> {
-        if self.data != 0 { return Err(Error::Invalid); }
+        if self.data != 0 { return Err(Error::Invalid("Data::validate self.data != 0".to_owned())); }
 
         let resulttype = self.offset.validate(context)?;
         let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
         if vts != vec![ValType::I32] {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Data::validate vts != vec![ValType::I32]".to_owned()));
         }
 
         if !self.offset.is_constant(context) {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Data::validate !self.offset.is_constant(context)".to_owned()));
         }
 
         Ok(())
@@ -329,9 +329,9 @@ impl Data {
 
 impl Start {
     fn validate(&self, context: &Context) -> Result<(), Error> {
-        let functype = context.func(self.0).ok_or(Error::Invalid)?;
+        let functype = context.func(self.0).ok_or(Error::Invalid("Start::validate context.func(self.0)".to_owned()))?;
         if functype.0.len() > 0 || functype.1.len() > 0 {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Start::validate functype.0.len() > 0 || functype.1.len() > 0".to_owned()));
         }
         Ok(())
     }
@@ -342,21 +342,21 @@ impl ExportDesc {
         match &self {
             ExportDesc::Func(x) => {
                 let functype = context.func(x.clone())
-                    .ok_or(Error::OutOfIndex(format!("exportdesc validate: funcidx")))?;
+                    .ok_or(Error::OutOfIndex(format!("ExportDesc::validate: funcidx")))?;
                 Ok(ExternType::Func(functype.clone()))
             },
             ExportDesc::Table(x) => {
-                if x != &0 { return Err(Error::Invalid); }
+                if x != &0 { return Err(Error::Invalid("ExportDesc::validate Table　x != &0".to_owned())); }
                 let tabletype = context.table().unwrap();
                 Ok(ExternType::Table(tabletype.clone()))
             },
             ExportDesc::Mem(x) => {
-                if x != &0 { return Err(Error::Invalid); }
+                if x != &0 { return Err(Error::Invalid("ExportDesc::validate Mem x != &0".to_owned())); }
                 let memtype = context.mem().unwrap();
                 Ok(ExternType::Mem(memtype.clone()))
             },
             ExportDesc::Global(x) => {
-                let globaltype = context.global(x.clone()).ok_or(Error::Invalid)?;
+                let globaltype = context.global(x.clone()).ok_or(Error::Invalid("ExportDesc::validate context.global(x.clone())".to_owned()))?;
                 Ok(ExternType::Global(globaltype.clone()))
             },
         }

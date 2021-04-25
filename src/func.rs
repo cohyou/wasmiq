@@ -6,7 +6,7 @@ use crate::{
     Error,
     FuncType,
     FuncInst,
-    Result as ExecResult,
+    ExecResult,
 
     alloc_hostfunc,
 };
@@ -26,6 +26,6 @@ pub fn func_invoke<'a>(store: &'a mut Store, funcaddr: FuncAddr, vals: Vec<Val>)
     let res = Module::invoke(store, funcaddr, vals);
     match res {
         ExecResult::Vals(vals) => Ok(vals),
-        ExecResult::Trap => Err(Error::Invalid),
+        ExecResult::Trap(err) => Err(err),
     }
 }

@@ -11,5 +11,5 @@ pub fn instance_export(moduleinst: ModuleInst, name: Name) -> Result<ExternVal, 
             return Ok(exportinst.value);
         }
     }
-    Err(Error::Invalid)
+    Err(Error::Invalid("instance_export".to_owned()))
 }

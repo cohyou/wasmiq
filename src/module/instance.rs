@@ -11,8 +11,7 @@ use crate::{
     Thread,
     StackEntry,
     Val,
-    // Instr,
-    // Start,
+
     FuncAddr,
     GlobalType,
     GlobalAddr,
@@ -32,31 +31,32 @@ use crate::{
     ElemType,
     ValType,
     Expr,
-    Result as ExecResult,
+    ExecResult,
 };
 
 pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<ExternVal>) -> Result<ModuleInst, Error> {
     let (frame, result) = module.instanciate(store, externvals);
-    if let ExecResult::Vals(_) = result {
-        Ok(frame.module)
-    } else {
-        Err(Error::Invalid)
+    match result {
+        ExecResult::Vals(_) => Ok(frame.module),
+        ExecResult::Trap(err) => Err(err),
     }
 }
 
 impl Module {
     fn instanciate(&self, store: &mut Store, externvals: Vec<ExternVal>) -> (Frame, ExecResult) {
         let frame_default = Frame::default();
-        let trap = ExecResult::Trap;
+        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate".to_owned()));
 
         let externtypes = match self.validate() {
-            Err(_error) => {
+            Err(err) => {
+                let trap = ExecResult::Trap(err);
                 return (frame_default, trap);
             },
             Ok(externtypes) => externtypes,
         };
         let externtypes_imp = externtypes.0;
         if externtypes_imp.len() != externvals.len() { 
+            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate externtypes_imp.len() != externvals.len()".to_owned()));
             return (frame_default, trap);
         }
         let mut globaladdrs = vec![];
@@ -69,8 +69,12 @@ impl Module {
                         Some(FuncInst::Host(funcinst)) => funcinst.tp.clone(),
                     };
                     if let ExternType::Func(ft) = ext_type {
-                        if Module::match_functype(functype, ft) { return (frame_default, trap); }
+                        if Module::match_functype(functype, ft) {
+                            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Module::match_functype(functype, ft)".to_owned()));
+                            return (frame_default, trap);
+                        }
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate ExternType::Func(ft) = ext_type".to_owned()));
                         return (frame_default, trap);
                     }
                 },
@@ -79,11 +83,16 @@ impl Module {
                     if let Some(tabletype) = find_tabletype(store, tableaddr.clone()) {
                         tabletype
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Some(tabletype) = find_tabletype(store, tableaddr.clone())".to_owned()));
                         return (frame_default, trap);
                     };
                     if let ExternType::Table(tt) = ext_type {
-                        if Module::match_tabletype(tabletype, tt) { return (frame_default, trap); }
+                        if Module::match_tabletype(tabletype, tt) {
+                            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Module::match_tabletype(tabletype, tt)".to_owned()));
+                            return (frame_default, trap);
+                        }
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate ExternType::Table(tt) = ext_type".to_owned()));
                         return (frame_default, trap);
                     }
                 },
@@ -92,11 +101,16 @@ impl Module {
                     if let Some(memtype) = find_memtype(store, memaddr.clone()) {
                         memtype
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Some(memtype) = find_memtype(store, memaddr.clone())".to_owned()));
                         return (frame_default, trap);
                     };
                     if let ExternType::Mem(mt) = ext_type {
-                        if Module::match_memtype(memtype, mt) { return (frame_default, trap); }
+                        if Module::match_memtype(memtype, mt) {
+                            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Module::match_memtype(memtype, mt)".to_owned()));
+                            return (frame_default, trap);
+                        }
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate ExternType::Mem(mt) = ext_type".to_owned()));
                         return (frame_default, trap);
                     }
                 },
@@ -105,11 +119,16 @@ impl Module {
                     if let Some(globaltype) = find_globaltype(store, globaladdr.clone()) {
                         globaltype
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Some(globaltype) = find_globaltype(store, globaladdr.clone())".to_owned()));
                         return (frame_default, trap);
                     };
                     if let ExternType::Global(gt) = ext_type {
-                        if Module::match_globaltype(globaltype, gt) { return (frame_default, trap); }
+                        if Module::match_globaltype(globaltype, gt) {
+                            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Module::match_globaltype(globaltype, gt)".to_owned()));
+                            return (frame_default, trap);
+                        }
                     } else {
+                        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate ExternType::Global(gt) = ext_type".to_owned()));
                         return (frame_default, trap);
                     }
                     globaladdrs.push(globaladdr.clone());
@@ -140,6 +159,7 @@ impl Module {
             let eo = if let Val::I32Const(eo) = Self::evaluate_expr(thread.store, elem.offset.clone()) {
                 eo
             } else {
+                let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Val::I32Const(eo) = Self::evaluate_expr(thread.store, elem.offset.clone())".to_owned()));
                 return (frame_default, trap);
             };
             let tableidx = elem.table;
@@ -148,6 +168,7 @@ impl Module {
             let eend = eo as usize + elem.init.len();
 
             if eend > tableinst.elem.len() {
+                let trap = ExecResult::Trap(Error::Invalid("Module::instanciate eend > tableinst.elem.len()".to_owned()));
                 return (frame_default, trap);
             }
             init_elem_list.push(eo);
@@ -158,6 +179,7 @@ impl Module {
             let data_o = if let Val::I32Const(data_o) = Self::evaluate_expr(thread.store, data.offset.clone()) {
                 data_o
             } else {
+                let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Val::I32Const(data_o) = Self::evaluate_expr(thread.store, data.offset.clone())".to_owned()));
                 return (frame_default, trap);
             };
             let memidx = data.data;
@@ -166,6 +188,7 @@ impl Module {
             let dend = data_o as usize + data.init.len();
 
             if dend > meminst.data.len() {
+                let trap = ExecResult::Trap(Error::Invalid("Module::instanciate dend > meminst.data.len()".to_owned()));
                 return (frame_default, trap);
             }
             init_data_list.push(data_o);
@@ -174,6 +197,7 @@ impl Module {
         let frame = if let Some(StackEntry::Activation(0, frame)) = thread.stack.pop() {
             frame
         } else {
+            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Some(StackEntry::Activation(0, frame)) = thread.stack.pop()".to_owned()));
             return (frame_default, trap);
         };
         for (elem, eo) in self.elem.iter().zip(init_elem_list) {
@@ -207,14 +231,14 @@ impl Module {
         let funcinst = if let Some(funcinst) = store.funcs.get(funcaddr) {
             funcinst
         } else {
-            return ExecResult::Trap;
+            return ExecResult::Trap(Error::Invalid("Module::invoke store.funcs.get(funcaddr) is None".to_owned()));
         };
         let (argtypes, returntypes) = match funcinst {
             FuncInst::User(user) => user.tp.clone(),
             FuncInst::Host(host) => host.tp.clone(),
         };
         if vals.len() != argtypes.len() {
-            return ExecResult::Trap;
+            return ExecResult::Trap(Error::Invalid("Module::invoke vals.len() != argtypes.len()".to_owned()));
         }
         for (argtype, val) in argtypes.iter().zip(vals.clone()) {
             let matches = match val {
@@ -223,7 +247,7 @@ impl Module {
                 Val::F32Const(_) => argtype == &ValType::F32,
                 Val::F64Const(_) => argtype == &ValType::F64,
             };
-            if !matches { return ExecResult::Trap; }
+            if !matches { return ExecResult::Trap(Error::Invalid("Module::invoke !matches".to_owned())); }
         }
 
         let dummy_frame = Frame{ module: ModuleInst::default(), locals: vec![] };
@@ -418,9 +442,13 @@ pub fn find_tabletype(store: &Store, tableaddr: TableAddr) -> Option<TableType> 
 
 pub fn grow_table(tableinst: &mut TableInst, n: usize) -> std::result::Result<(), Error> {
     let len = n + (tableinst.elem.len() / (64*1024));
-    if len > 2usize.pow(32) { return Err(Error::Invalid); }
+    if len > 2usize.pow(32) {
+        return Err(Error::Invalid("grow_table len > 2usize.pow(32)".to_owned()));
+    }
     if let Some(mx) = tableinst.max {
-        if (mx as usize) < len { return Err(Error::Invalid); }
+        if (mx as usize) < len {
+            return Err(Error::Invalid("grow_table (mx as usize) < len".to_owned()));
+        }
     }
     for _ in 0..n {
         tableinst.elem.push(None);    
@@ -440,9 +468,13 @@ pub fn find_memtype(store: &Store, memaddr: TableAddr) -> Option<MemType> {
 
 pub fn grow_mem(meminst: &mut MemInst, n: usize) -> std::result::Result<(), Error> {
     let len = n + (meminst.data.len() / (64*1024));
-    if len > 2usize.pow(16) { return Err(Error::Invalid); }
+    if len > 2usize.pow(16) {
+        return Err(Error::Invalid("grow_mem len > 2usize.pow(16)".to_owned()));
+    }
     if let Some(mx) = meminst.max {
-        if (mx as usize) < len { return Err(Error::Invalid); }
+        if (mx as usize) < len {
+            return Err(Error::Invalid("grow_mem (mx as usize) < len".to_owned()));
+        }
     }
     for _ in 0..n {
         let page = [0x00;64*1024];

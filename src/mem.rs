@@ -20,13 +20,13 @@ pub fn mem_type(store: &Store, memaddr: MemAddr) -> MemType {
 
 pub fn mem_read(store: &Store, memaddr: MemAddr, i: u32) -> Result<Byte, Error> {
     let mi = &store.mems[memaddr];
-    if i as usize >= mi.data.len() { return Err(Error::Invalid); }
+    if i as usize >= mi.data.len() { return Err(Error::Invalid("mem_read i as usize >= mi.data.len()".to_owned())); }
     Ok(mi.data[i as usize])
 }
 
 pub fn mem_write(store: &mut Store, memaddr: MemAddr, i: u32, byte: Byte) -> Result<(), Error> {
     let mi = &mut store.mems[memaddr];
-    if i as usize >= mi.data.len() { return Err(Error::Invalid); }
+    if i as usize >= mi.data.len() { return Err(Error::Invalid("mem_write i as usize >= mi.data.len()".to_owned())); }
     mi.data[i as usize] = byte;
     Ok(())
 }

@@ -30,6 +30,7 @@ use crate::{
     Mut,
     Func,
     Instr,
+    Error,
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -40,16 +41,16 @@ pub enum Val {
     F64Const(f64),
 }
 
-pub enum Result {
+pub enum ExecResult {
     Vals(Vec<Val>),
-    Trap,
+    Trap(Error),
 }
 
-impl Result {
-    pub fn i32val(n: u32) -> Self { Result::Vals(vec![Val::I32Const(n)]) }
-    pub fn i64val(n: u64) -> Self { Result::Vals(vec![Val::I64Const(n)]) }
-    pub fn f32val(n: f32) -> Self { Result::Vals(vec![Val::F32Const(n)]) }
-    pub fn f64val(n: f64) -> Self { Result::Vals(vec![Val::F64Const(n)]) }
+impl ExecResult {
+    pub fn i32val(n: u32) -> Self { ExecResult::Vals(vec![Val::I32Const(n)]) }
+    pub fn i64val(n: u64) -> Self { ExecResult::Vals(vec![Val::I64Const(n)]) }
+    pub fn f32val(n: f32) -> Self { ExecResult::Vals(vec![Val::F32Const(n)]) }
+    pub fn f64val(n: f64) -> Self { ExecResult::Vals(vec![Val::F64Const(n)]) }
 }
 
 #[derive(Default, Debug)]

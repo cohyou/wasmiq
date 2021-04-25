@@ -9,7 +9,7 @@ use crate::{
 
 use super::*;
 use super::{
-    Result as ExecResult,
+    ExecResult,
 };
 
 impl<'a> Thread<'a> {
@@ -39,7 +39,7 @@ impl<'a> Thread<'a> {
         let ea = ea as usize;
         let max = ea + (n / 8) as usize;
         if max > mem.data.len() {
-            return Result::Trap;
+            return ExecResult::Trap(Error::Invalid("Thread::execute_load_internal max > mem.data.len()".to_owned()));
         }
 
         let slice = &mem.data[ea..max];
@@ -51,8 +51,8 @@ impl<'a> Thread<'a> {
                 }
                 let v = u8::from_le_bytes(bytes);
                 match valtype {
-                    ValType::I32 => Result::i32val(v as u32),
-                    ValType::I64 => Result::i64val(v as u64),
+                    ValType::I32 => ExecResult::i32val(v as u32),
+                    ValType::I64 => ExecResult::i64val(v as u64),
                     // ValType::F32 => Result::f32val(v as f32),
                     // ValType::F64 => Result::f64val(v as f64),
                     _ => unreachable!(),
@@ -65,8 +65,8 @@ impl<'a> Thread<'a> {
                 }
                 let v = u16::from_le_bytes(bytes);
                 match valtype {
-                    ValType::I32 => Result::i32val(v as u32),
-                    ValType::I64 => Result::i64val(v as u64),
+                    ValType::I32 => ExecResult::i32val(v as u32),
+                    ValType::I64 => ExecResult::i64val(v as u64),
                     // ValType::F32 => Result::f32val(v as f32),
                     // ValType::F64 => Result::f64val(v as f64),
                     _ => unreachable!(),
@@ -79,10 +79,10 @@ impl<'a> Thread<'a> {
                 }
                 let v = u32::from_le_bytes(bytes);
                 match valtype {
-                    ValType::I32 => Result::i32val(v as u32),
-                    ValType::I64 => Result::i64val(v as u64),
-                    ValType::F32 => Result::f32val(v as f32),
-                    ValType::F64 => Result::f64val(v as f64),
+                    ValType::I32 => ExecResult::i32val(v as u32),
+                    ValType::I64 => ExecResult::i64val(v as u64),
+                    ValType::F32 => ExecResult::f32val(v as f32),
+                    ValType::F64 => ExecResult::f64val(v as f64),
                 }
             },
             64 => {
@@ -92,10 +92,10 @@ impl<'a> Thread<'a> {
                 }
                 let v = u64::from_le_bytes(bytes);
                 match valtype {
-                    ValType::I32 => Result::i32val(v as u32),
-                    ValType::I64 => Result::i64val(v as u64),
-                    ValType::F32 => Result::f32val(v as f32),
-                    ValType::F64 => Result::f64val(v as f64),
+                    ValType::I32 => ExecResult::i32val(v as u32),
+                    ValType::I64 => ExecResult::i64val(v as u64),
+                    ValType::F32 => ExecResult::f32val(v as f32),
+                    ValType::F64 => ExecResult::f64val(v as f64),
                 }
             },
             _ => unreachable!(),
@@ -130,7 +130,7 @@ impl<'a> Thread<'a> {
         let ea = ea as usize;
         let max = ea + (n / 8) as usize;
         if max > mem.data.len() {
-            return Result::Trap;
+            return ExecResult::Trap(Error::Invalid("Thread::execute_store_internal max > mem.data.len()".to_owned()));
         }
         let slice = &mut mem.data[ea..max];
 
@@ -146,7 +146,7 @@ impl<'a> Thread<'a> {
                 for i in 0..(n/8) as usize {
                     slice[i] = bytes[i];
                 }
-                Result::Vals(vec![])
+                ExecResult::Vals(vec![])
             },
             ValType::I64 => {
                 let wrapped_n = 
@@ -159,7 +159,7 @@ impl<'a> Thread<'a> {
                 for i in 0..(n/8) as usize {
                     slice[i] = bytes[i];
                 }
-                Result::Vals(vec![])
+                ExecResult::Vals(vec![])
             },
             ValType::F32 => {
                 let n = 
@@ -172,7 +172,7 @@ impl<'a> Thread<'a> {
                 for i in 0..4 {
                     slice[i] = bytes[i];
                 }
-                Result::Vals(vec![])
+                ExecResult::Vals(vec![])
             },
             ValType::F64 => {
                 let n = 
@@ -185,7 +185,7 @@ impl<'a> Thread<'a> {
                 for i in 0..8 {
                     slice[i] = bytes[i];
                 }
-                Result::Vals(vec![])
+                ExecResult::Vals(vec![])
             },
         }
     }
@@ -204,15 +204,15 @@ impl<'a> Thread<'a> {
         }
     }
 
-    pub fn execute_memorysize(&mut self) -> Result {
+    pub fn execute_memorysize(&mut self) -> ExecResult {
         let (_, frame) = self.current_frame();
         let memaddr = frame.module.memaddrs[0];
         let mem = &self.store.mems[memaddr];
         let sz = mem.data.len() / (64*1024);
-        Result::Vals(vec![Val::I32Const(sz as u32)])
+        ExecResult::Vals(vec![Val::I32Const(sz as u32)])
     }
 
-    pub fn execute_memorygrow(&mut self) -> Result {
+    pub fn execute_memorygrow(&mut self) -> ExecResult {
         let (_, frame) = self.current_frame();
         let memaddr = frame.module.memaddrs[0];
         let meminst = &self.store.mems[memaddr];
@@ -226,9 +226,9 @@ impl<'a> Thread<'a> {
         let err = u32::MAX;
 
         if let Err(_) = grow_mem(&mut self.store.mems[memaddr], n as usize){
-            Result::Vals(vec![Val::I32Const(err)])
+            ExecResult::Vals(vec![Val::I32Const(err)])
         } else {
-            Result::Vals(vec![Val::I32Const(sz as u32)])
+            ExecResult::Vals(vec![Val::I32Const(sz as u32)])
         }
     }
 }

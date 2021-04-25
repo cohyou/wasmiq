@@ -144,7 +144,7 @@ use runtime::{
     TableInst,
     MemInst,
     ExportInst,
-    Result,
+    ExecResult,
 };
 
 mod decoder;
@@ -164,22 +164,38 @@ pub use encoder::{
 
 #[test]
 fn test_invoke() {
-    use std::io::{Cursor, BufReader};
     let s = r#"
     (type (func (result i32)))
     (func $const (type 0) (result i32) i32.const 42)
     "#;
+    assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(42)]));
+}
+
+#[allow(dead_code)]
+fn invoke_assert_eq(s: &str) -> Option<Vec<Val>> {
+    match invoke(s) {
+        Ok(vals) => Some(vals),
+        Err(err) => {
+            println!("error: {:?}", err);
+            None
+        },
+    }
+    
+}
+
+#[allow(dead_code)]
+fn invoke(s: &str) -> Result<Vec<Val>, Error> {
+    use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let mut reader = BufReader::new(cursor);
-    if let Ok(module) = module_parse(&mut reader) {
-        let mut store = store_init();
-        if let Ok(moduleinst) = module_instanciate(&mut store, module, vec![]) {
-            println!("store1: {:?}", store);
-            println!("moduleinst: {:?}", moduleinst);
-            if let Ok(vals) = func_invoke(&mut store, 1, vec![]) {
-                println!("store2: {:?}", store);
-                println!("vals: {:?}", vals);
-            }
-        }
-    }
+    let module = module_parse(&mut reader)?;
+    let mut store = store_init();
+    let moduleinst = module_instanciate(&mut store, module, vec![])?;
+    println!("store1: {:?}", store);
+    println!("moduleinst: {:?}", moduleinst);
+    let vals = func_invoke(&mut store, 1, vec![])?;
+    println!("store2: {:?}", store);
+    println!("vals: {:?}", vals);
+
+    Ok(vals)
 }

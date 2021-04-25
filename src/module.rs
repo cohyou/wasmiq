@@ -126,20 +126,16 @@ pub fn module_decode(reader: &mut impl Read) -> Result<Module, Error> {
     if let Ok(module) = decode_module(reader) {
         Ok(module)
     } else {
-        Err(Error::Invalid)
+        Err(Error::Invalid("module_decode".to_owned()))
     }
 }
 
 pub fn module_parse(reader: &mut (impl Read + Seek)) -> Result<Module, Error> {
     let mut parser = Parser::new(reader);
     match parser.parse() {
-        Err(err) => {
-            println!("PARSE ERROR: {:?}", err);
-            return Err(Error::Invalid);
-        },
-        _ => {},
+        Ok(()) => Ok(parser.module),
+        Err(err) => Err(Error::OnParse(err)),
     }
-    Ok(parser.module)
 }
 
 pub fn module_validate(module: Module) -> Result<(), Error> {

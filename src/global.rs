@@ -25,7 +25,7 @@ pub fn global_read(store: &Store, globaladdr: GlobalAddr) -> Val {
 
 pub fn global_write(store: &mut Store, globaladdr: GlobalAddr, val: Val) -> Result<(), Error> {
     let gi = &mut store.globals[globaladdr];
-    if gi.mutability != Mut::Var { return Err(Error::Invalid); }
+    if gi.mutability != Mut::Var { return Err(Error::Invalid("global_write gi.mutability != Mut::Var".to_owned())); }
     gi.value = val;
     Ok(())
 }

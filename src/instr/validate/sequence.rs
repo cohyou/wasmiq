@@ -20,7 +20,7 @@ impl Expr {
     pub fn validate(&self, context: &Context) -> Result<ResultType, Error> {
         let functype = Instr::validate_instr_sequence(context, &self.0)?;
         if functype.0.0.len() > 0 {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid("Expr::validate functype.0.0.len() > 0".to_owned()));
         }
         Ok(ResultType(functype.1.0))
     }
@@ -84,7 +84,7 @@ impl Instr {
     pub fn validate_instr_sequence(context: &Context, instrs: &Vec<Instr>) -> Result<FuncType, Error> {
         if instrs.is_empty() { return instr_tp!(Ellipsis -> Ellipsis); }
 
-        let mut ret = Err(Error::Invalid);
+        let mut ret = Err(Error::Invalid("Instr::validate_instr_sequence default".to_owned()));
         let mut rets: ResultType; 
 
         let mut instr_resolved: Option<Instr> = None;
@@ -108,12 +108,14 @@ impl Instr {
             // TODO: better algorithm...
             match instr_second {
                 &Instr::Drop(None) => {
-                    let valtype = first_functype.1.last().ok_or(Error::Invalid)?;
+                    let valtype = first_functype.1.last()
+                        .ok_or(Error::Invalid("validate_instr_sequence instr_second Drop first_functype.1.last()".to_owned()))?;
                     second_functype_args = ResultType(vec![valtype.clone()]);
                     instr_resolved = Some(Instr::Drop(Some(vt_rev(valtype))));
                 },
                 &Instr::Select(None) => {
-                    let valtype = first_functype.1.last2().ok_or(Error::Invalid)?;
+                    let valtype = first_functype.1.last2()
+                        .ok_or(Error::Invalid("validate_instr_sequence instr_second Select first_functype.1.last2()".to_owned()))?;
                     second_functype_args = ResultType(vec![valtype.clone(), valtype.clone(), ValType::I32]);
                     second_functype_rets = ResultType(vec![valtype.clone()]);
                     instr_resolved = Some(Instr::Select(Some(vt_rev(valtype))));
@@ -123,7 +125,8 @@ impl Instr {
 
 
             // compare types
-            rets = first_functype.1.strip_suffix(&second_functype_args).ok_or(Error::Invalid)?;
+            rets = first_functype.1.strip_suffix(&second_functype_args)
+                .ok_or(Error::Invalid("validate_instr_sequence first_functype.1.strip_suffix".to_owned()))?;
             
 
             let ret_args = first_functype.0;

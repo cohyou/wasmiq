@@ -22,21 +22,21 @@ impl<'a> Thread<'a> {
         self.execute_instrs(instrs);
     }
 
-    pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> Result {
+    pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> ExecResult {
         for instr in instrs {
             match self.execute_instr(instr) {
-                Result::Vals(vals) => {
+                ExecResult::Vals(vals) => {
                     let vals: Vec<StackEntry> = vals.iter()
                         .map(|v| StackEntry::Value(v.clone())).collect();
                     self.stack.extend(vals);
                 },
-                Result::Trap => return Result::Trap,
+                ExecResult::Trap(err) => return ExecResult::Trap(err),
             }
         }
-        Result::Vals(vec![])
+        ExecResult::Vals(vec![])
     }
 
-    fn execute_instr(&mut self, instr: &Instr) -> Result {
+    fn execute_instr(&mut self, instr: &Instr) -> ExecResult {
         match instr {
             /* Block Instructions */
     
@@ -49,8 +49,8 @@ impl<'a> Thread<'a> {
             /* Plain Instructions */
     
             // Control Instructions
-            Instr::Unreachable => Result::Trap,
-            Instr::Nop => Result::Vals(vec![]),
+            Instr::Unreachable => ExecResult::Trap(Error::Invalid("Thread::execute_instr Unreachable".to_owned())),
+            Instr::Nop => ExecResult::Vals(vec![]),
             Instr::Br(labelidx) => self.execute_br(labelidx),
             Instr::BrIf(labelidx) => self.execute_brif(labelidx),
             Instr::BrTable(labelindices, labelidx) => self.execute_brtable(labelindices, labelidx),
@@ -82,10 +82,10 @@ impl<'a> Thread<'a> {
             Instr::MemoryGrow => self.execute_memorygrow(),
     
             // Numeric Instructions
-            Instr::I32Const(i) => Result::Vals(vec![Val::I32Const(i.clone())]),
-            Instr::I64Const(i) => Result::Vals(vec![Val::I64Const(i.clone())]),
-            Instr::F32Const(f) => Result::Vals(vec![Val::F32Const(f.clone())]),
-            Instr::F64Const(f) => Result::Vals(vec![Val::F64Const(f.clone())]),
+            Instr::I32Const(i) => ExecResult::Vals(vec![Val::I32Const(i.clone())]),
+            Instr::I64Const(i) => ExecResult::Vals(vec![Val::I64Const(i.clone())]),
+            Instr::F32Const(f) => ExecResult::Vals(vec![Val::F32Const(f.clone())]),
+            Instr::F64Const(f) => ExecResult::Vals(vec![Val::F64Const(f.clone())]),
     
             Instr::IUnOp(ValSize::V32, IUnOp::Clz) => self.execute_iclz32(),
             Instr::IUnOp(ValSize::V64, IUnOp::Clz) => self.execute_iclz64(),
@@ -230,7 +230,7 @@ impl<'a> Thread<'a> {
         }
     }
 
-    pub fn execute_invoke(&mut self, funcaddr: &FuncAddr) -> Result {
+    pub fn execute_invoke(&mut self, funcaddr: &FuncAddr) -> ExecResult {
         // let mut instrs = vec![];
         let funcinst = self.store.funcs[funcaddr.clone()].clone();
     
@@ -267,11 +267,11 @@ impl<'a> Thread<'a> {
                 self.stack.push(activation);
                 let label = StackEntry::Label(m as u32, vec![]);
 
-                if let Result::Vals(vals) = self.execute_instrs_with_label(label, &expr.0) {
+                if let ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0) {
                     let vals: Vec<StackEntry> = vals.iter().map(|v| StackEntry::Value(v.clone())).collect();
                     self.stack.extend(vals);
                 } else {
-                    return Result::Trap;
+                    return ExecResult::Trap(Error::Invalid("Thread::execute_invoke ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0)".to_owned()));
                 }
 
 
@@ -286,7 +286,7 @@ impl<'a> Thread<'a> {
                 // pop the label
                 self.stack.pop();  
 
-                Result::Vals(vals)
+                ExecResult::Vals(vals)
             },
             FuncInst::Host(hostfunc) => {
                 let f = hostfunc.hostcode;
@@ -296,7 +296,7 @@ impl<'a> Thread<'a> {
         }
     }
 
-    pub fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) -> Result {
+    pub fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) -> ExecResult {
         self.stack.push(label);
 
         self.execute_instrs(instrs);
@@ -312,7 +312,7 @@ impl<'a> Thread<'a> {
         // pop the label
         self.stack.pop();  
         
-        Result::Vals(vals)
+        ExecResult::Vals(vals)
     }
 
     pub fn current_frame(&self) -> (u32, Frame) {

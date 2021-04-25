@@ -20,13 +20,13 @@ pub fn table_type(store: &Store, tableaddr: TableAddr) -> TableType {
 
 pub fn table_read(store: &Store, tableaddr: TableAddr, i: u32) -> Result<Option<FuncAddr>, Error> {
     let ti = &store.tables[tableaddr];
-    if i as usize >= ti.elem.len() { return Err(Error::Invalid); }
+    if i as usize >= ti.elem.len() { return Err(Error::Invalid("table_read i as usize >= ti.elem.len()".to_owned())); }
     Ok(ti.elem[i as usize])
 }
 
 pub fn table_write(store: &mut Store, tableaddr: TableAddr, i: u32, funcaddr: Option<FuncAddr>) -> Result<(), Error> {
     let ti = &mut store.tables[tableaddr];
-    if i as usize >= ti.elem.len() { return Err(Error::Invalid); }
+    if i as usize >= ti.elem.len() { return Err(Error::Invalid("table_write i as usize >= ti.elem.len()".to_owned())); }
     ti.elem[i as usize] = funcaddr;
     Ok(())
 }

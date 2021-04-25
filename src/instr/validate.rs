@@ -400,7 +400,7 @@ impl Instr {
                 let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
                 let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
                 if functype1 != functype2 {
-                    return Err(Error::Invalid);
+                    return Err(Error::Invalid("Instr::If validate functype1 != functype2".to_owned()));
                 }
                 Ok(functype1)
             },
