@@ -1,5 +1,6 @@
 mod validate;
 mod instance;
+mod invoke;
 
 pub use instance::{
     alloc_hostfunc,
