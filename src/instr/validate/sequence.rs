@@ -83,6 +83,9 @@ impl ResultType {
 impl Instr {
     pub fn validate_instr_sequence(context: &Context, instrs: &Vec<Instr>) -> Result<FuncType, Error> {
         if instrs.is_empty() { return instr_tp!(Ellipsis -> Ellipsis); }
+        if instrs.len() ==  1 {
+            return instrs[0].validate(context);
+        }
 
         let mut ret = Err(Error::Invalid("Instr::validate_instr_sequence default".to_owned()));
         let mut rets: ResultType; 
