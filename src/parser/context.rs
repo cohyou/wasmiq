@@ -15,7 +15,11 @@ pub struct Context {
     pub typedefs: Vec<FuncType>, // typedefs functype*
 }
 
-pub type Id = String;
+#[derive(Clone, Debug)]
+pub enum Id {
+   Named(String),
+   Anonymous(u32),
+}
 
 
 impl Debug for Context {

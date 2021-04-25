@@ -252,7 +252,7 @@ impl<R> Parser<R> where R: Read + Seek {
     fn check_label_id(&mut self) -> Result<(), ParseError> {
         if let tk!(TokenKind::Id(s)) = &self.lookahead {
 
-            if let Some(label_s) = &self.contexts.last().unwrap().labels.last().unwrap() {
+            if let Some(Id::Named(label_s)) = &self.contexts.last().unwrap().labels.last().unwrap() {
                 if s != label_s {
                     return Err(self.err2("invalid label of block end"));
                 }

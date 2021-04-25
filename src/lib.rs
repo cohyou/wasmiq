@@ -217,20 +217,19 @@ fn test_invoke4() {
 #[test]
 fn test_gensym() {
     let s = r#"
-    (func $id (export "main") nop)
+    (type (func (param f32)))
+    (func (export "main") (param i32) (result i32) i32.const 32)
     "#;
-    use std::io::{Cursor, BufReader};
-    let cursor = Cursor::new(s);
-    let mut reader = BufReader::new(cursor);
-    match module_parse(&mut reader) {
-        Ok(module) => {
-            p!(module.types);
-            p!(module.imports);
-            p!(module.funcs);
-            p!(module.exports);
-        },
-        Err(err) => p!(err),
-    }
+    show_parse_result(s);
+}
+
+#[test]
+fn test_resolve_func_id() {
+    let s = r#"
+    (type (func))
+    (func (export "main") nop)
+    "#;
+    show_parse_result(s);
 }
 
 #[test]
@@ -247,6 +246,23 @@ fn test_export() {
     let mut reader = BufReader::new(cursor);
     let module = module_parse(&mut reader).unwrap();
     p!(module_exports(module));
+}
+
+
+#[allow(dead_code)]
+fn show_parse_result(s: &str) {
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    match module_parse(&mut reader) {
+        Ok(module) => {
+            p!(module.types);
+            p!(module.imports);
+            p!(module.funcs);
+            p!(module.exports);
+        },
+        Err(err) => p!(err),
+    }
 }
 
 #[allow(dead_code)]

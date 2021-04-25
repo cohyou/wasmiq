@@ -30,7 +30,10 @@ macro_rules! parse_optional_id {
     ($this:ident, $v:expr) => {
         if let tk!(TokenKind::Id(s)) = &$this.lookahead {
             let new_s = s.clone();
-            $v.push(Some(new_s));
+            $v.push(Some(Id::Named(new_s)));
+            $this.consume()?;
+        } else if let tk!(TokenKind::GenSym(idx)) = &$this.lookahead {
+            $v.push(Some(Id::Anonymous(idx.clone())));
             $this.consume()?;
         } else {
             $v.push(None);
@@ -42,7 +45,7 @@ macro_rules! parse_optional_label_id {
     ($this:ident, $v:expr) => {
         if let tk!(TokenKind::Id(s)) = &$this.lookahead {
             let new_s = s.clone();
-            $v.insert(0, Some(new_s));
+            $v.insert(0, Some(Id::Named(new_s)));
             $this.consume()?;
         } else {
             $v.push(None);

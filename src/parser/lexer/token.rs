@@ -41,7 +41,7 @@ pub enum TokenKind {
     LeftParen,
     RightParen,
     Reserved(String),
-    GenSym(usize),
+    GenSym(u32),
 }
 
 pub type Token = Annot<TokenKind>;
@@ -61,7 +61,7 @@ impl Token {
     pub fn left_paren(loc: Loc) -> Self { Self::new(TokenKind::LeftParen, loc) }
     pub fn right_paren(loc: Loc) -> Self { Self::new(TokenKind::RightParen, loc) }
     pub fn reserved(s: Vec<u8>, loc: Loc) -> Self { Self::new(TokenKind::Reserved(String::from_utf8(s).unwrap()), loc) }
-    pub fn gensym(index: usize, loc: Loc) -> Self { Self::new(TokenKind::GenSym(index), loc) }
+    pub fn gensym(index: u32, loc: Loc) -> Self { Self::new(TokenKind::GenSym(index), loc) }
 }
 
 impl Debug for Token {

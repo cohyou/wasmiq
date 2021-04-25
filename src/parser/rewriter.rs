@@ -54,7 +54,7 @@ where R: Read + Seek {
 
     pub ast: Vec<Token>,
     current: usize,
-    next_symbol_index: usize,
+    next_symbol_index: u32,
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {

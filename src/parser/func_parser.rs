@@ -10,22 +10,17 @@ impl<R> Parser<R> where R: Read + Seek {
         let mut func = Func::default();
 
         self.match_keyword(Keyword::Func)?;
-pp!("parse_func1", self.lookahead);
+
         // func id
         parse_optional_id!(self, self.contexts[0].funcs);
-pp!("parse_func2", self.lookahead);
+
         // add local context
         self.contexts.push(Context::default());
-p!(self.contexts);
+
         // typeuse
         let mut ft = FuncType::default();
+        
         func.tp = self.parse_typeuse(&mut ft.0, &mut ft.1)?;
-p!(func.tp);
-        if func.tp == self.module.types.len() as u32 {
-            // gensym
-            self.module.types.push(ft.clone());
-            self.contexts[0].typedefs.push(ft.clone());
-        } 
 
         self.check_typeuse(func.tp, ft)?;
 
@@ -57,7 +52,7 @@ p!(func.tp);
         // local id
         if let tk!(TokenKind::Id(s)) = &self.lookahead {
             let new_s = s.clone();
-            self.contexts[1].locals.push(Some(new_s));
+            self.contexts[1].locals.push(Some(Id::Named(new_s)));
             self.consume()?;
         } else {
             self.contexts[1].locals.push(None);

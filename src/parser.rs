@@ -240,7 +240,7 @@ impl<R> Parser<R> where R: Read + Seek {
                 if let Some(idx) = from.iter()
                 // .inspect(|c| println!("before: {:?}", c))
                 .position(|t|
-                    if let Some(typeidx) = t {
+                    if let Some(Id::Named(typeidx)) = t {
                         typeidx == id
                     } else {
                         false
@@ -248,6 +248,21 @@ impl<R> Parser<R> where R: Read + Seek {
                 ) {
                     self.consume()?;
                     Ok(u32::try_from(idx)?)
+                } else {
+                    Err(ParseError::CantResolveId(self.lookahead.clone()))
+                }
+            },
+            tk!(TokenKind::GenSym(anom_idx_tk)) => {
+                if let Some(symbol_idx) = from.iter()
+                .position(|t|
+                    if let Some(Id::Anonymous(anom_idx)) = t {
+                        anom_idx == anom_idx_tk
+                    } else {
+                        false
+                    }
+                ) {
+                    self.consume()?;
+                    Ok(u32::try_from(symbol_idx)?)
                 } else {
                     Err(ParseError::CantResolveId(self.lookahead.clone()))
                 }
@@ -263,7 +278,7 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn consume(&mut self) -> Result<(), ParseError> {
         self.lookahead = self.rewriter.next_token()?;
-        pp!("consume", self.lookahead);
+        // pp!("consume", self.lookahead);
         Ok(())
     }
 

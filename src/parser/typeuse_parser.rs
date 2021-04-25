@@ -7,18 +7,17 @@ use crate::{
 use super::*;
 
 impl<R> Parser<R> where R: Read + Seek {
-    pub(super) fn parse_typeuse(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
-p!(self.lookahead);
-        self.match_lparen()?; p!(self.lookahead);
-        let typeidx = self.parse_typeuse_typeidx()?;
-p!(typeidx);
+    pub fn parse_typeuse(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
+        self.match_lparen()?;
+        let typeidx = self.parse_typeuse_typeidx(params, results)?;
+
         if !self.is_rparen()? {
             self.parse_signature(params, results)?;
         }
         Ok(typeidx)
     }
 
-    pub(super) fn parse_signature(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<(), ParseError> {
+    pub fn parse_signature(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<(), ParseError> {
 
         // params        
         parse_field!(self, Param, 
@@ -35,7 +34,7 @@ p!(typeidx);
         Ok(())
     }
 
-    pub(super) fn check_typeuse(&mut self, typeidx: TypeIdx, tp: FuncType) -> Result<(), ParseError> {
+    pub fn check_typeuse(&mut self, typeidx: TypeIdx, tp: FuncType) -> Result<(), ParseError> {
         let typedef = &self.contexts[0].typedefs[typeidx as usize];
         if tp.0.len() == 0 && tp.1.len() == 0 { return Ok(()) }
         if typedef != &tp {
@@ -45,20 +44,44 @@ p!(typeidx);
         }
     }
 
-    fn parse_typeuse_typeidx(&mut self) -> Result<TypeIdx, ParseError> {
+    fn parse_typeuse_typeidx(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
         self.match_keyword(Keyword::Type)?;
-p!(self.lookahead);
-        let res = if let tk!(TokenKind::GenSym(_index)) = self.lookahead {
-            let new_id = self.module.types.len();
-            self.consume()?;
-            new_id as u32
+
+        let mut typeidx = self.contexts[0].typedefs.len() as u32;
+
+        if let tk!(TokenKind::GenSym(index)) = self.lookahead {
+            match self.resolve_id(&self.contexts[0].types.clone()) {
+                Ok(tpidx) => { typeidx = tpidx; },
+                Err(ParseError::CantResolveId(_)) => { self.consume()?; },
+                Err(error) => return Err(error), 
+            }
+
+            self.match_rparen()?;
+    
+            if !self.is_rparen()? {
+                self.parse_signature(params, results)?;
+            }
+    
+            for (i, functype) in self.contexts[0].typedefs.iter().enumerate() {
+                if &functype.0 == params && &functype.1 == results {
+                    typeidx = i as u32;
+                }
+            }
+
+            if typeidx == self.contexts[0].typedefs.len() as u32 {
+                let ft = (params.clone(), results.clone());
+                self.contexts[0].types.push(Some(Id::Anonymous(index)));
+                self.module.types.push(ft.clone());
+                self.contexts[0].typedefs.push(ft.clone());
+            }
+
         } else {
-            self.resolve_id(&self.contexts[0].types.clone())?
+            typeidx = self.resolve_id(&self.contexts[0].types.clone())?;
+
+            self.match_rparen()?;
         };
 
-        self.match_rparen()?;
-
-        Ok(res)
+        Ok(typeidx)
     }
 
     pub(super) fn parse_param(&mut self) -> Result<ValType, ParseError> {
@@ -70,7 +93,7 @@ p!(self.lookahead);
         if let tk!(TokenKind::Id(s)) = &self.lookahead {            
             if len > 1 {
                 let new_s = s.clone();                
-                self.contexts.last_mut().unwrap().locals.push(Some(new_s));
+                self.contexts.last_mut().unwrap().locals.push(Some(Id::Named(new_s)));
             }
             self.consume()?;
         } else {
