@@ -34,7 +34,7 @@ use super::{
     LabelIdx,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Context {
     types: Vec<FuncType>,
     funcs: Option<Vec<FuncType>>,

@@ -350,3 +350,16 @@ fn test_execute_instrs_single() {
     let exec_result = thread.execute_instrs(&vec![Instr::I32Const(42)]);
     assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(42)]));
 }
+
+#[test]
+fn test_execute_instrs1() {
+    let mut store = Store::default();
+    let mut thread = Thread{ store: &mut store, stack: vec![] };
+    let instrs = vec![
+        Instr::I32Const(42), 
+        Instr::I32Const(42),
+        Instr::IBinOp(ValSize::V32, IBinOp::Add),
+    ];
+    let exec_result = thread.execute_instrs(&instrs);
+    assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(42)]));
+}

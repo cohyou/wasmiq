@@ -58,14 +58,14 @@ macro_rules! instr_tp {
 
 type TypeValIdx = u32;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ValType {
     I32, I64, F32, F64,
     TypeVal(TypeValIdx),
     Ellipsis,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ResultType(pub Vec<ValType>);
 
 use std::slice::Iter;

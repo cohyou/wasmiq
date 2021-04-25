@@ -52,27 +52,31 @@ impl Instr {
 }
 
 impl ResultType {
-    pub fn strip_suffix<'a>(&'a self, suffix: &ResultType) -> Option<ResultType> {
-        let mut res = ResultType(vec![]);
+    pub fn strip_suffix<'a>(&'a self, suffix: &ResultType) -> Result<ResultType, Error> {
+        let mut res = ResultType(self.0.clone());
 
         if ResultType::is_stack_polymorphic(&self)
         || ResultType::is_stack_polymorphic(suffix) {
-            return Some(res);
+            return Ok(ResultType(vec![]));
         }
 
-        if self.0.len() < suffix.0.len() { return None; }
+        if self.0.len() < suffix.0.len() {
+            let message = format!("ResultType::strip_suffix different resulttype length: {:?} {:?}", self.0, suffix.0);
+            return Err(Error::Invalid(message));
+        }
 
         let max_idx = &self.0.len() - 1;
         for (idx, valtype) in suffix.iter().rev().enumerate() {
             let valtype1 = &self.0.get(max_idx - idx).unwrap();
             if &valtype == valtype1 {
-                res.0.insert(0, valtype.clone());
+                // res.0.insert(0, valtype.clone());
+                res.0.pop();
             } else {
-                return None;
+                return Err(Error::Invalid("ResultType::strip_suffix &valtype == valtype1".to_owned()));
             }
         }
 
-        Some(res)
+        Ok(res)
     }
 
     pub fn is_stack_polymorphic(rt: &ResultType) -> bool {
@@ -87,20 +91,26 @@ impl Instr {
             return instrs[0].validate(context);
         }
 
-        let mut ret = Err(Error::Invalid("Instr::validate_instr_sequence default".to_owned()));
+        let mut ret: Result<FuncType, Error> = Err(Error::Invalid("Instr::validate_instr_sequence default".to_owned()));
         let mut rets: ResultType; 
 
         let mut instr_resolved: Option<Instr> = None;
 
         for instr_pair in instrs.windows(2) {
             let first_functype = {
-                if let Some(instr) = instr_resolved {
-                    instr_resolved = None;
-                    instr.validate(context)?
-                } else {
-                    instr_pair[0].validate(context)?
+                match ret {
+                    Ok(ft) => ft,
+                    _ => {
+                        if let Some(instr) = instr_resolved {
+                            instr_resolved = None;
+                            instr.validate(context)?
+                        } else {
+                            instr_pair[0].validate(context)?
+                        }
+                    }
                 }
             };
+            
             let instr_second = &instr_pair[1];
             let second_functype = instr_second.validate(context)?;
             let mut second_functype_args = second_functype.0;
@@ -128,10 +138,9 @@ impl Instr {
 
 
             // compare types
-            rets = first_functype.1.strip_suffix(&second_functype_args)
-                .ok_or(Error::Invalid("validate_instr_sequence first_functype.1.strip_suffix".to_owned()))?;
-            
-
+            // p!(first_functype); p!(second_functype_args);
+            rets = first_functype.1.strip_suffix(&second_functype_args)?;
+            // p!(rets);
             let ret_args = first_functype.0;
             let ret_rets = {
                 if ResultType::is_stack_polymorphic(&second_functype_rets) {
@@ -146,4 +155,34 @@ impl Instr {
         
         ret
     }
+}
+
+
+#[test]
+fn test_validate_instrs() {
+    let instrs = vec![
+        Instr::I32Const(42),
+    ];
+    test_validate(instrs, (ResultType(vec![]), ResultType(vec![ValType::I32])));
+    
+    let instrs = vec![
+        Instr::I32Const(42),
+        Instr::I32Const(42),
+    ];
+    test_validate(instrs, (ResultType(vec![]), ResultType(vec![ValType::I32, ValType::I32])));
+
+    use crate::{ValSize, IBinOp};
+    let instrs = vec![
+        Instr::I32Const(1), 
+        Instr::I32Const(2),
+        Instr::IBinOp(ValSize::V32, IBinOp::Add),
+    ];
+    test_validate(instrs, (ResultType(vec![]), ResultType(vec![ValType::I32])));
+}
+
+#[allow(dead_code)]
+fn test_validate(instrs: Vec<Instr>, functype: FuncType) {
+    let context = Context::default();
+    let validation = Instr::validate_instr_sequence(&context, &instrs);
+    assert_eq!(validation, Ok(functype));
 }

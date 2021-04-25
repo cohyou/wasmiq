@@ -181,6 +181,15 @@ fn test_invoke() {
     assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(42)]));
 }
 
+#[test]
+fn test_invoke2() {
+    let s = r#"
+    (type (func (result i32)))
+    (func $const (export "addtest") (type 0) (result i32) i32.const 42 i32.const 42 i32.add)
+    "#;
+    assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(42)]));
+}
+
 #[allow(dead_code)]
 fn invoke_assert_eq(s: &str) -> Option<Vec<Val>> {
     match invoke(s) {
