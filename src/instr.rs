@@ -19,12 +19,6 @@ use crate::{
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct Expr(pub Vec<Instr>);
 
-impl Expr {
-    pub fn is_constant(&self) -> bool {
-        unimplemented!()
-    }
-}
-
 #[derive(PartialEq, Clone, Debug, Default)]
 pub struct MemArg {
     pub offset: u32,

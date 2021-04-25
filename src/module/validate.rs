@@ -277,7 +277,7 @@ impl Global {
         let rt = self.init.validate(context)?;
         let vts: Vec<ValType> = rt.0.iter().map(|v| vt_rev(v)).collect();
         if vts != vec![self.tp.0] { return Err(Error::Invalid); }
-        if !self.init.is_constant() { return Err(Error::Invalid); } 
+        if !self.init.is_constant(context) { return Err(Error::Invalid); } 
         Ok(self.tp.clone())
     }
 }
@@ -295,7 +295,7 @@ impl Elem {
             return Err(Error::Invalid);
         }
 
-        if !self.offset.is_constant() {
+        if !self.offset.is_constant(context) {
             return Err(Error::Invalid);
         }
 
@@ -319,7 +319,7 @@ impl Data {
             return Err(Error::Invalid);
         }
 
-        if !self.offset.is_constant() {
+        if !self.offset.is_constant(context) {
             return Err(Error::Invalid);
         }
 

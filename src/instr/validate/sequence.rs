@@ -3,6 +3,7 @@ use crate::{
     Expr,
     Error,
     Context,
+    Mut,
     ft,
     instr_tp,
 };
@@ -17,14 +18,35 @@ use super::{
 
 impl Expr {
     pub fn validate(&self, context: &Context) -> Result<ResultType, Error> {
-        if self.is_constant() {
-            unimplemented!()
-        } else {
-            let functype = Instr::validate_instr_sequence(context, &self.0)?;
-            if functype.0.0.len() > 0 {
-                return Err(Error::Invalid);
-            }
-            Ok(ResultType(functype.1.0))
+        let functype = Instr::validate_instr_sequence(context, &self.0)?;
+        if functype.0.0.len() > 0 {
+            return Err(Error::Invalid);
+        }
+        Ok(ResultType(functype.1.0))
+    }
+
+    pub fn is_constant(&self, context: &Context) -> bool {
+        self.0.iter().all(|instr| instr.is_constant(context))
+    }
+}
+
+impl Instr {
+    pub fn is_constant(&self, context: &Context) -> bool {
+        match self {
+            Instr::I32Const(_) | 
+            Instr::I64Const(_) |
+            Instr::F32Const(_) |
+            Instr::F64Const(_) => {
+                true
+            },
+            Instr::GlobalGet(x) => {
+                if let Some(globaltype) = context.global(x.clone()) {
+                    globaltype.1 == Mut::Const
+                } else {
+                    false
+                }
+            },
+            _ => false,
         }
     }
 }
