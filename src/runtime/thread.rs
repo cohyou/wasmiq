@@ -33,7 +33,17 @@ impl<'a> Thread<'a> {
                 ExecResult::Trap(err) => return ExecResult::Trap(err),
             }
         }
-        ExecResult::Vals(vec![])
+
+        let mut vals = vec![];
+        for entry in &self.stack {
+            if let StackEntry::Value(v) = entry {
+                vals.push(v.clone());
+            } else {
+                return ExecResult::Trap(Error::Invalid("Thread::execute_instrs StackEntry::Value(v) = entry".to_owned()));
+            }
+        }
+
+        ExecResult::Vals(vals)
     }
 
     fn execute_instr(&mut self, instr: &Instr) -> ExecResult {
@@ -325,7 +335,18 @@ impl<'a> Thread<'a> {
     }
 }
 
+#[test]
+fn test_execute_const_instr() {
+    let mut store = Store::default();
+    let mut thread = Thread{ store: &mut store, stack: vec![] };
+    let exec_result = thread.execute_instr(&Instr::I32Const(42));
+    assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(42)]));
+}
 
-
-
-
+#[test]
+fn test_execute_instrs_single() {
+    let mut store = Store::default();
+    let mut thread = Thread{ store: &mut store, stack: vec![] };
+    let exec_result = thread.execute_instrs(&vec![Instr::I32Const(42)]);
+    assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(42)]));
+}
