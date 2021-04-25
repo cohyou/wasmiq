@@ -25,7 +25,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.imports.push(t); }
                         if exporting && header.len() == 2 {
-                            self.imports.push(Token::gensym(Loc::zero()))
+                            self.imports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
                         }
 
                         let rparen = self.lexer.next_token()?;
@@ -61,7 +61,12 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.exports.push(t); }
                         if header.len() == 2 {
-                            self.exports.push(Token::gensym(Loc::zero()))
+                            if exporting {
+                                self.exports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+                            } else {
+                                let gensym = self.make_gensym();
+                                self.exports.push(gensym);
+                            }
                         }
 
                         self.exports.push(Token::right_paren(Loc::zero()));
@@ -82,7 +87,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
                 for t in header.clone() { self.tables.push(t); }
                 if exporting && header.len() == 2 {
-                    self.tables.push(Token::gensym(Loc::zero()))
+                    self.tables.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
                 }
 
                 self.tables.push(num1);
@@ -101,7 +106,12 @@ impl<R> Rewriter<R> where R: Read + Seek {
             data @ kw!(Keyword::FuncRef) => {
                 for t in header.clone() { self.tables.push(t); }
                 if header.len() == 2 {
-                    self.tables.push(Token::gensym(Loc::zero()))
+                    if exporting {
+                        self.tables.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+                    } else {
+                        let gensym = self.make_gensym();
+                        self.tables.push(gensym);
+                    }   
                 }
                 return self.rewrite_table_elem(&header, data, token2);
             },
@@ -124,7 +134,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         self.elem.push(token_elem); 
         
         match tokens.len() {
-            2 => self.elem.push(Token::gensym(Loc::zero())),
+            2 => self.elem.push(Token::gensym(self.next_symbol_index - 1, Loc::zero())),
             3 => self.elem.push(tokens[2].clone()),
             _ => {},
         }
@@ -195,7 +205,7 @@ fn test_rewrite_table_import() {
 fn test_rewrite_table_export() {
     assert_eq_rewrite(
         r#"(table (export "expname1") 100 200 funcref)"#, 
-        r#"(module (table <#:gensym> 100 200 funcref) (export "expname1" (table <#:gensym>)))"#
+        r#"(module (table <#:gensym(0)> 100 200 funcref) (export "expname1" (table <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(table $expid1 (export "expname2") 15 funcref)"#, 
@@ -203,7 +213,7 @@ fn test_rewrite_table_export() {
     );
     assert_eq_rewrite(
         r#"(table (export "e3") (export "e4") 32786 funcref)"#, 
-        r#"(module (table <#:gensym> 32786 funcref) (export "e3" (table <#:gensym>)) (export "e4" (table <#:gensym>)))"#
+        r#"(module (table <#:gensym(0)> 32786 funcref) (export "e3" (table <#:gensym(0)>)) (export "e4" (table <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(table $id (export "e5") (export "e6") 0 0 funcref)"#, 
@@ -219,7 +229,7 @@ fn test_rewrite_table_import_export() {
     );
     assert_eq_rewrite(
         r#"(table (export "e3") (import "n1" "n2") 4321 5678 funcref)"#, 
-        r#"(module (import "n1" "n2" (table <#:gensym> 4321 5678 funcref)) (export "e3" (table <#:gensym>)))"#
+        r#"(module (import "n1" "n2" (table <#:gensym(0)> 4321 5678 funcref)) (export "e3" (table <#:gensym(0)>)))"#
     );
 }
 

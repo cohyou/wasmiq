@@ -8,9 +8,10 @@ use super::*;
 
 impl<R> Parser<R> where R: Read + Seek {
     pub(super) fn parse_typeuse(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
-        self.match_lparen()?;
+p!(self.lookahead);
+        self.match_lparen()?; p!(self.lookahead);
         let typeidx = self.parse_typeuse_typeidx()?;
-        
+p!(typeidx);
         if !self.is_rparen()? {
             self.parse_signature(params, results)?;
         }
@@ -46,8 +47,14 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn parse_typeuse_typeidx(&mut self) -> Result<TypeIdx, ParseError> {
         self.match_keyword(Keyword::Type)?;
-
-        let res = self.resolve_id(&self.contexts[0].types.clone())?;
+p!(self.lookahead);
+        let res = if let tk!(TokenKind::GenSym(_index)) = self.lookahead {
+            let new_id = self.module.types.len();
+            self.consume()?;
+            new_id as u32
+        } else {
+            self.resolve_id(&self.contexts[0].types.clone())?
+        };
 
         self.match_rparen()?;
 
@@ -68,7 +75,6 @@ impl<R> Parser<R> where R: Read + Seek {
             self.consume()?;
         } else {
             if len > 1 {
-                pp!(1, self.lookahead);
                 self.contexts.last_mut().unwrap().locals.push(None);
             }
         }

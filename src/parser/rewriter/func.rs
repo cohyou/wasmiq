@@ -41,7 +41,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         let name = self.lexer.next_token()?;
                         self.exports.push(name);
 
-                        self.push_header_export(header.clone(), true);
+                        self.push_header_export(header.clone(), exporting);
 
                         self.exports.push(Token::right_paren(Loc::zero()));
                         let rparen_func = self.lexer.next_token()?;
@@ -105,7 +105,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             lparen @ tk!(TokenKind::LeftParen) => {
                 match token2 {
                     tp @ kw!(Keyword::Type) => {
-                        self.push_header_import(header.clone(), false);
+                        self.push_header_import(header.clone(), exporting);
 
                         let holding = self.scan_typeidx_holding(lparen, tp)?;
                         self.imports.extend(holding);
@@ -237,22 +237,32 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn push_header(&mut self, header: Vec<Token>, exporting: bool) {
         for t in header.clone() { self.funcs.push(t); }
-        if exporting && header.len() == 2 {
-            self.funcs.push(Token::gensym(Loc::zero()))
+        if header.len() == 2 {
+            if exporting {
+                self.funcs.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+            } else {
+                let gensym = self.make_gensym();
+                self.funcs.push(gensym);
+            }   
         }
     }
 
     fn push_header_import(&mut self, header: Vec<Token>, exporting: bool) {
         for t in header.clone() { self.imports.push(t); }
         if exporting && header.len() == 2 {
-            self.imports.push(Token::gensym(Loc::zero()))
+            self.imports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
         }
     }
 
     fn push_header_export(&mut self, header: Vec<Token>, exporting: bool) {
         for t in header.clone() { self.exports.push(t); }
-        if exporting && header.len() == 2 {
-            self.exports.push(Token::gensym(Loc::zero()))
+        if header.len() == 2 {
+            if exporting {
+                self.exports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+            } else {
+                let gensym = self.make_gensym();
+                self.exports.push(gensym);
+            }
         }
     }
 
@@ -379,12 +389,12 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
 #[test]
 fn test_rewrite_func_normal1() {
-    assert_eq_rewrite("(func)", "(module (func (type <#:gensym>)))");
-    assert_eq_rewrite("(func nop)", "(module (func (type <#:gensym>) nop))");
-    assert_eq_rewrite("(func nop unreachable)", "(module (func (type <#:gensym>) nop unreachable))");
-    assert_eq_rewrite("(func $id)", "(module (func $id (type <#:gensym>)))");
-    assert_eq_rewrite("(func $id nop)", "(module (func $id (type <#:gensym>) nop))");
-    assert_eq_rewrite("(func $id nop unreachable)", "(module (func $id (type <#:gensym>) nop unreachable))");
+    assert_eq_rewrite("(func)", "(module (func (type <#:gensym(0)>)))");
+    assert_eq_rewrite("(func nop)", "(module (func (type <#:gensym(0)>) nop))");
+    assert_eq_rewrite("(func nop unreachable)", "(module (func (type <#:gensym(0)>) nop unreachable))");
+    assert_eq_rewrite("(func $id)", "(module (func $id (type <#:gensym(0)>)))");
+    assert_eq_rewrite("(func $id nop)", "(module (func $id (type <#:gensym(0)>) nop))");
+    assert_eq_rewrite("(func $id nop unreachable)", "(module (func $id (type <#:gensym(0)>) nop unreachable))");
 }
 
 #[test]
@@ -401,13 +411,13 @@ fn test_rewrite_func_normal2() {
 
 #[test]
 fn test_rewrite_func_normal3() {
-    assert_eq_rewrite("(func (param i32))", "(module (func (type <#:gensym>) (param i32)))");
-    assert_eq_rewrite("(func $id (param i32 f64))", "(module (func $id (type <#:gensym>) (param i32) (param f64)))");
+    assert_eq_rewrite("(func (param i32))", "(module (func (type <#:gensym(0)>) (param i32)))");
+    assert_eq_rewrite("(func $id (param i32 f64))", "(module (func $id (type <#:gensym(0)>) (param i32) (param f64)))");
     assert_eq_rewrite("(func (type 0) (param i32))", "(module (func (type 0) (param i32)))");
-    assert_eq_rewrite("(func (result i64))", "(module (func (type <#:gensym>) (result i64)))");
+    assert_eq_rewrite("(func (result i64))", "(module (func (type <#:gensym(0)>) (result i64)))");
     assert_eq_rewrite("(func $id (type 0) (result i64 f32) i64.const 100)", "(module (func $id (type 0) (result i64) (result f32) i64.const 100))");
-    assert_eq_rewrite("(func (local f64 i32))", "(module (func (type <#:gensym>) (local f64) (local i32)))");
-    assert_eq_rewrite("(func $id (local f64))", "(module (func $id (type <#:gensym>) (local f64)))");
+    assert_eq_rewrite("(func (local f64 i32))", "(module (func (type <#:gensym(0)>) (local f64) (local i32)))");
+    assert_eq_rewrite("(func $id (local f64))", "(module (func $id (type <#:gensym(0)>) (local f64)))");
     assert_eq_rewrite("(func (type 0) (local f64 i32) nop nop)", "(module (func (type 0) (local f64) (local i32) nop nop))");
 }
 
@@ -415,7 +425,7 @@ fn test_rewrite_func_normal3() {
 fn test_rewrite_func_normal4() {
     assert_eq_rewrite(
         "(func (param i32) (result f32))", 
-        "(module (func (type <#:gensym>) (param i32) (result f32)))"
+        "(module (func (type <#:gensym(0)>) (param i32) (result f32)))"
     );
     assert_eq_rewrite(
         "(func (type 1) (param i32 i32) (result f32))", 
@@ -423,7 +433,7 @@ fn test_rewrite_func_normal4() {
     );
     assert_eq_rewrite(
         "(func $id (param i32 i32) (local i64 i64))", 
-        "(module (func $id (type <#:gensym>) (param i32) (param i32) (local i64) (local i64)))"
+        "(module (func $id (type <#:gensym(0)>) (param i32) (param i32) (local i64) (local i64)))"
     );
     assert_eq_rewrite(
         "(func $id (type 10) (result i32) (local i64 i64))",
@@ -435,7 +445,7 @@ fn test_rewrite_func_normal4() {
     );
     assert_eq_rewrite(
         "(func (param f32 f32) (result f64) (local i32 f32 f32))",
-        "(module (func (type <#:gensym>) (param f32) (param f32) (result f64) (local i32) (local f32) (local f32)))"
+        "(module (func (type <#:gensym(0)>) (param f32) (param f32) (result f64) (local i32) (local f32) (local f32)))"
     );
 }
 
@@ -447,19 +457,19 @@ fn test_rewrite_func_normal5() {
     );
     assert_eq_rewrite(
         "(func (param $pr i32))",
-        "(module (func (type <#:gensym>) (param $pr i32)))"
+        "(module (func (type <#:gensym(0)>) (param $pr i32)))"
     );
     assert_eq_rewrite(
         "(func $id (local $lcl i32))", 
-        "(module (func $id (type <#:gensym>) (local $lcl i32)))"
+        "(module (func $id (type <#:gensym(0)>) (local $lcl i32)))"
     );
     assert_eq_rewrite(
         "(func $id (local $lcl i32) nop)", 
-        "(module (func $id (type <#:gensym>) (local $lcl i32) nop))"
+        "(module (func $id (type <#:gensym(0)>) (local $lcl i32) nop))"
     );
     assert_eq_rewrite(
         "(func (param i32 i32) (result i32) (local $l1 i64) (local i64 f64))", 
-        "(module (func (type <#:gensym>) (param i32) (param i32) (result i32) (local $l1 i64) (local i64) (local f64)))"
+        "(module (func (type <#:gensym(0)>) (param i32) (param i32) (result i32) (local $l1 i64) (local i64) (local f64)))"
     );
     assert_eq_rewrite(
         "(func $id (type 0) (param $pr i32) (local f32 f32))", 
@@ -471,7 +481,7 @@ fn test_rewrite_func_normal5() {
 fn test_rewrite_func_import() {
     assert_eq_rewrite(
         r#"(func (import "n1" "n2"))"#, 
-        r#"(module (import "n1" "n2" (func (type <#:gensym>))))"#
+        r#"(module (import "n1" "n2" (func (type <#:gensym(0)>))))"#
     );
     assert_eq_rewrite(
         r#"(func (import "n1" "n2") (type 0))"#,
@@ -479,11 +489,11 @@ fn test_rewrite_func_import() {
     );
     assert_eq_rewrite(
         r#"(func $id (import "n1" "n2") (param i32 i64))"#, 
-        r#"(module (import "n1" "n2" (func $id (type <#:gensym>) (param i32) (param i64))))"#
+        r#"(module (import "n1" "n2" (func $id (type <#:gensym(0)>) (param i32) (param i64))))"#
     );
     assert_eq_rewrite(
         r#"(func $id (import "n1" "n2") (param i32 i32) (result i32))"#, 
-        r#"(module (import "n1" "n2" (func $id (type <#:gensym>) (param i32) (param i32) (result i32))))"#
+        r#"(module (import "n1" "n2" (func $id (type <#:gensym(0)>) (param i32) (param i32) (result i32))))"#
     );
 }
 
@@ -491,7 +501,11 @@ fn test_rewrite_func_import() {
 fn test_rewrite_func_export() {
     assert_eq_rewrite(
         r#"(func (export "n1"))"#, 
-        r#"(module (func <#:gensym> (type <#:gensym>)) (export "n1" (func <#:gensym>)))"#
+        r#"(module (func <#:gensym(0)> (type <#:gensym(1)>)) (export "n1" (func <#:gensym(0)>)))"#
+    );
+    assert_eq_rewrite(
+        r#"(func (export "main") nop)"#,
+        r#"(module (func <#:gensym(0)> (type <#:gensym(1)>) nop) (export "main" (func <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(func $id (export "e2") (type 1) nop)"#, 
@@ -499,7 +513,7 @@ fn test_rewrite_func_export() {
     );
     assert_eq_rewrite(
         r#"(func (export "e3") (export "e4") (param $p1 i64) (param i32 i32) (result f64))"#, 
-        r#"(module (func <#:gensym> (type <#:gensym>) (param $p1 i64) (param i32) (param i32) (result f64)) (export "e3" (func <#:gensym>)) (export "e4" (func <#:gensym>)))"#
+        r#"(module (func <#:gensym(0)> (type <#:gensym(1)>) (param $p1 i64) (param i32) (param i32) (result f64)) (export "e3" (func <#:gensym(0)>)) (export "e4" (func <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(func $id (export "e5") (export "e6") (type 256) (result f64))"#, 
@@ -511,10 +525,10 @@ fn test_rewrite_func_export() {
 fn test_rewrite_func_import_export() {
     assert_eq_rewrite(
         r#"(func (export "e3") (import "n1" "n2") (type 1))"#, 
-        r#"(module (import "n1" "n2" (func (type 1))) (export "e3" (func <#:gensym>)))"#
+        r#"(module (import "n1" "n2" (func <#:gensym(0)> (type 1))) (export "e3" (func <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(func $id (export "e4") (import "n3" "n4") (param $p i32) (result i32))"#, 
-        r#"(module (import "n3" "n4" (func $id (type <#:gensym>) (param $p i32) (result i32))) (export "e4" (func $id)))"#
+        r#"(module (import "n3" "n4" (func $id (type <#:gensym(0)>) (param $p i32) (result i32))) (export "e4" (func $id)))"#
     );
 }

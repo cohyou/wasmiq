@@ -216,12 +216,19 @@ fn test_invoke4() {
 
 #[test]
 fn test_gensym() {
-    let s = r#""#;
+    let s = r#"
+    (func $id (export "main") nop)
+    "#;
     use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let mut reader = BufReader::new(cursor);
     match module_parse(&mut reader) {
-        Ok(module) => p!(module.types),
+        Ok(module) => {
+            p!(module.types);
+            p!(module.imports);
+            p!(module.funcs);
+            p!(module.exports);
+        },
         Err(err) => p!(err),
     }
 }

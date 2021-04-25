@@ -25,7 +25,7 @@ impl<R> Parser<R> where R: Read + Seek {
         self.module.imports.push(Import{ module: import_module, name: import_name, desc: import_desc });
 
         self.match_rparen()?;
-        
+
         Ok(())
     }
 
@@ -46,10 +46,16 @@ impl<R> Parser<R> where R: Read + Seek {
         parse_optional_id!(self, self.contexts[0].funcs);
 
         // typeuse
-        let mut _ft = FuncType::default();
-        let typeidx = self.parse_typeuse(&mut _ft.0, &mut _ft.1)?;
+        let mut ft = FuncType::default();
+        let typeidx = self.parse_typeuse(&mut ft.0, &mut ft.1)?;
 
-        self.check_typeuse(typeidx, _ft)?;
+        if typeidx == self.module.types.len() as u32 {
+            // gensym
+            self.module.types.push(ft.clone());
+            self.contexts[0].typedefs.push(ft.clone());
+        } 
+
+        self.check_typeuse(typeidx, ft)?;
 
         self.match_rparen()?;
 

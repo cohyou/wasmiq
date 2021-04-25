@@ -80,7 +80,7 @@ impl<R> Parser<R> where R: Read + Seek {
             self.module.id = Some(s.clone());
             self.consume()?;
         }
-        
+
         self.parse_module_internal()?;
 
         self.match_rparen()?;
@@ -263,7 +263,7 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn consume(&mut self) -> Result<(), ParseError> {
         self.lookahead = self.rewriter.next_token()?;
-        // p!(self.lookahead);
+        pp!("consume", self.lookahead);
         Ok(())
     }
 

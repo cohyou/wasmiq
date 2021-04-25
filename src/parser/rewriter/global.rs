@@ -23,7 +23,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.imports.push(t); }
                         if exporting && header.len() == 2 {
-                            self.imports.push(Token::gensym(Loc::zero()))
+                            self.imports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
                         }
 
                         let rparen = self.lexer.next_token()?;
@@ -42,7 +42,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         }
                         self.imports.push(rparen);
                         let rparen = self.lexer.next_token()?;
-                        // println!("n: {:?}", rparen);
+                        
                         self.imports.push(rparen);
                     },
                     export @ kw!(Keyword::Export) => {
@@ -53,7 +53,12 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.exports.push(t); }
                         if header.len() == 2 {
-                            self.exports.push(Token::gensym(Loc::zero()))
+                            if exporting {
+                                self.exports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+                            } else {
+                                let gensym = self.make_gensym();
+                                self.exports.push(gensym);
+                            }
                         }
 
                         self.exports.push(Token::right_paren(Loc::zero()));
@@ -67,7 +72,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     mutable @ kw!(Keyword::Mutable) => {
                         for t in header.clone() { self.globals.push(t); }
                         if exporting && header.len() == 2 {
-                            self.globals.push(Token::gensym(Loc::zero()))
+                            self.globals.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()))
                         }
                         self.globals.push(lparen.clone());
                         self.globals.push(mutable);
@@ -90,10 +95,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
             valtype @ kw!(Keyword::ValType(_)) => {
                 for t in header.clone() { self.globals.push(t); }
                 if exporting && header.len() == 2 {
-                    self.globals.push(Token::gensym(Loc::zero()))
+                    self.globals.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()))
                 }
                 self.globals.push(valtype);
-                // println!("token2: {:?}", token2);
+                
                 match token2 {
                     rparen @ tk!(TokenKind::RightParen) => self.globals.push(rparen),
                     _ => self.rewrite_global_instrs(token2)?,
@@ -190,7 +195,7 @@ fn test_rewrite_global_import() {
 fn test_rewrite_global_export() {
     assert_eq_rewrite(
         r#"(global (export "n1") i32)"#, 
-        r#"(module (global <#:gensym> i32) (export "n1" (global <#:gensym>)))"#
+        r#"(module (global <#:gensym(0)> i32) (export "n1" (global <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(global $id (export "e2") (mut f64) nop)"#, 
@@ -198,7 +203,7 @@ fn test_rewrite_global_export() {
     );
     assert_eq_rewrite(
         r#"(global (export "e3") (export "e4") i64 nop)"#, 
-        r#"(module (global <#:gensym> i64 nop) (export "e3" (global <#:gensym>)) (export "e4" (global <#:gensym>)))"#
+        r#"(module (global <#:gensym(0)> i64 nop) (export "e3" (global <#:gensym(0)>)) (export "e4" (global <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(global $id (export "e5") (export "e6") (mut f32))"#, 
@@ -210,7 +215,7 @@ fn test_rewrite_global_export() {
 fn test_rewrite_global_import_export() {
     assert_eq_rewrite(
         r#"(global (export "e3") (import "n1" "n2") i32)"#, 
-        r#"(module (import "n1" "n2" (global <#:gensym> i32)) (export "e3" (global <#:gensym>)))"#
+        r#"(module (import "n1" "n2" (global <#:gensym(0)> i32)) (export "e3" (global <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(global $id (export "e3") (import "n1" "n2") (mut f64))"#, 

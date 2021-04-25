@@ -54,6 +54,7 @@ where R: Read + Seek {
 
     pub ast: Vec<Token>,
     current: usize,
+    next_symbol_index: usize,
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
@@ -77,6 +78,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                 ast: Vec::default(),
                 current: 0,
+                next_symbol_index: 0,
             }
         } else {
             unimplemented!()
@@ -213,10 +215,83 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }
     }
 
-    fn scan_import(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
-        let imports = self.scan_imexport(lparen_segment, segment)?;
-        self.imports.extend(imports);
+    fn scan_import(&mut self, lparen_import: Token, import: Token) -> Result<(), RewriteError> {
+        let mut tokens = vec![];
+        tokens.push(lparen_import);
+        tokens.push(import);
+
+        let n1 = self.lexer.next_token()?;
+        tokens.push(n1);
+        let n2 = self.lexer.next_token()?;
+        tokens.push(n2);
+        let lparen_desc = self.lexer.next_token()?;
+        tokens.push(lparen_desc);
+
+        match self.lexer.next_token()? {
+            func @ kw!(Keyword::Func) => {
+                tokens.push(func);
+
+                let t = self.lexer.next_token()?;
+
+                let next = if let id @ tk!(TokenKind::Id(_)) = t {
+                    tokens.push(id);
+                    self.lexer.next_token()?
+                } else {
+                    t
+                };
+
+                match next {
+                    lparen @ tk!(TokenKind::LeftParen) => {
+                        match self.lexer.next_token()? {
+                            type_ @ kw!(Keyword::Type) => {
+                                tokens.push(lparen);
+                                tokens.push(type_);
+                                let mut importdesc = self.scan_simple_list()?;
+                                let rparen_desc = self.lexer.next_token()?;
+                                importdesc.push(rparen_desc);
+                                tokens.extend(importdesc);
+                                let rparen_import = self.lexer.next_token()?;
+                                tokens.push(rparen_import);
+                            },
+                            t @ _ => {
+                                tokens.extend(self.make_type_gensym_tokens());
+                                tokens.push(lparen);
+                                tokens.push(t);
+                                let mut importdesc = self.scan_simple_list()?;
+                                let rparen_desc = self.lexer.next_token()?;
+                                importdesc.push(rparen_desc);
+                                tokens.extend(importdesc);
+                                let rparen_import = self.lexer.next_token()?;
+                                tokens.push(rparen_import);
+                            }
+                        }
+                    },
+                    rparen @ tk!(TokenKind::RightParen) => {
+                        tokens.extend(self.make_type_gensym_tokens());
+                        tokens.push(rparen);
+                    },
+                    t @ _ => tokens.push(t),
+                }
+            },
+            t @ _ => {
+                tokens.push(t);
+                let importdesc = self.scan_simple_list()?;
+                tokens.extend(importdesc);
+            },
+        }
+
+        self.imports.extend(tokens);
+
         Ok(())
+    }
+
+    fn make_type_gensym_tokens(&mut self) -> Vec<Token> {
+        vec![
+            Token::left_paren(Loc::zero()),
+            Token::keyword(Keyword::Type, Loc::zero()),
+            self.make_gensym(),
+            Token::right_paren(Loc::zero()),
+        ]
     }
 
     fn scan_export(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
@@ -303,7 +378,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         vec![
             Token::left_paren(Loc::zero()),
             Token::keyword(Keyword::Type, Loc::zero()),
-            Token::gensym(Loc::zero()),
+            self.make_gensym(),
             Token::right_paren(Loc::zero()),
         ]
     }
@@ -355,6 +430,14 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }
 
         Ok(holding)
+    }
+}
+
+impl<R> Rewriter<R> where R: Read + Seek {
+    fn make_gensym(&mut self) -> Token {
+        let index = self.next_symbol_index;
+        self.next_symbol_index += 1;
+        Token::gensym(index, Loc::zero())
     }
 }
 

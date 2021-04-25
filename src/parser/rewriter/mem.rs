@@ -23,7 +23,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.imports.push(t); }
                         if exporting && header.len() == 2 {
-                            self.imports.push(Token::gensym(Loc::zero()))
+                            self.imports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()))
                         }
 
                         let rparen = self.lexer.next_token()?;
@@ -55,7 +55,12 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
                         for t in header.clone() { self.exports.push(t); }
                         if header.len() == 2 {
-                            self.exports.push(Token::gensym(Loc::zero()))
+                            if exporting {
+                                self.exports.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+                            } else {
+                                let gensym = self.make_gensym();
+                                self.exports.push(gensym);
+                            }
                         }
 
                         self.exports.push(Token::right_paren(Loc::zero()));
@@ -69,7 +74,13 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     data @ kw!(Keyword::Data) => {
                         for t in header.clone() { self.mems.push(t); }
                         if header.len() == 2 {
-                            self.mems.push(Token::gensym(Loc::zero()))
+                            if exporting {
+                                self.mems.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
+                            } else {
+                                let gensym = self.make_gensym();
+                                self.mems.push(gensym);
+                            }
+                            
                         }
                         return self.rewrite_memory_data(&header, lparen, data);
                     },
@@ -83,7 +94,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             num1 @ tk!(TokenKind::Number(Number::Integer(_))) => {
                 for t in header.clone() { self.mems.push(t); }
                 if exporting && header.len() == 2 {
-                    self.mems.push(Token::gensym(Loc::zero()))
+                    self.mems.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()))
                 }
 
                 self.mems.push(num1);
@@ -116,7 +127,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         self.data.push(token2);                  
         
         match tokens.len() {
-            2 => self.data.push(Token::gensym(Loc::zero())),
+            2 => self.data.push(Token::gensym(self.next_symbol_index - 1, Loc::zero())),
             3 => self.data.push(tokens[2].clone()),
             _ => {},
         }
@@ -192,7 +203,7 @@ fn test_rewrite_mem_import() {
 fn test_rewrite_mem_export() {
     assert_eq_rewrite(
         r#"(memory (export "e1") 5)"#, 
-        r#"(module (memory <#:gensym> 5) (export "e1" (memory <#:gensym>)))"#
+        r#"(module (memory <#:gensym(0)> 5) (export "e1" (memory <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(memory $id (export "e2") 50 100)"#, 
@@ -200,10 +211,10 @@ fn test_rewrite_mem_export() {
     );
     assert_eq_rewrite(
         r#"(memory (export "e3") (export "e4") 512)"#, 
-        r#"(module (memory <#:gensym> 512) (export "e3" (memory <#:gensym>)) (export "e4" (memory <#:gensym>)))"#
+        r#"(module (memory <#:gensym(0)> 512) (export "e3" (memory <#:gensym(0)>)) (export "e4" (memory <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
-        r#"(memory $id2 (export "e5") (export "e6") 10000 20000)"#, 
+        r#"(memory $id2 (export "e5") (export "e6") 10000 20000)"#,
         r#"(module (memory $id2 10000 20000) (export "e5" (memory $id2)) (export "e6" (memory $id2)))"#
     );
 }
@@ -212,7 +223,7 @@ fn test_rewrite_mem_export() {
 fn test_rewrite_mem_import_export() {
     assert_eq_rewrite(
         r#"(memory (export "e3") (import "n1" "n2") 1234)"#, 
-        r#"(module (import "n1" "n2" (memory <#:gensym> 1234)) (export "e3" (memory <#:gensym>)))"#
+        r#"(module (import "n1" "n2" (memory <#:gensym(0)> 1234)) (export "e3" (memory <#:gensym(0)>)))"#
     );
     assert_eq_rewrite(
         r#"(memory $id (export "e3") (import "n1" "n2") 4321 5678)"#, 
@@ -224,7 +235,7 @@ fn test_rewrite_mem_import_export() {
 fn test_rewrite_mem_data() {
     assert_eq_rewrite(
         r#"(module (memory (data "abcd" "wowow" "wasmiq")))"#, 
-        r#"(module (memory <#:gensym> 1 1) (data <#:gensym> (i32.const 0) "abcd" "wowow" "wasmiq"))"#
+        r#"(module (memory <#:gensym(0)> 1 1) (data <#:gensym(0)> (i32.const 0) "abcd" "wowow" "wasmiq"))"#
     );
     assert_eq_rewrite(
         r#"(module (memory $id (data "abcd" "wowow" "wasmiq")))"#, 
@@ -232,7 +243,7 @@ fn test_rewrite_mem_data() {
     );
     assert_eq_rewrite(
         r#"(module (memory (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
-        r#"(module (memory <#:gensym> 1 1) (export "n1" (memory <#:gensym>)) (data <#:gensym> (i32.const 0) "abcd" "wowow" "wasmiq"))"#
+        r#"(module (memory <#:gensym(0)> 1 1) (export "n1" (memory <#:gensym(0)>)) (data <#:gensym(0)> (i32.const 0) "abcd" "wowow" "wasmiq"))"#
     );
     assert_eq_rewrite(
         r#"(module (memory $id (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 

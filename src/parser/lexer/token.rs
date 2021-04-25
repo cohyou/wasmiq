@@ -2,9 +2,7 @@ use std::fmt::{
     Debug,
     Display,
 };
-// use crate::{
-//     // ValType,
-// };
+
 use super::super::annot::{Annot, Loc};
 use super::keyword::*;
 
@@ -43,7 +41,7 @@ pub enum TokenKind {
     LeftParen,
     RightParen,
     Reserved(String),
-    GenSym,
+    GenSym(usize),
 }
 
 pub type Token = Annot<TokenKind>;
@@ -63,7 +61,7 @@ impl Token {
     pub fn left_paren(loc: Loc) -> Self { Self::new(TokenKind::LeftParen, loc) }
     pub fn right_paren(loc: Loc) -> Self { Self::new(TokenKind::RightParen, loc) }
     pub fn reserved(s: Vec<u8>, loc: Loc) -> Self { Self::new(TokenKind::Reserved(String::from_utf8(s).unwrap()), loc) }
-    pub fn gensym(loc: Loc) -> Self { Self::new(TokenKind::GenSym, loc) }
+    pub fn gensym(index: usize, loc: Loc) -> Self { Self::new(TokenKind::GenSym(index), loc) }
 }
 
 impl Debug for Token {
@@ -90,7 +88,7 @@ impl Display for Token {
             TokenKind::String(s) => write!(f, "{:?}", s),
             TokenKind::Id(id) => write!(f, "${}", id),
             TokenKind::Reserved(r) => write!(f, "Reserved({})<{:?}>", r, self.loc),
-            TokenKind::GenSym => write!(f, "<#:gensym>"),
+            TokenKind::GenSym(idx) => write!(f, "<#:gensym({})>", idx),
             // _ => write!(f, "{:?}<{:?}>", self.value, self.loc)
         }        
      }
