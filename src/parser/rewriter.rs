@@ -21,7 +21,7 @@ use crate::parser::{
 use crate::{
     Instr,
 };
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RewriteError {
     Invalid,
     Break,

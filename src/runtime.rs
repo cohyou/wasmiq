@@ -41,6 +41,7 @@ pub enum Val {
     F64Const(f64),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ExecResult {
     Vals(Vec<Val>),
     Trap(Error),
@@ -138,6 +139,7 @@ pub enum ExternVal {
     Global(GlobalAddr),
 }
 
+#[derive(Debug)]
 pub enum StackEntry {
     Value(Val),
     Label(u32, Vec<Instr>),
@@ -168,12 +170,3 @@ pub fn signed32(n: u32) -> i32 { i32::from_le_bytes(n.to_le_bytes()) }
 pub fn signed64(n: u64) -> i64 { i64::from_le_bytes(n.to_le_bytes()) }
 pub fn unsigned32(n: i32) -> u32 { u32::from_le_bytes(n.to_le_bytes()) }
 pub fn unsigned64(n: i64) -> u64 { u64::from_le_bytes(n.to_le_bytes()) }
-
-// #[test]
-// fn test_trunc() {
-//     let n = f32::INFINITY;
-//     let i = n as i8;
-//     assert_eq!(f32::NEG_INFINITY as i8, 1i8);
-//     assert_eq!(i, 1i8);
-//     assert_eq!(1.0 as u8, 1u8);
-// }

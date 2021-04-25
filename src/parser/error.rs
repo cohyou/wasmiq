@@ -5,7 +5,7 @@
  use lexer::{Token, TokenKind};
  use super::*;
  
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     Lex(LexError),
     NotMatch(Token, TokenKind),
@@ -14,8 +14,7 @@ pub enum ParseError {
     CantResolveId(Token),
     InvalidTypeuseDef(Token, FuncType, FuncType),
     InvalidMessage(Token, String),
-    Rewrite(RewriteError)
-    // LastItem,    
+    Rewrite(RewriteError)  
 }
 
 use lexer::LexError;

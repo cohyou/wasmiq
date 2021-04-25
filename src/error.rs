@@ -2,7 +2,7 @@ use crate::{
     parser::error::ParseError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     Invalid(String),
     OutOfIndex(String),
