@@ -1,13 +1,3 @@
-#[macro_export]
-macro_rules! p {
-    ($e:expr) => { println!(concat!(stringify!($e), ": {:?}"), {&$e}); };
-}
-
-#[macro_export]
-macro_rules! pp {
-    ($i:expr, $e:expr) => { println!(concat!(stringify!($i), ": {:?}"), {&$e}); };
-}
-
 macro_rules! la {    
     ($this:ident) => {
         p!($this.lookahead);

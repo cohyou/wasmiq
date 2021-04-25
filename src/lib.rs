@@ -1,3 +1,13 @@
+#[macro_export]
+macro_rules! p {
+    ($e:expr) => { println!(concat!(stringify!($e), ": {:?}"), {&$e}); };
+}
+
+#[macro_export]
+macro_rules! pp {
+    ($i:expr, $e:expr) => { println!(concat!(stringify!($i), ": {:?}"), {&$e}); };
+}
+
 mod store;
 pub use store::store_init;
 
@@ -166,7 +176,7 @@ pub use encoder::{
 fn test_invoke() {
     let s = r#"
     (type (func (result i32)))
-    (func $const (type 0) (result i32) i32.const 42)
+    (func $const (export "val42") (type 0) (result i32) i32.const 42)
     "#;
     assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(42)]));
 }
@@ -190,12 +200,9 @@ fn invoke(s: &str) -> Result<Vec<Val>, Error> {
     let mut reader = BufReader::new(cursor);
     let module = module_parse(&mut reader)?;
     let mut store = store_init();
-    let moduleinst = module_instanciate(&mut store, module, vec![])?;
-    println!("store1: {:?}", store);
-    println!("moduleinst: {:?}", moduleinst);
-    let vals = func_invoke(&mut store, 1, vec![])?;
-    println!("store2: {:?}", store);
-    println!("vals: {:?}", vals);
+    let _moduleinst = module_instanciate(&mut store, module, vec![])?;
+    let vals = func_invoke(&mut store, 0, vec![])?;
+    println!("store: {:?}", store);
 
     Ok(vals)
 }
