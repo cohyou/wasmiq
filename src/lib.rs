@@ -187,7 +187,7 @@ fn test_invoke2() {
     (type (func (result i32)))
     (func $const (export "addtest") (type 0) (result i32) i32.const 42 i32.const 42 i32.add)
     "#;
-    assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(42)]));
+    assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(84)]));
 }
 
 #[allow(dead_code)]

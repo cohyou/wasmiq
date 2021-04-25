@@ -241,7 +241,6 @@ impl<'a> Thread<'a> {
     }
 
     pub fn execute_invoke(&mut self, funcaddr: &FuncAddr) -> ExecResult {
-        // let mut instrs = vec![];
         let funcinst = self.store.funcs[funcaddr.clone()].clone();
     
         match funcinst {
@@ -312,7 +311,7 @@ impl<'a> Thread<'a> {
         self.execute_instrs(instrs);
 
         let mut vals = vec![];
-        let m = vals.len();
+        let m = self.stack.len();
         for _ in 0..m {
             if let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.push(val);
@@ -320,8 +319,8 @@ impl<'a> Thread<'a> {
         }
 
         // pop the label
-        self.stack.pop();  
-        
+        self.stack.pop();
+
         ExecResult::Vals(vals)
     }
 
@@ -361,5 +360,5 @@ fn test_execute_instrs1() {
         Instr::IBinOp(ValSize::V32, IBinOp::Add),
     ];
     let exec_result = thread.execute_instrs(&instrs);
-    assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(42)]));
+    assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(84)]));
 }

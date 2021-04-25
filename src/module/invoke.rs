@@ -44,13 +44,13 @@ impl Module {
         thread.stack.extend(vals);
 
         let mut thread = Thread::new(store);
-        thread.execute_invoke(&funcaddr);
-
         let mut returnvals = vec![];
-        for _ in 0..returntypes.len() {
-            if let Some(StackEntry::Value(v)) = thread.stack.pop() {
-                returnvals.push(v);
-            }
+        if let ExecResult::Vals(mut vals) = thread.execute_invoke(&funcaddr) {
+            for _ in 0..returntypes.len() {
+                if let Some(v) = vals.pop() {
+                    returnvals.push(v);
+                }
+            }    
         }
 
         ExecResult::Vals(returnvals)
