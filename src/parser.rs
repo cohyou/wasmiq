@@ -80,17 +80,11 @@ impl<R> Parser<R> where R: Read + Seek {
             self.module.id = Some(s.clone());
             self.consume()?;
         }
-
-        self.reorder_segments()?;
-
+        
         self.parse_module_internal()?;
 
         self.match_rparen()?;
 
-        Ok(())
-    }
-
-    fn reorder_segments(&mut self) -> Result<(), ParseError> {
         Ok(())
     }
 

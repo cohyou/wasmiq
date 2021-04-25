@@ -59,6 +59,7 @@ impl GlobalType {
     pub fn is_var(&self) -> bool { self.1 == Mut::Var }
 }
 
+#[derive(Debug)]
 pub enum ExternType {
     Func(FuncType),
     Table(TableType),

@@ -194,7 +194,12 @@ fn test_invoke2() {
 fn test_invoke3() {
     let s = r#"
     (type (func (result i32)))
-    (func $const (export "addtest") (type 0) (result i32) i32.const 100 i32.const 100 i32.add i32.const 1 i32.sub)
+    (func $const (export "addtest") (type 0) (result i32)
+        i32.const 100 
+        i32.const 100 
+        i32.add 
+        i32.const 1 
+        i32.sub)
     "#;
     assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(199)]));
 }
@@ -203,10 +208,38 @@ fn test_invoke3() {
 fn test_invoke4() {
     let s = r#"
     (type (func (result i32)))
-    (func $const (export "addtest") (type 0) (result i32)
+    (func $const (export "calctest") (type 0) (result i32)
         (i32.sub (i32.add (i32.const 100) (i32.const 50)) (i32.const 1)))
     "#;
     assert_eq!(invoke_assert_eq(s), Some(vec![Val::I32Const(149)]));
+}
+
+#[test]
+fn test_gensym() {
+    let s = r#""#;
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    match module_parse(&mut reader) {
+        Ok(module) => p!(module.types),
+        Err(err) => p!(err),
+    }
+}
+
+#[test]
+fn test_export() {
+    let s = r#"
+    (type (func (result i32)))
+    (type (func))
+    (func $const (export "calctest") (type 0) (result i32)
+        (i32.sub (i32.add (i32.const 100) (i32.const 50)) (i32.const 1)))
+    (func (type 1) (export "nop"))
+    "#;
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    let module = module_parse(&mut reader).unwrap();
+    p!(module_exports(module));
 }
 
 #[allow(dead_code)]

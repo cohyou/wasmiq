@@ -21,15 +21,18 @@ use crate::parser::{
 use crate::{
     Instr,
 };
+
 #[derive(Debug, PartialEq)]
 pub enum RewriteError {
-    Invalid,
+    Invalid(String),
+    OnLex(LexError),
     Break,
+    EOF,
 }
 
 impl From<LexError> for RewriteError {
-    fn from(_: LexError) -> RewriteError {
-        RewriteError::Invalid
+    fn from(lex_error: LexError) -> RewriteError {
+        RewriteError::OnLex(lex_error)
     }
 }
 
@@ -81,7 +84,15 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
     
     pub fn rewrite(&mut self) -> Result<(), RewriteError> {
-        self.rewrite_module()
+        if self.lookahead.value == TokenKind::Empty {
+            self.ast.push(Token::left_paren(Loc::zero()));
+            self.ast.push(Token::keyword(Keyword::Module, Loc::zero()));
+            self.ast.push(Token::right_paren(Loc::zero()));
+            self.ast.push(self.lookahead.clone());
+            Ok(())
+        } else {
+            self.rewrite_module()
+        }
     }
 
     fn rewrite_module(&mut self) -> Result<(), RewriteError> {
@@ -353,7 +364,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             self.current += 1;
             Ok(token.clone())
         } else {
-            Err(RewriteError::Invalid)
+            Err(RewriteError::EOF)
         }
     }
 
@@ -361,7 +372,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         if let Some(token) = self.ast.get(self.current) {
             Ok(token.clone())
         } else {
-            Err(RewriteError::Invalid)
+            Err(RewriteError::Invalid("peek_token".to_owned()))
         }
     }
 
@@ -377,7 +388,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         if self.lookahead.value == t {
             self.consume()
         } else {
-            Err(RewriteError::Invalid)
+            Err(RewriteError::Invalid("match_token".to_owned()))
         }
     }
 

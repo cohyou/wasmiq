@@ -18,7 +18,9 @@ impl Module {
         let funcinst = if let Some(funcinst) = store.funcs.get(funcaddr) {
             funcinst
         } else {
-            return ExecResult::Trap(Error::Invalid("Module::invoke store.funcs.get(funcaddr) is None".to_owned()));
+            let message = format!("can not get func with addr:{:?} from store.funcs:{:?} (Module::invoke)", funcaddr, store.funcs);
+            let error = Error::Invalid(message);
+            return ExecResult::Trap(error);
         };
         let (argtypes, returntypes) = match funcinst {
             FuncInst::User(user) => user.tp.clone(),
