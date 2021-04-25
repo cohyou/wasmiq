@@ -273,8 +273,8 @@ impl Module {
         let mut moduleinst = ModuleInst::default();
         moduleinst.types = self.types.clone();
 
-        fn hostfunc() {}
-        alloc_hostfunc(store, (vec![], vec![]), hostfunc);
+        // fn hostfunc() {}
+        // alloc_hostfunc(store, (vec![], vec![]), hostfunc);
 
         let mut funcaddrs = vec![];
         for func in &self.funcs {
