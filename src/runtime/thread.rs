@@ -364,3 +364,27 @@ fn test_execute_instrs1() {
     let exec_result = thread.execute_instrs(&instrs);
     assert_eq!(exec_result, ExecResult::Vals(vec![Val::I32Const(84)]));
 }
+
+#[test]
+fn test_execute_instrs_local() {
+    use crate::{
+        Expr,
+        FuncInst,
+        ModuleInst,
+    };
+    let mut store = Store::default();
+    let instrs = vec![
+        Instr::LocalGet(1),
+    ];
+    let func = Func{tp: 0, locals: vec![ValType::F32, ValType::F32], body: Expr(instrs) };
+    let funcinst = FuncInst::user((vec![],vec![]), ModuleInst::default(), func);
+    store.funcs.push(funcinst);
+
+    let stack = vec![
+        StackEntry::Value(Val::F32Const(120.0)),
+        StackEntry::Value(Val::F32Const(10.0)),
+    ];
+
+    let mut thread = Thread{ store: &mut store, stack: stack };
+    thread.execute_invoke(&0);
+}

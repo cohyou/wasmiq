@@ -49,6 +49,7 @@ impl Module {
 
         let externtypes = match self.validate() {
             Err(err) => {
+                pp!("error on validation:", err);
                 let trap = ExecResult::Trap(err);
                 return (frame_default, trap);
             },
@@ -59,6 +60,7 @@ impl Module {
             let trap = ExecResult::Trap(Error::Invalid("Module::instanciate externtypes_imp.len() != externvals.len()".to_owned()));
             return (frame_default, trap);
         }
+
         let mut globaladdrs = vec![];
         for (ext_val, ext_type) in externvals.iter().zip(externtypes_imp) {
             match ext_val {
@@ -149,6 +151,11 @@ impl Module {
         thread.stack.pop();
 
         let moduleinst = self.alloc_module(thread.store, vec![], vals);
+        for f in thread.store.funcs.iter_mut() {
+            if let FuncInst::User(funcinst) = f {
+                funcinst.module = moduleinst.clone();
+            }
+        }
         let tableaddrs = moduleinst.tableaddrs.clone();
         let memaddrs = moduleinst.memaddrs.clone();
         let frame = Frame { module: moduleinst, locals: vec![] };
@@ -200,6 +207,7 @@ impl Module {
             let trap = ExecResult::Trap(Error::Invalid("Module::instanciate Some(StackEntry::Activation(0, frame)) = thread.stack.pop()".to_owned()));
             return (frame_default, trap);
         };
+
         for (elem, eo) in self.elem.iter().zip(init_elem_list) {
             for (j, funcidx) in elem.init.iter().enumerate() {
                 let funcaddr = frame.module.funcaddrs[funcidx.clone() as usize];
@@ -209,6 +217,7 @@ impl Module {
                 tableinst.elem[eo as usize + j] = Some(funcaddr);
             }
         }
+
         for (data, data_o) in self.data.iter().zip(init_data_list) {
             let memidx = data.data;
             let memaddr = memaddrs[memidx as usize];

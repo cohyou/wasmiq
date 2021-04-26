@@ -96,7 +96,7 @@ impl FuncInst {
 #[derive(Clone, Debug)]
 pub struct UserFuncInst {
     pub tp: FuncType,
-    module: ModuleInst,
+    pub module: ModuleInst,
     code: Func,
 }
 
@@ -152,6 +152,7 @@ pub struct Frame {
     pub module: ModuleInst,
 }
 
+#[derive(Debug)]
 pub struct Thread<'a> {
     pub store: &'a mut Store,
     pub stack: Vec<StackEntry>,

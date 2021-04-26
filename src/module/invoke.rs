@@ -29,6 +29,7 @@ impl Module {
         if vals.len() != argtypes.len() {
             return ExecResult::Trap(Error::Invalid("Module::invoke vals.len() != argtypes.len()".to_owned()));
         }
+
         for (argtype, val) in argtypes.iter().zip(vals.clone()) {
             let matches = match val {
                 Val::I32Const(_) => argtype == &ValType::I32,

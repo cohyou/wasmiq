@@ -263,13 +263,20 @@ fn test_wast_file() {
 fn test_wast_file_3_3() {
     let file_name = "./wast/3-3.wat";
     // show_file_parse_result(file_name);
-    assert_eq!(invoke_file_assert_eq(file_name), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_instruction_type() {
     let file_name = "./wast/instruction-type.wat";
-    assert_eq!(invoke_file_assert_eq(file_name), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0), Some(vec![]));
+}
+
+#[test]
+fn test_wast_file_function() {
+    let file_name = "./wast/function.wat";
+    // show_file_parse_result(file_name);
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
 }
 
 #[allow(dead_code)]
@@ -338,8 +345,8 @@ fn invoke(s: &str) -> Result<Vec<Val>, Error> {
 }
 
 #[allow(dead_code)]
-fn invoke_file_assert_eq(file_name: &str) -> Option<Vec<Val>> {
-    match invoke_file(file_name) {
+fn invoke_file_assert_eq(file_name: &str, idx: usize) -> Option<Vec<Val>> {
+    match invoke_file(file_name, idx) {
         Ok(vals) => Some(vals),
         Err(err) => {
             println!("error: {:?}", err);
@@ -350,7 +357,7 @@ fn invoke_file_assert_eq(file_name: &str) -> Option<Vec<Val>> {
 }
 
 #[allow(dead_code)]
-fn invoke_file(file_name: &str) -> Result<Vec<Val>, Error> {
+fn invoke_file(file_name: &str, idx: usize) -> Result<Vec<Val>, Error> {
     use std::fs::File;
     use std::io::{BufReader};
     let f = File::open(file_name).unwrap();
@@ -359,7 +366,7 @@ fn invoke_file(file_name: &str) -> Result<Vec<Val>, Error> {
     let mut store = store_init();
     let _moduleinst = module_instanciate(&mut store, module, vec![])?;
     p!(store);
-    let vals = func_invoke(&mut store, 0, vec![])?;
+    let vals = func_invoke(&mut store, idx, vec![])?;
 
     Ok(vals)
 }

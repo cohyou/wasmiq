@@ -4,14 +4,10 @@ use crate::{
     FuncType,
     ElemType,
     TableType,
-    // Limits,
     MemType,
     GlobalType,
     ExternType,
     Name,
-    // Mut,
-    // Expr,
-    // Instr,
     Error,
 };
 use super::{
@@ -34,7 +30,7 @@ use super::{
     LabelIdx,
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Context {
     types: Vec<FuncType>,
     funcs: Option<Vec<FuncType>>,
@@ -104,11 +100,12 @@ impl Context {
         context
     }
 }
+
 impl Module {
     pub fn validate(&self) -> Result<(Vec<ExternType>, Vec<ExternType>), Error> {
         let mut context = Context {
             types: self.types.clone(),
-            funcs: None,
+            funcs: Some(vec![]),
             tables: None,
             mems: None,
             globals: None,
@@ -132,11 +129,17 @@ impl Module {
                     ExternType::Global(globaltype) => { globals.push(globaltype); },
                 }
             }
-    
-            for functype in self.funcs.iter().map(|f| f.validate(&context)) {
-                let functype = functype?;
-                funcs.push(functype);
+
+            let mut context_func = context.clone();
+            for f in &self.funcs {
+                let functype = f.validate(&context_func)?;
+                if let Some(funcs) = &context_func.funcs {
+                    let mut new_funcs = funcs.clone();
+                    new_funcs.push(functype);
+                    context_func.funcs = Some(new_funcs);
+                }
             }
+            funcs = context_func.funcs.unwrap();
 
             for tabletype in self.tables.iter().map(|t| t.validate(&context)) {
                 let tabletype = tabletype?;
@@ -248,10 +251,10 @@ impl Func {
         new_context.labels = Some(vec![functype.1.clone()]);
         new_context.rtn = Some(functype.1.clone());
 
-        let expr_type = self.body.validate(context)?;
+        let expr_type = self.body.validate(&new_context)?;
         let vts: Vec<ValType> = expr_type.0.iter().map(|v| vt_rev(v)).collect();
         if vts != functype.1 {
-            return Err(Error::Invalid("Func::validate vts != functype.1".to_owned()));
+            return Err(Error::Invalid(format!("Func::validate vts({:?}) != functype.1({:?})", vts, functype.1)));
         }
 
         Ok(functype)

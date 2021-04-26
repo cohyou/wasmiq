@@ -166,7 +166,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             i += 1;
         }
         
-        let debugging = true;
+        let debugging = false;
         if debugging {
             pp!("types", tokens_to_string(self.types.clone()));
             pp!("imports", tokens_to_string(self.imports.clone()));
