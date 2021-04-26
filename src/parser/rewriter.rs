@@ -168,16 +168,16 @@ impl<R> Rewriter<R> where R: Read + Seek {
         
         let debugging = true;
         if debugging {
-            p!(self.types);
-            p!(self.imports);
-            p!(self.funcs);
-            p!(self.tables);
-            p!(self.mems);
-            p!(self.globals);
-            p!(self.exports);
-            p!(self.elem);
-            p!(self.data);
-            p!(self.start);
+            pp!("types", tokens_to_string(self.types.clone()));
+            pp!("imports", tokens_to_string(self.imports.clone()));
+            pp!("funcs", tokens_to_string(self.funcs.clone()));
+            pp!("tables", tokens_to_string(self.tables.clone()));
+            pp!("mems", tokens_to_string(self.mems.clone()));
+            pp!("globals", tokens_to_string(self.globals.clone()));
+            pp!("exports", tokens_to_string(self.exports.clone()));
+            pp!("elem", tokens_to_string(self.elem.clone()));
+            pp!("data", tokens_to_string(self.data.clone()));
+            pp!("start", tokens_to_string(self.start.clone()));
         }        
 
         self.ast.extend(self.types.clone());
