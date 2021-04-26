@@ -143,7 +143,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     break;
                 }
             };
-            p!(lookahead);
+
             match lookahead.value {
                 TokenKind::LeftParen => {
                     match self.rewrite_list(lookahead) {

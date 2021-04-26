@@ -82,7 +82,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         self.globals.push(rparen);
 
                         let token = self.lexer.next_token()?;
-                        // self.rewrite_global_instrs(token)?;
                         let instrs = self.rewrite_instrs(vec![token])?;
                         self.globals.extend(instrs);
                     },
@@ -104,7 +103,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 match token2 {
                     rparen @ tk!(TokenKind::RightParen) => self.globals.push(rparen),
                     _ => {
-                        // self.rewrite_global_instrs(token2)?
                         let instrs = self.rewrite_instrs(vec![token2])?;
                         self.globals.extend(instrs);
                     },
@@ -119,30 +117,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         Ok(())
     }
-
-    // fn rewrite_global_instrs(&mut self, token: Token) -> Result<(), RewriteError> {
-    //     let mut current = token;
-    //     loop {
-    //         match current {
-    //             rparen @ tk!(TokenKind::RightParen) => {
-    //                 self.globals.push(rparen);
-    //                 break;
-    //             },
-    //             lparen @ tk!(TokenKind::LeftParen) => {
-    //                 self.globals.push(lparen);
-    //                 let next = self.lexer.next_token()?;
-    //                 self.rewrite_global_instrs(next)?;
-    //             },
-    //             t @ _ => self.globals.push(t),
-    //         }
-    //         if let Ok(token) = self.lexer.next_token() {
-    //             current = token;
-    //         } else {
-    //             break;
-    //         }
-    //     }
-    //     Ok(())
-    // }
 }
 
 #[test]

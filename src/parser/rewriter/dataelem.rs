@@ -154,7 +154,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let mut result = vec![];
         let mut current = token;
         loop {
-            p!(current);
             match current {
                 rparen @ tk!(TokenKind::RightParen) => {
                     result.push(rparen);

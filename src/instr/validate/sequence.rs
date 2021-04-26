@@ -138,9 +138,8 @@ impl Instr {
 
 
             // compare types
-            // p!(first_functype); p!(second_functype_args);
             rets = first_functype.1.strip_suffix(&second_functype_args)?;
-            // p!(rets);
+
             let ret_args = first_functype.0;
             let ret_rets = {
                 if ResultType::is_stack_polymorphic(&second_functype_rets) {

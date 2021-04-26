@@ -1,3 +1,4 @@
+#[allow(unused_macros)]
 macro_rules! la {    
     ($this:ident) => {
         p!($this.lookahead);

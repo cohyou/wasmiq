@@ -80,7 +80,6 @@ macro_rules! instr_one_block {
         // label id(repeated)
         $this.check_label_id()?;
 
-        p!($this.contexts.last());
         $this.contexts.pop();
 
         $v.push(Instr::$instr(vt, instrs));
@@ -172,12 +171,10 @@ impl<R> Parser<R> where R: Read + Seek {
 
         // check params context (must not include string id)
         if self.contexts[2].locals.iter().any(|x| x.is_some()) {
-            p!(self.contexts[2].locals);
             Err(self.err2("call_indirect: params context (must be empty)"))
         } else {
             instrs.push(Instr::CallIndirect(typeidx));
 
-            la!(self);p!(self.contexts[2]);
             self.contexts.pop();
 
             Ok(())        
@@ -213,7 +210,6 @@ impl<R> Parser<R> where R: Read + Seek {
         // check label id(after end)
         self.check_label_id()?;
     
-        p!(self.contexts.last());
         self.contexts.pop();
 
         instrs.push(Instr::If(blocktype, instrs1, Some(instrs2)));

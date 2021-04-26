@@ -33,7 +33,6 @@ impl<R> Parser<R> where R: Read + Seek {
             offset: offset, 
             init: func_indices
         };
-        p!(elem);
 
         self.module.elem.push(elem);
 
