@@ -263,7 +263,7 @@ fn test_wast_file() {
 fn test_wast_file_3_3() {
     let file_name = "./wast/3-3.wat";
     // show_file_parse_result(file_name);
-    assert_eq!(invoke_assert_eq(file_name), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name), Some(vec![]));
 }
 
 #[allow(dead_code)]
@@ -352,7 +352,7 @@ fn invoke_file(file_name: &str) -> Result<Vec<Val>, Error> {
     let module = module_parse(&mut reader)?;
     let mut store = store_init();
     let _moduleinst = module_instanciate(&mut store, module, vec![])?;
-    println!("store: {:?}", store);
+    p!(store);
     let vals = func_invoke(&mut store, 0, vec![])?;
 
     Ok(vals)

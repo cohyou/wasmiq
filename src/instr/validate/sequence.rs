@@ -65,16 +65,23 @@ impl ResultType {
             return Err(Error::Invalid(message));
         }
 
-        let max_idx = &self.0.len() - 1;
-        for (idx, valtype) in suffix.iter().rev().enumerate() {
-            let valtype1 = &self.0.get(max_idx - idx).unwrap();
-            if &valtype == valtype1 {
-                // res.0.insert(0, valtype.clone());
-                res.0.pop();
-            } else {
-                return Err(Error::Invalid("ResultType::strip_suffix &valtype == valtype1".to_owned()));
+        if self.0.is_empty() {
+            if !suffix.0.is_empty() {
+                return Err(Error::Invalid("ResultType::strip_suffix !suffix.is_empty()".to_owned()));
+            }
+        } else {
+            let max_idx = &self.0.len() - 1;
+            for (idx, valtype) in suffix.iter().rev().enumerate() {
+                let valtype1 = &self.0.get(max_idx - idx).unwrap();
+                if &valtype == valtype1 {
+                    // res.0.insert(0, valtype.clone());
+                    res.0.pop();
+                } else {
+                    return Err(Error::Invalid("ResultType::strip_suffix &valtype == valtype1".to_owned()));
+                }
             }
         }
+
 
         Ok(res)
     }
