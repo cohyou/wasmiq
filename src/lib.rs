@@ -339,7 +339,10 @@ fn invoke(s: &str) -> Result<Vec<Val>, Error> {
     let mut store = store_init();
     let _moduleinst = module_instanciate(&mut store, module, vec![])?;
     let vals = func_invoke(&mut store, 0, vec![])?;
-    println!("store: {:?}", store);
+    p!(store.funcs);
+    p!(store.tables);
+    p!(store.mems);
+    p!(store.globals);
 
     Ok(vals)
 }
@@ -365,7 +368,10 @@ fn invoke_file(file_name: &str, idx: usize) -> Result<Vec<Val>, Error> {
     let module = module_parse(&mut reader)?;
     let mut store = store_init();
     let _moduleinst = module_instanciate(&mut store, module, vec![])?;
-    p!(store);
+    p!(store.funcs);
+    p!(store.tables);
+    p!(store.mems);
+    p!(store.globals);
     let vals = func_invoke(&mut store, idx, vec![])?;
 
     Ok(vals)
