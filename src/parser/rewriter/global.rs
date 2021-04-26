@@ -82,7 +82,9 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         self.globals.push(rparen);
 
                         let token = self.lexer.next_token()?;
-                        self.rewrite_global_instrs(token)?;
+                        // self.rewrite_global_instrs(token)?;
+                        let instrs = self.rewrite_instrs(vec![token])?;
+                        self.globals.extend(instrs);
                     },
                     _ => {
                         for t in header { self.globals.push(t); }
@@ -101,7 +103,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 
                 match token2 {
                     rparen @ tk!(TokenKind::RightParen) => self.globals.push(rparen),
-                    _ => self.rewrite_global_instrs(token2)?,
+                    _ => {
+                        // self.rewrite_global_instrs(token2)?
+                        let instrs = self.rewrite_instrs(vec![token2])?;
+                        self.globals.extend(instrs);
+                    },
                 }
             },
             _ => {
@@ -114,29 +120,29 @@ impl<R> Rewriter<R> where R: Read + Seek {
         Ok(())
     }
 
-    fn rewrite_global_instrs(&mut self, token: Token) -> Result<(), RewriteError> {
-        let mut current = token;
-        loop {
-            match current {
-                rparen @ tk!(TokenKind::RightParen) => {
-                    self.globals.push(rparen);
-                    break;
-                },
-                lparen @ tk!(TokenKind::LeftParen) => {
-                    self.globals.push(lparen);
-                    let next = self.lexer.next_token()?;
-                    self.rewrite_global_instrs(next)?;
-                },
-                t @ _ => self.globals.push(t),
-            }
-            if let Ok(token) = self.lexer.next_token() {
-                current = token;
-            } else {
-                break;
-            }
-        }
-        Ok(())
-    }
+    // fn rewrite_global_instrs(&mut self, token: Token) -> Result<(), RewriteError> {
+    //     let mut current = token;
+    //     loop {
+    //         match current {
+    //             rparen @ tk!(TokenKind::RightParen) => {
+    //                 self.globals.push(rparen);
+    //                 break;
+    //             },
+    //             lparen @ tk!(TokenKind::LeftParen) => {
+    //                 self.globals.push(lparen);
+    //                 let next = self.lexer.next_token()?;
+    //                 self.rewrite_global_instrs(next)?;
+    //             },
+    //             t @ _ => self.globals.push(t),
+    //         }
+    //         if let Ok(token) = self.lexer.next_token() {
+    //             current = token;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     Ok(())
+    // }
 }
 
 #[test]
@@ -220,5 +226,13 @@ fn test_rewrite_global_import_export() {
     assert_eq_rewrite(
         r#"(global $id (export "e3") (import "n1" "n2") (mut f64))"#, 
         r#"(module (import "n1" "n2" (global $id (mut f64))) (export "e3" (global $id)))"#
+    );
+}
+
+#[test]
+fn test_rewrite_global_single_instr() {
+    assert_eq_rewrite(
+        r#"(global i32 (i32.const 1))"#,
+        r#"(module (global i32 i32.const 1))"#
     );
 }
