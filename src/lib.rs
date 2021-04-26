@@ -233,21 +233,26 @@ fn test_resolve_func_id() {
 }
 
 #[test]
-fn test_export() {
+fn test_wast() {
     let s = r#"
     (type (func (result i32)))
     (type (func))
     (func $const (export "calctest") (type 0) (result i32)
         (i32.sub (i32.add (i32.const 100) (i32.const 50)) (i32.const 1)))
-    (func (type 1) (export "nop"))
+    ;; (func (export "nop") (type 1))
     "#;
-    use std::io::{Cursor, BufReader};
-    let cursor = Cursor::new(s);
-    let mut reader = BufReader::new(cursor);
-    let module = module_parse(&mut reader).unwrap();
-    p!(module_exports(module));
+    show_parse_result(s);
 }
 
+#[test]
+fn test_wast_export() {
+    let s = r#"
+    (type (func (result i32)))
+    (type (func))
+    (func (export "nop") (type 1))
+    "#;
+    show_parse_result(s);
+}
 
 #[allow(dead_code)]
 fn show_parse_result(s: &str) {

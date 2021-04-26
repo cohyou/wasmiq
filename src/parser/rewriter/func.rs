@@ -52,7 +52,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         return self.rewrite_func_first(header, token1, token2, true);
                     },
                     tp @ kw!(Keyword::Type) => {
-                        self.push_header(header.clone(), false);
+                        self.push_header(header.clone(), exporting);
 
                         let holding = self.scan_typeidx_holding(lparen, tp)?;
                         self.funcs.extend(holding);
@@ -530,5 +530,13 @@ fn test_rewrite_func_import_export() {
     assert_eq_rewrite(
         r#"(func $id (export "e4") (import "n3" "n4") (param $p i32) (result i32))"#, 
         r#"(module (import "n3" "n4" (func $id (type <#:gensym(0)>) (param $p i32) (result i32))) (export "e4" (func $id)))"#
+    );
+}
+
+#[test]
+fn test_rewrite_func_export2() {
+    assert_eq_rewrite(
+        r#"(func (export "nop") (type 1))"#, 
+        r#"(module (func <#:gensym(0)> (type 1)) (export "nop" (func <#:gensym(0)>)))"#
     );
 }

@@ -242,3 +242,12 @@ fn test_import4() {
         r#"(module (import "mod" "nm" (func $fn (type <#:gensym(0)>) (param $pr f32) (param f64) (param i32) (result i32) (result i64))))"#
     );
 }
+
+#[test]
+fn test_import() {
+    assert_eq_rewrite(r#"(import "n1" "n2" (func $f (type 0)))"#, r#"(module (import "n1" "n2" (func $f (type 0))))"#);
+    assert_eq_rewrite(
+        r#"(import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32)))"#, 
+        r#"(module (import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32))))"#
+    );
+}

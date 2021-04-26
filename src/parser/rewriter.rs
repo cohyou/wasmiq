@@ -494,19 +494,10 @@ fn assert_eq_rewrite(before: &str, after:&str) {
 }
 
 #[test]
-fn test_import() {
-    assert_eq_rewrite(r#"(import "n1" "n2" (func $f (type 0)))"#, r#"(module (import "n1" "n2" (func $f (type 0))))"#);
-    assert_eq_rewrite(
-        r#"(import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32)))"#, 
-        r#"(module (import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32))))"#
-    );
-}
-
-#[test]
 fn test_export() {
-    assert_eq_rewrite(r#"(export "n1" (func $fid))"#, r#"(module (export "n1" (func $fid)))"#);
+    assert_eq_rewrite(r#"(export "n1" (func 0))"#, r#"(module (export "n1" (func 0)))"#);
     assert_eq_rewrite(
-        r#"(export "n1" (func $fid)) (export "n2" (table $tid))"#, 
-        r#"(module (export "n1" (func $fid)) (export "n2" (table $tid)))"#
+        r#"(export "n1" (func 1)) (export "n2" (table 0))"#, 
+        r#"(module (export "n1" (func 1)) (export "n2" (table 0)))"#
     );
 }
