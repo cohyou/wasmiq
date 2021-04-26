@@ -270,7 +270,13 @@ fn show_file_parse_result(file_name: &str) {
             p!(module.types);
             p!(module.imports);
             p!(module.funcs);
+            p!(module.tables);
+            p!(module.mems);
+            p!(module.globals);
             p!(module.exports);
+            p!(module.elem);
+            p!(module.data);
+            p!(module.start);
         },
         Err(err) => p!(err),
     }

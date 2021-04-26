@@ -166,8 +166,18 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 
     fn parse_data_string(&mut self) -> Result<Vec<Byte>, ParseError> {
-        // self.parse_string();
-        unimplemented!();
+        let mut names = vec![];
+        loop {
+            if let tk!(TokenKind::String(s)) = &self.lookahead {
+                let bytes = s.clone().bytes().collect::<Vec<Byte>>();
+                self.consume()?;
+                names.extend(bytes);
+            } else {
+                break;
+            }
+        }
+
+        Ok(names)
     }
 
     fn parse_string(&mut self) -> Result<String, ParseError> {

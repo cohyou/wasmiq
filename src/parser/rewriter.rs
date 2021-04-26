@@ -195,6 +195,8 @@ impl<R> Rewriter<R> where R: Read + Seek {
             self.ast.push(last);
         }
 
+        self.ast.push(Token::empty(Loc::zero()));
+
         Ok(())
     }
 
