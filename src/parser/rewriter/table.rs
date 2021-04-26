@@ -237,7 +237,7 @@ fn test_rewrite_table_import_export() {
 fn test_rewrite_table_elem() {
     assert_eq_rewrite(
         r#"(module (table funcref (elem 0 1 2 3 100)))"#, 
-        r#"(module (table <#:gensym> 5 5 funcref) (elem <#:gensym> (i32.const 0) 0 1 2 3 100))"#
+        r#"(module (table <#:gensym(0)> 5 5 funcref) (elem <#:gensym(0)> (i32.const 0) 0 1 2 3 100))"#
     );
     assert_eq_rewrite(
         r#"(module (table $id funcref (elem 0 1 2 3 100)))"#, 
@@ -245,7 +245,7 @@ fn test_rewrite_table_elem() {
     );
     assert_eq_rewrite(
         r#"(module (table (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 
-        r#"(module (table <#:gensym> 10 10 funcref) (export "n1" (table <#:gensym>)) (elem <#:gensym> (i32.const 0) 1 2 4 8 16 32 64 128 256 512))"#
+        r#"(module (table <#:gensym(0)> 10 10 funcref) (export "n1" (table <#:gensym(0)>)) (elem <#:gensym(0)> (i32.const 0) 1 2 4 8 16 32 64 128 256 512))"#
     );
     assert_eq_rewrite(
         r#"(module (table $id (export "n1") funcref (elem 1 2 4 8 16 32 64 128 256 512)))"#, 

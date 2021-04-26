@@ -4,6 +4,7 @@ mod mem;
 mod global;
 mod dataelem;
 mod type_;
+mod import;
 
 use std::io::{Read, Seek};
 use crate::parser::lexer::{
@@ -114,7 +115,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             let token_module = Token::keyword(Keyword::Module, Loc::zero());
             self.ast = vec![token_lparen, token_module];
             self.rewrite_segment(first_lparen, self.lookahead.clone())?;
-            self.rewrite_module_internal()?;
+            self.rewrite_module_internal()?;  // p!(self.ast);
             self.ast.insert(self.ast.len()-2, Token::right_paren(Loc::zero()));
             
             Ok(())
@@ -148,7 +149,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }
         
         self.ast.extend(self.types.clone());
-        self.ast.extend(self.imports.clone());
+        self.ast.extend(self.imports.clone());  // p!(self.imports);
         self.ast.extend(self.funcs.clone());
         self.ast.extend(self.tables.clone());
         self.ast.extend(self.mems.clone());
@@ -198,7 +199,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
     fn rewrite_segment(&mut self, lparen_segment: Token, segment: Token) -> Result<(), RewriteError> {
         match segment {
-            kw!(Keyword::Import) => self.scan_import(lparen_segment, segment),
+            kw!(Keyword::Import) => self.rewrite_import(lparen_segment, segment),
             kw!(Keyword::Type) => self.rewrite_type(lparen_segment, segment),
             kw!(Keyword::Func) => self.rewrite_func(lparen_segment, segment),
             kw!(Keyword::Table) => self.rewrite_table(lparen_segment, segment),
@@ -213,76 +214,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 Ok(())
             },
         }
-    }
-
-    fn scan_import(&mut self, lparen_import: Token, import: Token) -> Result<(), RewriteError> {
-        let mut tokens = vec![];
-        tokens.push(lparen_import);
-        tokens.push(import);
-
-        let n1 = self.lexer.next_token()?;
-        tokens.push(n1);
-        let n2 = self.lexer.next_token()?;
-        tokens.push(n2);
-        let lparen_desc = self.lexer.next_token()?;
-        tokens.push(lparen_desc);
-
-        match self.lexer.next_token()? {
-            func @ kw!(Keyword::Func) => {
-                tokens.push(func);
-
-                let t = self.lexer.next_token()?;
-
-                let next = if let id @ tk!(TokenKind::Id(_)) = t {
-                    tokens.push(id);
-                    self.lexer.next_token()?
-                } else {
-                    t
-                };
-
-                match next {
-                    lparen @ tk!(TokenKind::LeftParen) => {
-                        match self.lexer.next_token()? {
-                            type_ @ kw!(Keyword::Type) => {
-                                tokens.push(lparen);
-                                tokens.push(type_);
-                                let mut importdesc = self.scan_simple_list()?;
-                                let rparen_desc = self.lexer.next_token()?;
-                                importdesc.push(rparen_desc);
-                                tokens.extend(importdesc);
-                                let rparen_import = self.lexer.next_token()?;
-                                tokens.push(rparen_import);
-                            },
-                            t @ _ => {
-                                tokens.extend(self.make_type_gensym_tokens());
-                                tokens.push(lparen);
-                                tokens.push(t);
-                                let mut importdesc = self.scan_simple_list()?;
-                                let rparen_desc = self.lexer.next_token()?;
-                                importdesc.push(rparen_desc);
-                                tokens.extend(importdesc);
-                                let rparen_import = self.lexer.next_token()?;
-                                tokens.push(rparen_import);
-                            }
-                        }
-                    },
-                    rparen @ tk!(TokenKind::RightParen) => {
-                        tokens.extend(self.make_type_gensym_tokens());
-                        tokens.push(rparen);
-                    },
-                    t @ _ => tokens.push(t),
-                }
-            },
-            t @ _ => {
-                tokens.push(t);
-                let importdesc = self.scan_simple_list()?;
-                tokens.extend(importdesc);
-            },
-        }
-
-        self.imports.extend(tokens);
-
-        Ok(())
     }
 
     fn make_type_gensym_tokens(&mut self) -> Vec<Token> {

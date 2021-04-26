@@ -241,8 +241,8 @@ impl<R> Rewriter<R> where R: Read + Seek {
             if exporting {
                 self.funcs.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
             } else {
-                let gensym = self.make_gensym();
-                self.funcs.push(gensym);
+                // let gensym = self.make_gensym();
+                // self.funcs.push(gensym);
             }   
         }
     }

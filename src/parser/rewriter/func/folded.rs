@@ -238,11 +238,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
 fn test_rewrite_instrs_folded1() {
     assert_eq_rewrite(
         "(func (block nop i32.const 0 unreachable))", 
-        "(module (func (type <#:gensym>) block nop i32.const 0 unreachable end))"
+        "(module (func (type <#:gensym(0)>) block nop i32.const 0 unreachable end))"
     );
     assert_eq_rewrite(
         "(func (loop nop i32.const 0 unreachable))", 
-        "(module (func (type <#:gensym>) loop nop i32.const 0 unreachable end))"
+        "(module (func (type <#:gensym(0)>) loop nop i32.const 0 unreachable end))"
     );
 }
 
@@ -250,7 +250,7 @@ fn test_rewrite_instrs_folded1() {
 fn test_rewrite_instrs_folded2() {
     assert_eq_rewrite(
         "(func (i32.add (local.get 0) (i32.const 2)))", 
-        "(module (func (type <#:gensym>) local.get 0 i32.const 2 i32.add))"
+        "(module (func (type <#:gensym(0)>) local.get 0 i32.const 2 i32.add))"
     );
 }
 
@@ -258,47 +258,47 @@ fn test_rewrite_instrs_folded2() {
 fn test_rewrite_instrs_folded_if() {
     assert_eq_rewrite(
         "(module (func (if (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if $iiff (result i32) (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if $iiff (result i32) unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if $iiff (result i32) unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if (result i32) (nop) (then unreachable))))",
-        "(module (func (type <#:gensym>) nop if (result i32) unreachable else end))"
+        "(module (func (type <#:gensym(0)>) nop if (result i32) unreachable else end))"
     );
     assert_eq_rewrite(
         "(module (func (if (type 0) (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if (type 0) unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if (type 0) unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if (param i64) (nop) (then drop))))",
-        "(module (func (type <#:gensym>) nop if (type <#:gensym>) (param i64) drop else end))"
+        "(module (func (type <#:gensym(0)>) nop if (type <#:gensym(1)>) (param i64) drop else end))"
     );
     assert_eq_rewrite(
         "(module (func (if (param i32 i64) (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if (type <#:gensym>) (param i32) (param i64) unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if (type <#:gensym(1)>) (param i32) (param i64) unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if (type 1) (param f32) (nop) (then drop))))",
-        "(module (func (type <#:gensym>) nop if (type 1) (param f32) drop else end))"
+        "(module (func (type <#:gensym(0)>) nop if (type 1) (param f32) drop else end))"
     );
     assert_eq_rewrite(
         "(module (func (if (type 1) (param f32 f64) (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if (type 1) (param f32) (param f64) unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if (type 1) (param f32) (param f64) unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if (type 1) (param f32) (result f64) (nop) (then unreachable) (else drop))))",
-        "(module (func (type <#:gensym>) nop if (type 1) (param f32) (result f64) unreachable else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if (type 1) (param f32) (result f64) unreachable else drop end))"
     );
     assert_eq_rewrite(
         "(module (func (if (type 1) (param $p i64) (param f32 i32) (result f64) (nop) (then nop) (else nop))))",
-        "(module (func (type <#:gensym>) nop if (type 1) (param $p i64) (param f32) (param i32) (result f64) nop else nop end))"
+        "(module (func (type <#:gensym(0)>) nop if (type 1) (param $p i64) (param f32) (param i32) (result f64) nop else nop end))"
     );
     assert_eq_rewrite(
         "(module $mod (func (if (result i32) (i32.lt_s (local.get $input) (i32.const 0)) (then (i32.sub (i32.const 0) (local.get $input))) (else (local.get $input)))))",
-        "(module $mod (func (type <#:gensym>) local.get $input i32.const 0 i32.lt_s if (result i32) i32.const 0 local.get $input i32.sub else local.get $input end))"
+        "(module $mod (func (type <#:gensym(0)>) local.get $input i32.const 0 i32.lt_s if (result i32) i32.const 0 local.get $input i32.sub else local.get $input end))"
     );
 }
 
@@ -306,7 +306,7 @@ fn test_rewrite_instrs_folded_if() {
 fn test_rewrite_instrs_folded_if_nested() {
     assert_eq_rewrite(
         "(module (func (if (nop) (then (if (drop) (then select))) (else drop))))",
-        "(module (func (type <#:gensym>) nop if drop if select else end else drop end))"
+        "(module (func (type <#:gensym(0)>) nop if drop if select else end else drop end))"
     );
 }
 
@@ -314,18 +314,18 @@ fn test_rewrite_instrs_folded_if_nested() {
 fn test_rewrite_instrs_folded_nested() {
     assert_eq_rewrite(
         "(func (block nop i32.const 0 drop))", 
-        "(module (func (type <#:gensym>) block nop i32.const 0 drop end))"
+        "(module (func (type <#:gensym(0)>) block nop i32.const 0 drop end))"
     );
     assert_eq_rewrite(
         "(func (loop nop i32.const 0 drop))", 
-        "(module (func (type <#:gensym>) loop nop i32.const 0 drop end))"
+        "(module (func (type <#:gensym(0)>) loop nop i32.const 0 drop end))"
     );
     assert_eq_rewrite(
         "(func (block nop i32.const 0 (if (drop) (then select))))", 
-        "(module (func (type <#:gensym>) block nop i32.const 0 drop if select else end end))"
+        "(module (func (type <#:gensym(0)>) block nop i32.const 0 drop if select else end end))"
     );
     assert_eq_rewrite(
         "(func (loop i32.const 0 (if (drop) (then select)) drop))", 
-        "(module (func (type <#:gensym>) loop i32.const 0 drop if select else end drop end))"
+        "(module (func (type <#:gensym(0)>) loop i32.const 0 drop if select else end drop end))"
     );
 }
