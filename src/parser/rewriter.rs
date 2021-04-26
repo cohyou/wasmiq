@@ -7,6 +7,7 @@ mod type_;
 mod import;
 
 use std::io::{Read, Seek};
+use std::collections::VecDeque;
 use crate::parser::lexer::{
     Lexer,
     LexError,
@@ -56,6 +57,8 @@ where R: Read + Seek {
     pub ast: Vec<Token>,
     current: usize,
     next_symbol_index: u32,
+
+    precedings: VecDeque<Token>,
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
@@ -80,6 +83,8 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 ast: Vec::default(),
                 current: 0,
                 next_symbol_index: 0,
+
+                precedings: VecDeque::default(),
             }
         } else {
             unimplemented!()
@@ -125,8 +130,20 @@ impl<R> Rewriter<R> where R: Read + Seek {
     fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
         let mut last: Option<Token> = None;
 
-        while let Ok(lookahead) = self.lexer.next_token() {
-            // println!("lookahead: {:?}", lookahead);
+        let mut i = 0;
+        loop {
+            if i == 1000 { break; }
+            let lookahead = 
+            if let Some(token) = self.precedings.pop_front() {
+                token
+            } else {
+                if let Ok(lookahead) = self.lexer.next_token() {
+                    lookahead
+                } else {
+                    break;
+                }
+            };
+            p!(lookahead);
             match lookahead.value {
                 TokenKind::LeftParen => {
                     match self.rewrite_list(lookahead) {
@@ -146,10 +163,25 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     self.ast.push(lookahead);
                 },
             }
+            i += 1;
         }
         
+        let debugging = true;
+        if debugging {
+            p!(self.types);
+            p!(self.imports);
+            p!(self.funcs);
+            p!(self.tables);
+            p!(self.mems);
+            p!(self.globals);
+            p!(self.exports);
+            p!(self.elem);
+            p!(self.data);
+            p!(self.start);
+        }        
+
         self.ast.extend(self.types.clone());
-        self.ast.extend(self.imports.clone());  // p!(self.imports);
+        self.ast.extend(self.imports.clone());  
         self.ast.extend(self.funcs.clone());
         self.ast.extend(self.tables.clone());
         self.ast.extend(self.mems.clone());
@@ -208,12 +240,23 @@ impl<R> Rewriter<R> where R: Read + Seek {
             kw!(Keyword::Export) => self.scan_export(lparen_segment, segment),
             kw!(Keyword::Elem) => self.rewrite_elem(lparen_segment, segment),
             kw!(Keyword::Data) => self.rewrite_data(lparen_segment, segment),
+            kw!(Keyword::Start) => self.scan_start(lparen_segment, segment),
             _ => {
                 self.ast.push(lparen_segment);
                 self.ast.push(segment);
                 Ok(())
             },
         }
+    }
+
+    fn scan_start(&mut self, lparen_start: Token, start: Token) -> Result<(), RewriteError> {
+        self.start.push(lparen_start);
+        self.start.push(start);
+        let funcidx = self.lexer.next_token()?;
+        self.start.push(funcidx);
+        let rparen_start = self.lexer.next_token()?;
+        self.start.push(rparen_start);
+        Ok(())
     }
 
     fn make_type_gensym_tokens(&mut self) -> Vec<Token> {

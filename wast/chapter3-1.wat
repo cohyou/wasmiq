@@ -1,0 +1,12 @@
+(module
+    (type (func))
+    (import "myModule" "importFunc" (func $importFunc (type 0)))
+    (func $f (type 0))
+    (table 1 funcref)
+    (memory 1)
+    (global i32 (i32.const 1))
+    (export "table" (table 0))
+    (start $importFunc)
+    (elem (i32.const 0) $f)
+    (data (i32.const 0) "データ")
+)

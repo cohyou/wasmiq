@@ -7,25 +7,17 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         let token = self.lexer.next_token()?;
         
-        match token {
-            num @ tk!(TokenKind::Number(_)) => {
-                self.elem.push(num);
-                let offset = self.scan_offset()?;
-                self.elem.extend(offset);
-            },
-            id @ tk!(TokenKind::Id(_)) => {
-                self.elem.push(id);
-                let offset = self.scan_offset()?;
-                self.elem.extend(offset);
-            },
-            lparen @ tk!(TokenKind::LeftParen) => {
-                self.elem.push(Token::number_u(0, Loc::zero()));
-                self.elem.push(lparen);
-                let offset = self.scan_offset()?;
-                self.elem.extend(offset);
-            },
-            t @ _ => self.elem.push(t),
-        }
+        // tableidx
+        let (tokens, token) = self.scan_idx(token)?;
+        self.elem.extend(tokens);
+
+        // offset
+        let (tokens, token) = self.rewrite_offset(token)?;
+        self.elem.extend(tokens);
+
+        // vec(funcidx)
+        let func_indices = self.scan_vec(token)?;
+        self.elem.extend(func_indices);
 
         Ok(())
     }
@@ -36,64 +28,150 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         let token = self.lexer.next_token()?;
         
-        match token {
-            num @ tk!(TokenKind::Number(_)) => {
-                self.data.push(num);
-                let offset = self.scan_offset()?;
-                self.data.extend(offset);
-            },
-            id @ tk!(TokenKind::Id(_)) => {
-                self.data.push(id);
-                let offset = self.scan_offset()?;
-                self.data.extend(offset);
-            },
-            lparen @ tk!(TokenKind::LeftParen) => {
-                self.data.push(Token::number_u(0, Loc::zero()));
-                self.data.push(lparen);
-                let offset = self.scan_offset()?;
-                self.data.extend(offset);
-            },
-            t @ _ => self.data.push(t),
-        }
+        // memidx
+        let (tokens, token) = self.scan_idx(token)?;
+        self.data.extend(tokens);
+
+        // offset
+        let (tokens, token) = self.rewrite_offset(token)?;
+        self.data.extend(tokens);
+
+        // vec(funcidx)
+        let func_indices = self.scan_vec(token)?;
+        self.data.extend(func_indices);
 
         Ok(())
     }
 
-    fn scan_offset(&mut self) -> Result<Vec<Token>, RewriteError> {
-        let mut result = vec![];
+    fn scan_idx(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
+        let mut tokens = vec![];
 
-        match self.lexer.next_token()? {
-            lparen @ tk!(TokenKind::LeftParen) => {
-                result.push(lparen);
-                let offset = self.lexer.next_token()?;
-                result.push(offset);
-                let instrs = self.rewrite_instrs(vec![])?;
-                result.extend(instrs);
-        
-                let func_indices = self.scan_vec()?;
-                result.extend(func_indices);
+        let token = match token {
+            num @ tk!(TokenKind::Number(_)) => {
+                tokens.push(num);
+                self.lexer.next_token()?
             },
-            offset @ kw!(Keyword::Offset) => {
-                result.push(offset);
-                let instrs = self.rewrite_instrs(vec![])?;
-                result.extend(instrs);
-        
-                let func_indices = self.scan_vec()?;
-                result.extend(func_indices);
+            id @ tk!(TokenKind::Id(_)) => {
+                tokens.push(id);
+                self.lexer.next_token()?
+            },
+            lparen @ tk!(TokenKind::LeftParen) => {
+                tokens.push(Token::number_u(0, Loc::zero()));
+                lparen
+            },
+            t @ _ => t,
+        };
+
+        Ok((tokens, token))
+    }
+
+    fn rewrite_offset(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
+        let mut tokens = vec![];
+
+        let token = match token {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match self.lexer.next_token()? {
+                    offset @ kw!(Keyword::Offset) => {
+                        tokens.push(lparen);
+                        tokens.push(offset);
+                        let tokens_instr = self.rewrite_instrs(vec![])?;
+                        tokens.extend(tokens_instr);
+                        self.lexer.next_token()?
+                    },
+                    instr @ instr!(_) => {
+                        tokens.push(lparen);
+                        tokens.push(Token::keyword(Keyword::Offset, Loc::zero()));
+                        let tokens_instr = self.rewrite_instr_for_offset(instr)?;
+                        tokens.extend(tokens_instr);
+                        let rparen = self.lexer.next_token()?;
+                        tokens.push(rparen);
+                        self.lexer.next_token()?
+                    },
+                    t @ _ => t,
+                }
             },
             instr @ instr!(_) => {
-                result.push(Token::left_paren(Loc::zero()));
-                result.push(Token::keyword(Keyword::Offset, Loc::zero()));
-                let instr = self.rewrite_instr_for_offset(instr)?;
-                result.extend(instr);
-                result.push(Token::right_paren(Loc::zero()));
-
-                let func_indices = self.scan_vec()?;
-                result.extend(func_indices);
+                tokens.push(Token::left_paren(Loc::zero()));
+                tokens.push(Token::keyword(Keyword::Offset, Loc::zero()));
+                let tokens_instr = self.rewrite_instr_for_offset(instr)?;
+                tokens.extend(tokens_instr);
+                tokens.push(Token::right_paren(Loc::zero()));
+                self.lexer.next_token()?
             },
-            t @ _ => result.push(t),
-        }
+            t @ _ => t,
+        };
 
+        Ok((tokens, token))
+    }
+}
+
+#[test]
+fn test_rewrite_elem() {
+    assert_eq_rewrite(
+        "(elem 0 (offset f32.const 12.3 i32.const 0) 2 3)",
+        "(module (elem 0 (offset f32.const 12.3 i32.const 0) 2 3))"
+    );
+    assert_eq_rewrite(
+        "(elem 0 i64.const 867 6 78)",
+        "(module (elem 0 (offset i64.const 867) 6 78))"
+    );
+    assert_eq_rewrite(
+        "(elem $id i32.const 64 200 42784)",
+        "(module (elem $id (offset i32.const 64) 200 42784))"
+    );
+    assert_eq_rewrite(
+        "(elem (offset f64.const 3.14) 32 44 33)",
+        "(module (elem 0 (offset f64.const 3.14) 32 44 33))"
+    );
+    assert_eq_rewrite(
+        "(elem (i32.const 0) $f)",
+        "(module (elem 0 (offset i32.const 0) $f))"
+    );
+}
+
+#[test]
+fn test_rewrite_data() {
+    assert_eq_rewrite(
+        r#"(data 0 (offset i32.const 0 i64.const 1) "test" "string")"#, 
+        r#"(module (data 0 (offset i32.const 0 i64.const 1) "test" "string"))"#
+    );
+    assert_eq_rewrite(
+        r#"(data 0 i32.const 0 "test")"#, 
+        r#"(module (data 0 (offset i32.const 0) "test"))"#
+    );
+    assert_eq_rewrite(
+        r#"(data (offset f64.const 1.0) "string")"#,
+        r#"(module (data 0 (offset f64.const 1) "string"))"#
+    );
+    assert_eq_rewrite(
+        r#"(data (i32.const 0) "データ")"#,
+        r#"(module (data 0 (offset i32.const 0) "データ"))"#
+    );
+}
+
+impl<R> Rewriter<R> where R: Read + Seek {
+    fn scan_vec(&mut self, token: Token) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+        let mut current = token;
+        loop {
+            p!(current);
+            match current {
+                rparen @ tk!(TokenKind::RightParen) => {
+                    result.push(rparen);
+                    break;
+                },
+                empty @ tk!(TokenKind::Empty) => {
+                    result.push(empty);
+                    break;
+                },
+                t @ _ => result.push(t),
+            }
+            current = if let Ok(token) = self.lexer.next_token() {
+                token
+            } else {
+                break;
+            }
+        }
 
         Ok(result)
     }
@@ -184,60 +262,4 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         Ok(result)
     }
-
-    fn scan_vec(&mut self) -> Result<Vec<Token>, RewriteError> {
-        let mut result = vec![];
-    
-        while let Ok(token) = self.lexer.next_token() {
-            match token {
-                rparen @ tk!(TokenKind::RightParen) => {
-                    result.push(rparen);
-                    break;
-                },
-                empty @ tk!(TokenKind::Empty) => {
-                    result.push(empty);
-                    break;
-                },
-                t @ _ => result.push(t),
-            }
-        }
-
-        Ok(result)
-    }
-}
-
-#[test]
-fn test_rewrite_elem() {
-    assert_eq_rewrite(
-        "(elem 0 (offset f32.const 12.3 i32.const 0) 2 3)",
-        "(module (elem 0 (offset f32.const 12.3 i32.const 0) 2 3))"
-    );
-    assert_eq_rewrite(
-        "(elem 0 i64.const 867 6 78)",
-        "(module (elem 0 (offset i64.const 867) 6 78))"
-    );
-    assert_eq_rewrite(
-        "(elem $id i32.const 64 200 42784)",
-        "(module (elem $id (offset i32.const 64) 200 42784))"
-    );
-    assert_eq_rewrite(
-        "(elem (offset f64.const 3.14) 32 44 33)",
-        "(module (elem 0 (offset f64.const 3.14) 32 44 33))"
-    );
-}
-
-#[test]
-fn test_rewrite_data() {
-    assert_eq_rewrite(
-        r#"(data 0 (offset i32.const 0 i64.const 1) "test" "string")"#, 
-        r#"(module (data 0 (offset i32.const 0 i64.const 1) "test" "string"))"#
-    );
-    assert_eq_rewrite(
-        r#"(data 0 i32.const 0 "test")"#, 
-        r#"(module (data 0 (offset i32.const 0) "test"))"#
-    );
-    assert_eq_rewrite(
-        r#"(data (offset f64.const 1.0) "string")"#,
-        r#"(module (data 0 (offset f64.const 1) "string"))"#
-    );
 }

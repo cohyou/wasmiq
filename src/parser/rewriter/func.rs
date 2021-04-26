@@ -174,7 +174,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 let instrs = self.rewrite_instrs(vec![instr, token2])?;
                 self.funcs.extend(instrs);
             },
-            rparen @ tk!(TokenKind::RightParen) => self.funcs.push(rparen),
+            rparen @ tk!(TokenKind::RightParen) => {
+                self.funcs.push(rparen);
+                self.precedings.push_back(token2);
+            },
             _ => self.push_others_rest(token1, token2),
         }
 

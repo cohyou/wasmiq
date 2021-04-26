@@ -254,6 +254,28 @@ fn test_wast_export() {
     show_parse_result(s);
 }
 
+#[test]
+fn test_wast_file() {
+    show_file_parse_result("./wast/chapter3-1.wat");
+}
+
+#[allow(dead_code)]
+fn show_file_parse_result(file_name: &str) {
+    use std::fs::File;
+    use std::io::{BufReader};
+    let f = File::open(file_name).unwrap();
+    let mut reader = BufReader::new(f);
+    match module_parse(&mut reader) {
+        Ok(module) => {
+            p!(module.types);
+            p!(module.imports);
+            p!(module.funcs);
+            p!(module.exports);
+        },
+        Err(err) => p!(err),
+    }
+}
+
 #[allow(dead_code)]
 fn show_parse_result(s: &str) {
     use std::io::{Cursor, BufReader};
