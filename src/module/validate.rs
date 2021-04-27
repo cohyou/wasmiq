@@ -244,9 +244,8 @@ impl Func {
         let mut new_context = context.clone();
         let mut new_locals = functype.0.clone();
         
-        if let Some(locals) = &context.locals {
-            new_locals.extend(locals)
-        }
+        new_locals.extend(self.locals.clone());
+        
         new_context.locals = Some(new_locals);
         new_context.labels = Some(vec![functype.1.clone()]);
         new_context.rtn = Some(functype.1.clone());

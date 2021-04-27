@@ -57,13 +57,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let mut result = vec![];
 
         let (label, token) = self.scan_label_internal(token)?;
-        p!(label); p!(token);
         result.extend(label);
         
         let (holding_loop, tokens) = self.rewrite_blocktype_first(token)?;
         result.extend(holding_loop);
 
-        // first.extend(tokens);
         let mut first = VecDeque::from(tokens);
         let folded_block_loop_instrs = self.rewrite_block_loop_instrs(&mut first)?;
         result.extend(folded_block_loop_instrs);

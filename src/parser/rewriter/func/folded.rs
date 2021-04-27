@@ -25,7 +25,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         self.lexer.next_token()?
                     };
                     let loop_instrs = self.rewrite_loop(token)?;
-                    p!(tokens_to_string(loop_instrs.clone()));
                     result.extend(loop_instrs);
                 },
                 if_ @ instr!(Instr::If(_, _, _)) => {
