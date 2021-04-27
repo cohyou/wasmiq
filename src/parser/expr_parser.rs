@@ -50,6 +50,23 @@ macro_rules! instr_const {
     }};
 }
 
+macro_rules! instr_const_float {
+    ($this:ident, $n:ident, $v:ident, $instr:ident, $tp:ident, $err:expr) => {{
+        $this.consume()?;
+        match $this.lookahead {
+            nm!(Number::FloatingPoint($n)) => {
+                $v.push(Instr::$instr($n as $tp));
+                $this.consume()?;
+            },
+            nm!(Number::Integer($n)) => {
+                $v.push(Instr::$instr($n as $tp));
+                $this.consume()?;
+            },
+            _ => return Err($this.err2($err)),
+        }
+    }};
+}
+
 macro_rules! instr_memarg {
     ($this: ident, $v:ident, $align:expr) => {{
         $this.consume()?;
@@ -136,8 +153,8 @@ impl<R> Parser<R> where R: Read + Seek {
                 // Numeric Instructions
                 instr!(Instr::I32Const(_)) => instr_const!(self, Number::Integer(n), n, instrs, I32Const, u32, "i32.const"),
                 instr!(Instr::I64Const(_)) => instr_const!(self, Number::Integer(n), n, instrs, I64Const, u64, "i64.const"),
-                instr!(Instr::F32Const(_)) => instr_const!(self, Number::FloatingPoint(n), n, instrs, F32Const, f32, "f32.const"),
-                instr!(Instr::F64Const(_)) => instr_const!(self, Number::FloatingPoint(n), n, instrs, F64Const, f64, "f64.const"),
+                instr!(Instr::F32Const(_)) => instr_const_float!(self, n, instrs, F32Const, f32, "f32.const"),
+                instr!(Instr::F64Const(_)) => instr_const_float!(self, n, instrs, F64Const, f64, "f64.const"),
 
                 instr!(instr) => {
                     instrs.push(instr.clone());
