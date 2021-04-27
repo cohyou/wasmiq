@@ -220,8 +220,8 @@ fn instr2wasm(instr: &Instr) -> Vec<Byte> {
         ].concat(),
         Instr::If(rt, instrs1, instrs2) => {
             let true_term = [vec![0x04], blocktype2wasm(rt), instrs2wasm(instrs1)].concat();
-            if let Some(instr2) = instrs2 {
-                [true_term, vec![0x05], instrs2wasm(instr2), vec![0x0B]].concat()
+            if !instrs2.is_empty() {
+                [true_term, vec![0x05], instrs2wasm(instrs2), vec![0x0B]].concat()
             } else {
                 [true_term, vec![0x0B]].concat()
             }

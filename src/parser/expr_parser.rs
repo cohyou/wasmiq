@@ -250,7 +250,7 @@ impl<R> Parser<R> where R: Read + Seek {
     
         self.contexts.pop();
 
-        instrs.push(Instr::If(blocktype, instrs1, Some(instrs2)));
+        instrs.push(Instr::If(blocktype, instrs1, instrs2));
 
         Ok(())
     }

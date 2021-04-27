@@ -38,7 +38,7 @@ impl<'a> Thread<'a> {
         self.execute_instrs_with_label(label, instrs)
     }
 
-    pub fn execute_if(&mut self, blocktype: &BlockType, instrs1: &Vec<Instr>, instrs2: &Option<Vec<Instr>>) -> ExecResult {
+    pub fn execute_if(&mut self, blocktype: &BlockType, instrs1: &Vec<Instr>, instrs2: &Vec<Instr>) -> ExecResult {
         let (_, frame) = self.current_frame();
         let (argtypes, returntypes) = blocktype.extend(&frame.module);
 

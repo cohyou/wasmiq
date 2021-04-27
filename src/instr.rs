@@ -57,7 +57,7 @@ pub enum Instr {
     // Control Instructions
     Block(BlockType, Vec<Instr>),
     Loop(BlockType, Vec<Instr>),
-    If(BlockType, Vec<Instr>, Option<Vec<Instr>>),
+    If(BlockType, Vec<Instr>, Vec<Instr>),
 
     /* Plain Instructions */
 

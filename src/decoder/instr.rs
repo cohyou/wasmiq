@@ -38,7 +38,7 @@ pub fn decode_instr(b: Byte, reader: &mut impl Read) -> Instr {
         0x04 => {
             let block_type = decode_blocktype(reader);
             let mut instrs_true = vec![];
-            let mut expr_false = None;
+            let mut expr_false = vec![];
             let mut instrs = vec![];
 
             loop {
@@ -46,7 +46,7 @@ pub fn decode_instr(b: Byte, reader: &mut impl Read) -> Instr {
                     if b == 0x05 {
                         // else
                         instrs_true = instrs;
-                        expr_false = Some(decode_instrs(reader));
+                        expr_false = decode_instrs(reader);
                         break;
                     }  
                     if b == 0x08 {

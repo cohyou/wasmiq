@@ -107,7 +107,7 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
     match s {
         b"block" => Some(Instr::Block(blocktype, vec![])),
         b"loop" => Some(Instr::Loop(blocktype, vec![])),
-        b"if" => Some(Instr::If(blocktype, vec![], None)),
+        b"if" => Some(Instr::If(blocktype, vec![], vec![])),
 
         b"unreachable" => Some(Instr::Unreachable),
         b"nop" => Some(Instr::Nop),
