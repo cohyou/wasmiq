@@ -24,9 +24,6 @@ impl<R> Parser<R> where R: Read + Seek {
 
         self.check_typeuse(func.tp, ft)?;
 
-        let typedef = &self.contexts[0].typedefs[func.tp as usize];
-        func.locals.extend(typedef.0.clone());
-
         // locals
         parse_field!(self, Local, 
         if let Ok(local_vt) = self.parse_local() {
