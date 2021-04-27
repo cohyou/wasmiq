@@ -302,11 +302,18 @@ impl<R> Parser<R> where R: Read + Seek {
 }
 
 #[test]
-#[ignore]
-fn test() {
+fn test_parse_if() {
     let s = r#"
-    (func $const (type 0) i32.const 42)
-    (type (func (param i32)))
+    (func
+        (param $exponent i32) (result i32)
+        local.get $exponent
+        i32.eqz
+        if 
+            i32.const 1
+            return
+        end
+        i32.const 2
+    )
     "#;
     parse_str(s);
 }

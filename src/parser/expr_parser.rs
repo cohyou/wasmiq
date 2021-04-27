@@ -215,10 +215,22 @@ impl<R> Parser<R> where R: Read + Seek {
         parse_optional_label_id!(self, new_label_context.labels);
         self.contexts.push(new_label_context);
 
-        self.match_lparen()?;
-
-        // resulttype
-        let blocktype = self.parse_blocktype()?;
+        let blocktype = 
+        match self.lookahead {
+            tk!(TokenKind::LeftParen) => {
+                self.consume()?;
+                match &self.lookahead {
+                    kw!(Keyword::Result) => {
+                        self.parse_blocktype()?
+                    },
+                    kw!(Keyword::Type) => {
+                        self.parse_blocktype()?
+                    },           
+                    t @ _ => return Err(ParseError::InvalidMessage(t.clone(), format!("parse_if"))),
+                }
+            },
+            _ => BlockType::ValType(None),
+        };
 
         // instrs1
         let instrs1 = self.parse_instrs()?;

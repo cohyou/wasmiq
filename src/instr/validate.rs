@@ -402,8 +402,10 @@ impl Instr {
                 let context = context.clone_with_labels(vts);
                 let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
                 let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
-                if functype1 != functype2 {
-                    return Err(Error::Invalid("Instr::If validate functype1 != functype2".to_owned()));
+                if !Instr::match_resulttype(&functype1.0, &functype2.0) ||
+                   !Instr::match_resulttype(&functype1.1, &functype2.1) {
+                    let message = format!("Instr::If validate functype1({:?}) != functype2({:?})", functype1, functype2);
+                    return Err(Error::Invalid(message));
                 }
                 let mut functype_if = functype1.clone();
                 functype_if.0.0.push(ValType::I32);
@@ -467,6 +469,15 @@ impl Instr {
             },
 
             // _ => unimplemented!(),
+        }
+    }
+
+    fn match_resulttype(rt1: &ResultType, rt2: &ResultType) -> bool {
+        if rt1.0 == vec![ValType::Ellipsis] || 
+           rt2.0 == vec![ValType::Ellipsis] {
+            true
+        } else {
+            rt1 == rt2
         }
     }
 

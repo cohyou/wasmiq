@@ -17,6 +17,17 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     result.push(empty);
                     break;
                 },
+                loop_ @ instr!(Instr::Loop(_, _)) => {
+                    result.push(loop_);
+                    let token = if let Some(token) = tokens.pop_front() {
+                        token
+                    } else {
+                        self.lexer.next_token()?
+                    };
+                    let loop_instrs = self.rewrite_loop(token)?;
+                    p!(tokens_to_string(loop_instrs.clone()));
+                    result.extend(loop_instrs);
+                },
                 if_ @ instr!(Instr::If(_, _, _)) => {
                     result.push(if_);
                     let if_instrs = self.rewrite_if()?;
@@ -30,7 +41,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     result.push(rparen);
                     break;
                 },
-                _ => result.push(token),
+                t @ _ => result.push(t),
             }
 
             if let Some(new_token) = tokens.pop_front() {
@@ -47,7 +58,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         Ok(result)
     }
 
-    fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+    pub fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
         let mut result = vec![]; 
         let token = if let Some(token) = first.pop_front() {
             token
@@ -94,7 +105,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let (label, token) = self.scan_label()?;
         result.extend(label);
         
-        let (holding_if, tokens) = self.rewrite_blocktype_if_first(token)?;
+        let (holding_if, tokens) = self.rewrite_blocktype_first(token)?;
         result.extend(holding_if);
         first.extend(tokens);
 
@@ -112,7 +123,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let (label, token) = self.scan_label()?;
         result.extend(label);
         
-        let (holding_if, tokens) = self.rewrite_blocktype_if_first(token)?;
+        let (holding_if, tokens) = self.rewrite_blocktype_first(token)?;
         result.extend(holding_if);
 
         first.extend(tokens);
@@ -131,7 +142,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let (label, token) = self.scan_label()?;
         holding.extend(label);
         
-        let (holding_if, tokens) = self.rewrite_blocktype_if_first(token)?;
+        let (holding_if, tokens) = self.rewrite_blocktype_first(token)?;
         holding.extend(holding_if);
 
         let mut tokens = VecDeque::from(tokens);

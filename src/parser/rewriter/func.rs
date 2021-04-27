@@ -299,7 +299,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
 }
 
 impl<R> Rewriter<R> where R: Read + Seek {
-    fn rewrite_blocktype_if_first(&mut self, token: Token) -> Result<(Vec<Token>, Vec<Token>), RewriteError> {
+    fn rewrite_blocktype_first(&mut self, token: Token) -> Result<(Vec<Token>, Vec<Token>), RewriteError> {
         let mut holding = vec![];
         let token = match token {
             lparen @ tk!(TokenKind::LeftParen) => {
@@ -317,7 +317,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         holding.extend(holding_typeidx);
 
                         let token1 = self.lexer.next_token()?;
-                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_rest(token1)?;
                         holding.extend(holding_blocktype);
                         
                         return Ok((holding, vec![token2.clone()]));
@@ -333,7 +333,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         holding.extend(holding_param);
 
                         let token1 = self.lexer.next_token()?;
-                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_rest(token1)?;
                         holding.extend(holding_blocktype);
 
                         return Ok((holding, vec![token2]));
@@ -349,7 +349,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         Ok((holding, vec![token]))
     }
 
-    fn rewrite_blocktype_if_rest(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
+    fn rewrite_blocktype_rest(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
         let mut holding = vec![];
 
         let token = match token {
@@ -363,7 +363,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         holding.extend(holding_param);
 
                         let token1 = self.lexer.next_token()?;
-                        let (holding_blocktype, token2) = self.rewrite_blocktype_if_rest(token1)?;
+                        let (holding_blocktype, token2) = self.rewrite_blocktype_rest(token1)?;
                         holding.extend(holding_blocktype);
 
                         return Ok((holding, token2));

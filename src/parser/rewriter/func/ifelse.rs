@@ -8,7 +8,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let (holding, token) = self.scan_label()?;
         result.extend(holding);
 
-        let (holding, tokens) = self.rewrite_blocktype_if_first(token)?;
+        let (holding, tokens) = self.rewrite_blocktype_first(token)?;
         result.extend(holding);
         let mut tokens = VecDeque::from(tokens);
         let mut token = tokens.pop_front().unwrap();
@@ -47,6 +47,56 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 } else {
                     break;
                 }
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn rewrite_loop(&mut self, token: Token) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
+        let (label, token) = self.scan_label_internal(token)?;
+        p!(label); p!(token);
+        result.extend(label);
+        
+        let (holding_loop, tokens) = self.rewrite_blocktype_first(token)?;
+        result.extend(holding_loop);
+
+        // first.extend(tokens);
+        let mut first = VecDeque::from(tokens);
+        let folded_block_loop_instrs = self.rewrite_block_loop_instrs(&mut first)?;
+        result.extend(folded_block_loop_instrs);
+
+        result.push(Token::keyword(Keyword::End, Loc::zero()));
+
+        Ok(result)
+    }
+
+    pub fn rewrite_block_loop_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
+        let mut result = vec![];
+
+        let mut token;
+        loop {
+            if let Some(new_token) = first.pop_front() {
+                token = new_token
+            } else {
+                if let Ok(new_token) = self.lexer.next_token() {
+                    token = new_token 
+                } else {
+                    break;
+                }
+            }
+
+            match token {
+                kw!(Keyword::End) => break,
+                tk!(TokenKind::LeftParen) => {
+                    let folded_instrs = self.rewrite_folded_instrs(first)?;
+                    result.extend(folded_instrs);
+                },
+                instr @ instr!(_) => result.push(instr),
+                tk!(TokenKind::Empty) => { result.push(token); break; },
+                token @ _ => result.push(token),
             }
         }
 
@@ -160,4 +210,16 @@ fn test_rewrite_if_nested() {
         "(func i32.const 0 if nop if nop if nop end end end)", 
         "(module (func (type <#:gensym(0)>) i32.const 0 if nop if nop if nop else end else end else end))"
     )
+}
+
+#[test]
+fn test_rewrite_control() {
+    assert_eq_rewrite(
+        "(func (type 0) i32.const 0 if (result i64) i64.const 100 else i64.const 200 end)",
+        "(module (func (type 0) i32.const 0 if (result i64) i64.const 100 else i64.const 200 end))"
+    );
+    assert_eq_rewrite(
+        "(func (type 0) loop $label (result i32) i32.const 2456 i32.const 8545 i32.add br_if $label end)",
+        "(module (func (type 0) loop $label (result i32) i32.const 2456 i32.const 8545 i32.add BrIf(0) $label end))"
+    );
 }

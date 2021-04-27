@@ -324,12 +324,13 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
 
     fn scan_label(&mut self) -> Result<(Vec<Token>, Token), RewriteError> {
-        self.scan_label_internal()
+        let token = self.lexer.next_token()?;
+        self.scan_label_internal(token)
     }
 
-    fn scan_label_internal(&mut self) -> Result<(Vec<Token>, Token), RewriteError> {
+    fn scan_label_internal(&mut self, token: Token) -> Result<(Vec<Token>, Token), RewriteError> {
         let mut holding = vec![];
-        let token = match self.lexer.next_token()? {
+        let token = match token {
             id_ @ tk!(TokenKind::Id(_)) => {
                 holding.push(id_);
                 self.lexer.next_token()?
