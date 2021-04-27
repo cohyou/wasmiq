@@ -60,11 +60,7 @@ impl<'a> Thread<'a> {
         }
 
         if c == 0 {
-            if let Some(instrs) = instrs2 {
-                self.execute_instrs_with_label(label, instrs)
-            } else {
-                self.execute_instrs_with_label(label, &vec![])
-            }
+            self.execute_instrs_with_label(label, instrs2)
         } else {
             self.execute_instrs_with_label(label, instrs1)
         }
