@@ -24,16 +24,17 @@ impl<'a> Thread<'a> {
 
     pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> ExecResult {
         for instr in instrs {
-            // p!(instr);
+            p!(instr);
             match self.execute_instr(instr) {
                 ExecResult::Vals(vals) => {
                     let vals: Vec<StackEntry> = vals.iter()
                         .map(|v| StackEntry::Value(v.clone())).collect();
+                        pp!("before: ", self.stack); 
                     self.stack.extend(vals);
                 },
                 ExecResult::Trap(err) => return ExecResult::Trap(err),
             }
-            // p!(self.stack);
+            pp!("after:  ", self.stack);
         }
 
         let mut vals = vec![];
@@ -270,9 +271,9 @@ impl<'a> Thread<'a> {
                     locals.push(val);
                 }
     
-                locals.extend(args);
+                args.extend(locals);
     
-                let frame = Frame{ module: userfunc.module, locals: locals };
+                let frame = Frame{ module: userfunc.module, locals: args };
                 let m = returntypes.len();
                 let activation = StackEntry::Activation(m as u32, frame);
                 self.stack.push(activation);
@@ -284,7 +285,6 @@ impl<'a> Thread<'a> {
                 } else {
                     return ExecResult::Trap(Error::Invalid("Thread::execute_invoke ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0)".to_owned()));
                 }
-
 
                 let mut vals = vec![];
                 let n = m;
@@ -313,10 +313,12 @@ impl<'a> Thread<'a> {
         self.execute_instrs(instrs);
 
         let mut vals = vec![];
-        let m = self.stack.len();
-        for _ in 0..m {
+        // let m = self.stack.len();p!(m);
+        loop {
             if let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.push(val);
+            } else {
+                break;
             }
         }
 

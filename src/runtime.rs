@@ -33,12 +33,23 @@ use crate::{
     Error,
 };
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Val {
     I32Const(u32),
     I64Const(u64),
     F32Const(f32),
     F64Const(f64),
+}
+
+impl Debug for Val {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Val::I32Const(n) => write!(f, "i32({:?})", n),
+            Val::I64Const(n) => write!(f, "i64({:?})", n),
+            Val::F32Const(n) => write!(f, "f32({:?})", n),
+            Val::F64Const(n) => write!(f, "f64({:?})", n),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -139,17 +150,32 @@ pub enum ExternVal {
     Global(GlobalAddr),
 }
 
-#[derive(Debug)]
 pub enum StackEntry {
     Value(Val),
     Label(u32, Vec<Instr>),
     Activation(u32, Frame),
 }
 
-#[derive(Default, PartialEq, Clone, Debug)]
+use std::fmt::Debug;
+impl Debug for StackEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StackEntry::Value(v) => write!(f, "{:?}", v),
+            StackEntry::Label(n, instrs) => write!(f, "Label{:?}<{:?}>", n, instrs),
+            StackEntry::Activation(n, frame) => write!(f, "Frame{:?}{:?}", n, frame),
+        }
+    }
+}
+
+#[derive(Default, PartialEq, Clone)]
 pub struct Frame {
     pub locals: Vec<Val>,
     pub module: ModuleInst,
+}
+impl Debug for Frame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<{:?}>", self.locals)
+    }
 }
 
 #[derive(Debug)]
