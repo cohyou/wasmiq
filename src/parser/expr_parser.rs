@@ -172,7 +172,16 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 
     fn parse_blocktype(&mut self) -> Result<BlockType, ParseError> {
-        unimplemented!();
+        // TODO: only (result valtype)
+        let mut bt = BlockType::ValType(None);
+        // self.match_lparen()?;
+        self.match_keyword(Keyword::Result)?;
+        if let kw!(Keyword::ValType(vt)) = self.lookahead {
+            self.consume()?;
+            bt = BlockType::ValType(Some(vt.clone()));            
+        }
+        self.match_rparen()?;
+        Ok(bt)
     }
 
     fn parse_call_indirect(&mut self, instrs: &mut Vec<Instr>) -> Result<(), ParseError> {

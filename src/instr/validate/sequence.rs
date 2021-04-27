@@ -184,6 +184,22 @@ fn test_validate_instrs() {
         Instr::IBinOp(ValSize::V32, IBinOp::Add),
     ];
     test_validate(instrs, (ResultType(vec![]), ResultType(vec![ValType::I32])));
+
+
+}
+
+#[test]
+fn test_validate_instrs_if() {
+    use crate::{BlockType, ValType as ValTypeOriginal,};
+    let instrs = vec![
+        Instr::I32Const(0), 
+        Instr::If(
+            BlockType::ValType(Some(ValTypeOriginal::I32)), 
+            vec![Instr::I32Const(1)], 
+            Some(vec![Instr::I32Const(2)])
+        ),
+    ];
+    test_validate(instrs, (ResultType(vec![]), ResultType(vec![ValType::I32])));
 }
 
 #[allow(dead_code)]

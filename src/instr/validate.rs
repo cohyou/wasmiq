@@ -391,7 +391,10 @@ impl Instr {
                 let ft = blocktype.validate(context)?;
                 let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
                 let context = context.clone_with_labels(vts);
-                Instr::validate_instr_sequence(&context, &instrs1)
+                let functype = Instr::validate_instr_sequence(&context, &instrs1)?;
+                let mut functype_if = functype.clone();
+                functype_if.0.0.push(ValType::I32);
+                Ok(functype_if)
             },
             Instr::If(blocktype, instrs1, Some(instrs2)) => {
                 let ft = blocktype.validate(context)?;
@@ -402,7 +405,9 @@ impl Instr {
                 if functype1 != functype2 {
                     return Err(Error::Invalid("Instr::If validate functype1 != functype2".to_owned()));
                 }
-                Ok(functype1)
+                let mut functype_if = functype1.clone();
+                functype_if.0.0.push(ValType::I32);
+                Ok(functype_if)
             },
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
