@@ -387,29 +387,30 @@ impl Instr {
                 let context = context.clone_with_labels(vts);
                 Instr::validate_instr_sequence(&context, &instrs)
             },
-            Instr::If(blocktype, instrs1, None) => {
-                let ft = blocktype.validate(context)?;
-                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
-                let context = context.clone_with_labels(vts);
-                let functype = Instr::validate_instr_sequence(&context, &instrs1)?;
-                let mut functype_if = functype.clone();
-                functype_if.0.0.push(ValType::I32);
-                Ok(functype_if)
-            },
-            Instr::If(blocktype, instrs1, Some(instrs2)) => {
-                let ft = blocktype.validate(context)?;
-                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
-                let context = context.clone_with_labels(vts);
-                let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
-                let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
-                if !Instr::match_resulttype(&functype1.0, &functype2.0) ||
-                   !Instr::match_resulttype(&functype1.1, &functype2.1) {
-                    let message = format!("Instr::If validate functype1({:?}) != functype2({:?})", functype1, functype2);
-                    return Err(Error::Invalid(message));
+            Instr::If(blocktype, instrs1, instrs2) => {
+                if instrs2.is_empty() {
+                    let ft = blocktype.validate(context)?;
+                    let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                    let context = context.clone_with_labels(vts);
+                    let functype = Instr::validate_instr_sequence(&context, &instrs1)?;
+                    let mut functype_if = functype.clone();
+                    functype_if.0.0.push(ValType::I32);
+                    Ok(functype_if)
+                } else {
+                    let ft = blocktype.validate(context)?;
+                    let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                    let context = context.clone_with_labels(vts);
+                    let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
+                    let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
+                    if !Instr::match_resulttype(&functype1.0, &functype2.0) ||
+                       !Instr::match_resulttype(&functype1.1, &functype2.1) {
+                        let message = format!("Instr::If validate functype1({:?}) != functype2({:?})", functype1, functype2);
+                        return Err(Error::Invalid(message));
+                    }
+                    let mut functype_if = functype1.clone();
+                    functype_if.0.0.push(ValType::I32);
+                    Ok(functype_if)
                 }
-                let mut functype_if = functype1.clone();
-                functype_if.0.0.push(ValType::I32);
-                Ok(functype_if)
             },
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
