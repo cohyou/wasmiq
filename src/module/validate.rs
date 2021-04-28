@@ -232,11 +232,6 @@ impl Module {
     }
 }
 
-// use crate::instr::{
-//     // vt, 
-//     // vt_rev,
-// };
-
 impl Func {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
         let functype = context.tp(self.tp.clone())

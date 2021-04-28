@@ -68,14 +68,6 @@ impl ResultType {
         self.0.iter()
     }
 
-    // fn get(&self, idx: usize) -> Option<&ValType> {
-    //     self.0.get(idx)
-    // }
-
-    // fn len(&self) -> usize {
-    //     self.0.len()
-    // }
-
     fn last(&self) -> Option<&ValType> {
         self.0.last()
     }
@@ -83,32 +75,9 @@ impl ResultType {
     fn last2(&self) -> Option<&ValType> {
         self.0.get(self.0.len() - 2)
     }
-
-    // fn valtypes(&self) -> Vec<ValType> {
-    //     self.0
-    // }
 }
 
 type FuncType = (ResultType, ResultType);
-
-// pub fn vt(vt: &ValTypeOriginal) -> ValType {
-//     match vt {
-//         ValTypeOriginal::I32 => ValType::I32,
-//         ValTypeOriginal::I64 => ValType::I64,
-//         ValTypeOriginal::F32 => ValType::F32,
-//         ValTypeOriginal::F64 => ValType::F64,
-//     }
-// }
-
-// pub fn vt_rev(vt: &ValType) -> ValTypeOriginal {
-//     match vt {
-//         ValType::I32 => ValTypeOriginal::I32,
-//         ValType::I64 => ValTypeOriginal::I64,
-//         ValType::F32 => ValTypeOriginal::F32,
-//         ValType::F64 => ValTypeOriginal::F64,
-//         _ => unimplemented!(),
-//     }
-// }
 
 impl Instr {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -464,8 +433,6 @@ impl Instr {
                     ft!(tp0, tp1)
                 }
             },
-
-            // _ => unimplemented!(),
         }
     }
 
