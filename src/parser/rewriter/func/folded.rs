@@ -17,6 +17,16 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     result.push(empty);
                     break;
                 },
+                block @ instr!(Instr::Block(_, _)) => {
+                    result.push(block);
+                    let token = if let Some(token) = tokens.pop_front() {
+                        token
+                    } else {
+                        self.lexer.next_token()?
+                    };
+                    let block_instrs = self.rewrite_block(token)?;
+                    result.extend(block_instrs);
+                },
                 loop_ @ instr!(Instr::Loop(_, _)) => {
                     result.push(loop_);
                     let token = if let Some(token) = tokens.pop_front() {

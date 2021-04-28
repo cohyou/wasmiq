@@ -103,6 +103,7 @@ impl Instr {
         let mut instr_resolved: Option<Instr> = None;
 
         for instr_pair in instrs.windows(2) {
+            // p!(instr_pair);
             let first_functype = {
                 match ret {
                     Ok(ft) => ft,

@@ -29,12 +29,11 @@ impl<'a> Thread<'a> {
                 ExecResult::Vals(vals) => {
                     let vals: Vec<StackEntry> = vals.iter()
                         .map(|v| StackEntry::Value(v.clone())).collect();
-                        pp!("before: ", self.stack); 
                     self.stack.extend(vals);
                 },
                 ExecResult::Trap(err) => return ExecResult::Trap(err),
             }
-            pp!("after:  ", self.stack);
+            p!(self.stack);
         }
 
         let mut vals = vec![];
@@ -331,6 +330,7 @@ impl<'a> Thread<'a> {
 
     pub fn current_frame(&self) -> (u32, Frame) {
         for entry in self.stack.iter().rev() {
+            // pp!("current_frame:", entry);
             if let StackEntry::Activation(arity, frame) = entry {
                 return (arity.clone(), frame.clone());
             }

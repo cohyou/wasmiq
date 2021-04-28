@@ -16,6 +16,18 @@ impl<R> Rewriter<R> where R: Read + Seek {
         let mut else_exists = false; 
         loop {
             match token {
+                instr!(Instr::Block(_, _)) => {
+                    result.push(token);
+                    let next = self.lexer.next_token()?;
+                    let block = self.rewrite_block(next)?;
+                    result.extend(block);
+                },
+                instr!(Instr::Loop(_, _)) => {
+                    result.push(token);
+                    let next = self.lexer.next_token()?;
+                    let loop_ = self.rewrite_loop(next)?;
+                    result.extend(loop_);
+                },
                 instr!(Instr::If(_, _, _)) => {
                     result.push(token);
                     let if_ = self.rewrite_if()?;
@@ -54,6 +66,14 @@ impl<R> Rewriter<R> where R: Read + Seek {
     }
 
     pub fn rewrite_loop(&mut self, token: Token) -> Result<Vec<Token>, RewriteError> {
+        self.rewrite_block_loop(token)
+    }
+
+    pub fn rewrite_block(&mut self, token: Token) -> Result<Vec<Token>, RewriteError> {
+        self.rewrite_block_loop(token)
+    }
+
+    fn rewrite_block_loop(&mut self, token: Token) -> Result<Vec<Token>, RewriteError> {
         let mut result = vec![];
 
         let (label, token) = self.scan_label_internal(token)?;
@@ -91,6 +111,23 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 tk!(TokenKind::LeftParen) => {
                     let folded_instrs = self.rewrite_folded_instrs(first)?;
                     result.extend(folded_instrs);
+                },
+                instr!(Instr::Block(_, _)) => {
+                    result.push(token);
+                    let next = self.lexer.next_token()?;
+                    let block = self.rewrite_block(next)?;
+                    result.extend(block);
+                },
+                instr!(Instr::Loop(_, _)) => {
+                    result.push(token);
+                    let next = self.lexer.next_token()?;
+                    let loop_ = self.rewrite_loop(next)?;
+                    result.extend(loop_);
+                },
+                instr!(Instr::If(_, _, _)) => {
+                    result.push(token);
+                    let if_ = self.rewrite_if()?;
+                    result.extend(if_);
                 },
                 instr @ instr!(_) => result.push(instr),
                 tk!(TokenKind::Empty) => { result.push(token); break; },

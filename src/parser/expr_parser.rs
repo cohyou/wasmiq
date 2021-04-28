@@ -118,7 +118,7 @@ impl<R> Parser<R> where R: Read + Seek {
                 instr!(Instr::Block(_, _)) => instr_one_block!(self, instrs, Block),
                 instr!(Instr::Loop(_, _)) => instr_one_block!(self, instrs, Loop),
                 instr!(Instr::If(_, _, _)) => self.parse_if(&mut instrs)?,
-                instr!(Instr::Br(_)) => instr_label!(self, instrs, BrIf),
+                instr!(Instr::Br(_)) => instr_label!(self, instrs, Br),
                 instr!(Instr::BrIf(_)) => instr_label!(self, instrs, BrIf),
                 instr!(Instr::BrTable(_, _)) => self.parse_br_table(&mut instrs)?,
                 instr!(Instr::Call(_)) => instr_func!(self, instrs, Call),

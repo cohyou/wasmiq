@@ -116,6 +116,12 @@ fn test_wast_file_condition_blocktype() {
 #[test]
 fn test_wast_file_loop() {
     let file_name = "./wast/loop.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(8)]));
+}
+
+#[test]
+fn test_wast_file_block() {
+    let file_name = "./wast/block.wat";
     assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
 }
 

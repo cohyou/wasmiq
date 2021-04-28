@@ -82,7 +82,7 @@ impl<'a> Thread<'a> {
     pub fn execute_br(&mut self, labelidx: &LabelIdx) -> ExecResult {
         let (n, cont) = self.find_label(labelidx);
         let mut vals = vec![];
-        {
+        
             for _ in 0..n.clone() {
                 if let Some(val) = self.stack.pop() {
                     vals.push(val);
@@ -90,20 +90,20 @@ impl<'a> Thread<'a> {
                     unreachable!();
                 }
             }
-        }
+        
 
-        for _ in 0..labelidx.clone() {
+        for _ in 0..(labelidx.clone() + 1) {
             while let Some(StackEntry::Value(_)) = self.stack.pop() {}
-            self.stack.pop();
         }
 
         self.stack.extend(vals);
-
+        
         self.execute_instrs(&cont)
     }
 
     pub fn execute_brif(&mut self, labelidx: &LabelIdx) -> ExecResult {
         if let Some(StackEntry::Value(Val::I32Const(c))) = self.stack.pop() {
+            pp!("brif: ", c);
             if c == 0 {
                 ExecResult::Vals(vec![])
             } else {

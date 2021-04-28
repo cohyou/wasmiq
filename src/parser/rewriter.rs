@@ -168,16 +168,16 @@ impl<R> Rewriter<R> where R: Read + Seek {
         
         let debugging = false;
         if debugging {
-            pp!("types", tokens_to_string(self.types.clone()));
-            pp!("imports", tokens_to_string(self.imports.clone()));
-            pp!("funcs", tokens_to_string(self.funcs.clone()));
-            pp!("tables", tokens_to_string(self.tables.clone()));
-            pp!("mems", tokens_to_string(self.mems.clone()));
-            pp!("globals", tokens_to_string(self.globals.clone()));
-            pp!("exports", tokens_to_string(self.exports.clone()));
-            pp!("elem", tokens_to_string(self.elem.clone()));
-            pp!("data", tokens_to_string(self.data.clone()));
-            pp!("start", tokens_to_string(self.start.clone()));
+            pp!("types", tokens_to_string(&self.types));
+            pp!("imports", tokens_to_string(&self.imports));
+            pp!("funcs", tokens_to_string(&self.funcs));
+            pp!("tables", tokens_to_string(&self.tables));
+            pp!("mems", tokens_to_string(&self.mems));
+            pp!("globals", tokens_to_string(&self.globals));
+            pp!("exports", tokens_to_string(&self.exports));
+            pp!("elem", tokens_to_string(&self.elem));
+            pp!("data", tokens_to_string(&self.data));
+            pp!("start", tokens_to_string(&self.start));
         }        
 
         self.ast.extend(self.types.clone());
@@ -483,7 +483,7 @@ fn rewrite_tokens(src: &str) -> Vec<Token> {
 }
 
 #[allow(dead_code)]
-fn tokens_to_string(tokens: Vec<Token>) -> String {
+pub fn tokens_to_string(tokens: &Vec<Token>) -> String {
     let mut result = String::new();
     let mut prev = Token::empty(Loc::zero());
     let mut nospace = false;
@@ -525,7 +525,7 @@ fn tokens_to_string(tokens: Vec<Token>) -> String {
                 nospace = false;
             },
         };
-        prev = token;
+        prev = token.clone();
     }
     // print!("]");
 
@@ -536,7 +536,7 @@ fn tokens_to_string(tokens: Vec<Token>) -> String {
 
 #[allow(dead_code)]
 fn assert_eq_rewrite(before: &str, after:&str) {
-    assert_eq!(tokens_to_string(rewrite_tokens(before)), after.to_string());
+    assert_eq!(tokens_to_string(&rewrite_tokens(before)), after.to_string());
 }
 
 #[test]

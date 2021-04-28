@@ -1,15 +1,15 @@
-use crate::{
-    LocalIdx,
-    GlobalIdx,
-};
+use crate::{GlobalIdx, LocalIdx};
 
 use super::*;
 
 impl<'a> Thread<'a> {
     pub fn execute_localget(&mut self, localidx: &LocalIdx) -> ExecResult {
         let (_, frame) = self.current_frame();
-        let local_value = frame.locals[localidx.clone() as usize];
-        ExecResult::Vals(vec![local_value])
+        if let Some(local_value) = frame.locals.get(localidx.clone() as usize) {
+            ExecResult::Vals(vec![local_value.clone()])
+        } else {
+            panic!("execute_localget {:?} {:?}", localidx, self.stack);
+        }
     }
 
     pub fn execute_localset(&mut self, localidx: &LocalIdx) -> ExecResult {
@@ -27,7 +27,7 @@ impl<'a> Thread<'a> {
 
         ExecResult::Vals(vec![])
     }
-    
+
     pub fn execute_localtee(&mut self, localidx: &LocalIdx) -> ExecResult {
         let val = if let Some(StackEntry::Value(val)) = self.stack.pop() {
             val
@@ -40,7 +40,6 @@ impl<'a> Thread<'a> {
         let mut new_frame = frame.clone();
         new_frame.locals[localidx.clone() as usize] = val;
         self.stack[index] = StackEntry::Activation(n, new_frame);
-        
         ExecResult::Vals(vec![val])
     }
 

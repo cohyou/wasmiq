@@ -163,3 +163,13 @@ pub enum CvtOp {
     IReinterpretFromF(ValSize),
     FReinterpretFromI(ValSize),
 }
+
+use std::fmt::Display;
+
+impl Display for Instr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            instr @ _ => write!(f, "{:?}", instr),
+        }
+    }
+}

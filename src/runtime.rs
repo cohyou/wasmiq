@@ -11,6 +11,9 @@ mod variable;
 mod memory;
 mod control;
 
+// use crate::{
+//     tokens_to_string,
+// };
 pub use operation32::*;
 pub use operation64::*;
 pub use unop::*;
@@ -161,7 +164,9 @@ impl Debug for StackEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StackEntry::Value(v) => write!(f, "{:?}", v),
-            StackEntry::Label(n, instrs) => write!(f, "Label{:?}{:?}", n, instrs),
+            StackEntry::Label(n, instrs) => {
+                write!(f, "Label{:?}{:?}", n, instrs)
+            },
             StackEntry::Activation(n, frame) => write!(f, "Frame{:?}{:?}", n, frame),
         }
     }
