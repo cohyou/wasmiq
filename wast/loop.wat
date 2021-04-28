@@ -11,23 +11,21 @@
 
         i32.const 1
         local.set $acc
-        
-        i32.const 100
 
-        ;; loop $label (result i32)
-        ;;     local.get $base
-        ;;     local.get $acc
-        ;;     i32.mul
-        ;;     local.tee $acc
+        loop $label (result i32)
+            local.get $base
+            local.get $acc
+            i32.mul
+            local.tee $acc
 
-        ;;     local.get $exponent
-        ;;     i32.const 1
-        ;;     i32.sub
-        ;;     local.tee $exponent
-        ;;     i32.const 0
-        ;;     i32.ne
-        ;;     br_if $label
-        ;; end
+            local.get $exponent
+            i32.const 1
+            i32.sub
+            local.tee $exponent
+            i32.const 0
+            i32.ne
+            br_if $label
+        end
     )
 
     (func (export "main") (result i32)

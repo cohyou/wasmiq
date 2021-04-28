@@ -13,23 +13,35 @@ impl<'a> Thread<'a> {
     }
 
     pub fn execute_localset(&mut self, localidx: &LocalIdx) -> ExecResult {
-        let (_, mut frame) = self.current_frame();
-        if let Some(StackEntry::Value(val)) = self.stack.pop() {
-            frame.locals[localidx.clone() as usize] = val;
-            ExecResult::Vals(vec![])
+        let val = if let Some(StackEntry::Value(val)) = self.stack.pop() {
+            val
         } else {
             unreachable!()
-        }
+        };
+
+        let (n, frame) = self.current_frame();
+        let index = self.current_frame_index();
+        let mut new_frame = frame.clone();
+        new_frame.locals[localidx.clone() as usize] = val;
+        self.stack[index] = StackEntry::Activation(n, new_frame);
+
+        ExecResult::Vals(vec![])
     }
     
     pub fn execute_localtee(&mut self, localidx: &LocalIdx) -> ExecResult {
-        let (_, mut frame) = self.current_frame();
-        if let Some(StackEntry::Value(val)) = self.stack.pop() {
-            frame.locals[localidx.clone() as usize] = val;
-            ExecResult::Vals(vec![val])
+        let val = if let Some(StackEntry::Value(val)) = self.stack.pop() {
+            val
         } else {
             unreachable!()
-        }
+        };
+
+        let (n, frame) = self.current_frame();
+        let index = self.current_frame_index();
+        let mut new_frame = frame.clone();
+        new_frame.locals[localidx.clone() as usize] = val;
+        self.stack[index] = StackEntry::Activation(n, new_frame);
+        
+        ExecResult::Vals(vec![val])
     }
 
     pub fn execute_globalget(&mut self, globalidx: &GlobalIdx) -> ExecResult {

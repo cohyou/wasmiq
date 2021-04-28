@@ -337,6 +337,15 @@ impl<'a> Thread<'a> {
         }
         unreachable!()
     }
+
+    pub fn current_frame_index(&mut self) -> usize {
+        for (i, entry) in self.stack.iter().enumerate().rev() {
+            if let StackEntry::Activation(_, _) = entry {
+                return i;
+            }
+        }
+        unreachable!()
+    }
 }
 
 #[test]
