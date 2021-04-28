@@ -341,41 +341,48 @@ impl Instr {
             Instr::Nop => instr_tp!(() -> ()),
             Instr::Unreachable => instr_tp!(Ellipsis -> Ellipsis),
             Instr::Block(blocktype, instrs) => {
-                let ft = blocktype.validate(context)?;
-                let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
-                let context = context.clone_with_labels(vts);
-                Instr::validate_instr_sequence(&context, &instrs)
+                let functype_block = blocktype.validate(context)?;
+                let context = context.clone_with_labels(functype_block.clone().1.0);
+
+                let functype_instr = Instr::validate_instr_sequence(&context, &instrs)?;
+                if Instr::match_functype(&functype_block, &functype_instr) {
+                    let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr);
+                    return Err(Error::Invalid(message));
+                }
+                Ok(functype_block)
             },
             Instr::Loop(blocktype, instrs) => {
-                let ft = blocktype.validate(context)?;
-                let vts: Vec<ValType> = ft.0.0.iter().map(|v| v.clone()).collect();
-                let context = context.clone_with_labels(vts);
-                Instr::validate_instr_sequence(&context, &instrs)
+                let functype_block = blocktype.validate(context)?;
+                let context = context.clone_with_labels(functype_block.clone().0.0);
+
+                let functype_instr = Instr::validate_instr_sequence(&context, &instrs)?;
+                if Instr::match_functype(&functype_block, &functype_instr) {
+                    let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr);
+                    return Err(Error::Invalid(message));
+                }
+                Ok(functype_block)
             },
             Instr::If(blocktype, instrs1, instrs2) => {
-                if instrs2.is_empty() {
-                    let ft = blocktype.validate(context)?;
-                    let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
-                    let context = context.clone_with_labels(vts);
-                    let functype = Instr::validate_instr_sequence(&context, &instrs1)?;
-                    let mut functype_if = functype.clone();
-                    functype_if.0.0.push(ValType::I32);
-                    Ok(functype_if)
-                } else {
-                    let ft = blocktype.validate(context)?;
-                    let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
-                    let context = context.clone_with_labels(vts);
-                    let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
-                    let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
-                    if !Instr::match_resulttype(&functype1.0, &functype2.0) ||
-                       !Instr::match_resulttype(&functype1.1, &functype2.1) {
-                        let message = format!("Instr::If validate functype1({:?}) != functype2({:?})", functype1, functype2);
+                let functype_block = blocktype.validate(context)?;
+                let context = context.clone_with_labels(functype_block.clone().1.0);
+
+                let functype_instr1 = Instr::validate_instr_sequence(&context, &instrs1)?;
+                if Instr::match_functype(&functype_block, &functype_instr1) {
+                    let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr1);
+                    return Err(Error::Invalid(message));
+                }
+
+                if !instrs2.is_empty() {
+                    let functype_instr2 = Instr::validate_instr_sequence(&context, &instrs2)?;
+                    if Instr::match_functype(&functype_block, &functype_instr2) {
+                        let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr1);
                         return Err(Error::Invalid(message));
                     }
-                    let mut functype_if = functype1.clone();
-                    functype_if.0.0.push(ValType::I32);
-                    Ok(functype_if)
                 }
+
+                let mut functype_if = functype_block;
+                functype_if.0.0.push(ValType::I32);
+                Ok(functype_if)
             },
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
@@ -434,6 +441,11 @@ impl Instr {
                 }
             },
         }
+    }
+
+    fn match_functype(ft1: &FuncType, ft2: &FuncType) -> bool {
+        !Instr::match_resulttype(&ft1.0, &ft2.0) ||
+        !Instr::match_resulttype(&ft1.1, &ft2.1)
     }
 
     fn match_resulttype(rt1: &ResultType, rt2: &ResultType) -> bool {

@@ -9,8 +9,10 @@
             return
         end
 
-        ;; i32.const 1
-        ;; local.set $acc
+        i32.const 1
+        local.set $acc
+        
+        i32.const 100
 
         ;; loop $label (result i32)
         ;;     local.get $base
@@ -30,7 +32,7 @@
 
     (func (export "main") (result i32)
         i32.const 2
-        i32.const 0
+        i32.const 3
         call $power
     )
 )

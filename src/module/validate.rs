@@ -246,16 +246,9 @@ impl Func {
         new_context.rtn = Some(functype.1.clone());
 
         let expr_result_type = self.body.validate(&new_context)?;
-        if let Some(expr_type) = expr_result_type.0.last() {
-            if expr_type == &ValType::Ellipsis {
-                return Ok(functype);
-            }
-        }
-
-        // let vts: Vec<ValType> = expr_type.0.iter().map(|v| v.clone()).collect();
         if expr_result_type.0 != functype.1 {
             let message = format!("Func{:?} has return type {:?} but {:?} occured", 
-                self.tp, expr_result_type.0, functype.1);
+                self.tp, functype.1, expr_result_type.0);
             return Err(Error::Invalid(message));
         }
 
