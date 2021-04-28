@@ -179,6 +179,7 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
                         ValType::I64 => Some(Instr::I64Const(0)),
                         ValType::F32 => Some(Instr::F32Const(0.0)),
                         ValType::F64 => Some(Instr::F64Const(0.0)),
+                        _ => unreachable!(),
                     }
                 }
                 b"clz" => Some(Instr::IUnOp(vs, IUnOp::Clz)),
@@ -193,6 +194,7 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
                         ValType::F32 | ValType::F64 => {
                             Some(Instr::FBinOp(vs, vec_to_fbinop(instr).unwrap()))
                         },                        
+                        _ => unreachable!(),
                     }                    
                 },
 
@@ -226,7 +228,8 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
                         },
                         ValType::F32 | ValType::F64 => {
                             Some(Instr::FRelOp(vs, vec_to_frelop(instr).unwrap()))
-                        },                        
+                        },          
+                        _ => unreachable!(),              
                     }                    
                 }
 

@@ -267,6 +267,7 @@ impl<'a> Thread<'a> {
                         ValType::I64 => Val::I64Const(0),
                         ValType::F32 => Val::F32Const(0.0),
                         ValType::F64 => Val::F64Const(0.0),
+                        _ => unreachable!(),
                     };
                     locals.push(val);
                 }

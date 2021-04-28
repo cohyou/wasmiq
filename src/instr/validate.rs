@@ -1,7 +1,7 @@
 mod sequence;
 
 use crate::{
-    ValType as ValTypeOriginal,
+    ValType,
     ResultType as ResultTypeOriginal,
     FuncType as FuncTypeOriginal,
     TableType,
@@ -56,14 +56,8 @@ macro_rules! instr_tp {
     }
 }
 
-type TypeValIdx = u32;
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum ValType {
-    I32, I64, F32, F64,
-    TypeVal(TypeValIdx),
-    Ellipsis,
-}
+
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ResultType(pub Vec<ValType>);
@@ -97,24 +91,24 @@ impl ResultType {
 
 type FuncType = (ResultType, ResultType);
 
-pub fn vt(vt: &ValTypeOriginal) -> ValType {
-    match vt {
-        ValTypeOriginal::I32 => ValType::I32,
-        ValTypeOriginal::I64 => ValType::I64,
-        ValTypeOriginal::F32 => ValType::F32,
-        ValTypeOriginal::F64 => ValType::F64,
-    }
-}
+// pub fn vt(vt: &ValTypeOriginal) -> ValType {
+//     match vt {
+//         ValTypeOriginal::I32 => ValType::I32,
+//         ValTypeOriginal::I64 => ValType::I64,
+//         ValTypeOriginal::F32 => ValType::F32,
+//         ValTypeOriginal::F64 => ValType::F64,
+//     }
+// }
 
-pub fn vt_rev(vt: &ValType) -> ValTypeOriginal {
-    match vt {
-        ValType::I32 => ValTypeOriginal::I32,
-        ValType::I64 => ValTypeOriginal::I64,
-        ValType::F32 => ValTypeOriginal::F32,
-        ValType::F64 => ValTypeOriginal::F64,
-        _ => unimplemented!(),
-    }
-}
+// pub fn vt_rev(vt: &ValType) -> ValTypeOriginal {
+//     match vt {
+//         ValType::I32 => ValTypeOriginal::I32,
+//         ValType::I64 => ValTypeOriginal::I64,
+//         ValType::F32 => ValTypeOriginal::F32,
+//         ValType::F64 => ValTypeOriginal::F64,
+//         _ => unimplemented!(),
+//     }
+// }
 
 impl Instr {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -236,38 +230,38 @@ impl Instr {
 
             // value-polymorphic
             Instr::Drop(None) => ft!(vec![ValType::TypeVal(0)], vec![]),
-            Instr::Drop(Some(valtype)) => ft!(vec![vt(valtype)], vec![]),
+            Instr::Drop(Some(valtype)) => ft!(vec![valtype.clone()], vec![]),
             // value-polymorphic
             Instr::Select(None) => {
                 ft!(vec![ValType::TypeVal(0), ValType::TypeVal(0), ValType::I32], vec![ValType::TypeVal(0)])
             },
             Instr::Select(Some(valtype)) => {
-                ft!(vec![vt(valtype), vt(valtype), ValType::I32], vec![vt(valtype)])
+                ft!(vec![valtype.clone(), valtype.clone(), ValType::I32], vec![valtype.clone()])
             },
             /*
             VARIABLE INSTRUCTIONS
             */
             Instr::LocalGet(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.get")?;
-                ft!(vec![], vec![vt(&tp)])
+                ft!(vec![], vec![tp.clone()])
             },
             Instr::LocalSet(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.set")?;
-                ft!(vec![vt(&tp)], vec![])
+                ft!(vec![tp.clone()], vec![])
             },
             Instr::LocalTee(localidx) => {
                 let tp = Instr::check_local(context, localidx, "local.tee")?;
-                ft!(vec![vt(&tp)], vec![vt(&tp)])
+                ft!(vec![tp.clone()], vec![tp.clone()])
             },
             Instr::GlobalGet(globalidx) => {
                 let globaltype = Instr::check_global(context, globalidx, "global.get")?;
-                ft!(vec![], vec![vt(&globaltype.0)])
+                ft!(vec![], vec![globaltype.0.clone()])
             },
             Instr::GlobalSet(globalidx) => {
                 let globaltype = Instr::check_global(context, globalidx, "global.set")?;
 
                 if globaltype.is_var() {
-                    ft!(vec![vt(&globaltype.0)], vec![])
+                    ft!(vec![globaltype.0.clone()], vec![])
                 } else {
                     let message = "instr global.set validate: can't set value to const global";
                     Err(Error::Mutability(message.to_string()))
@@ -281,12 +275,13 @@ impl Instr {
                 let opname = "load";
                 let _ = Instr::check_mem_exist(context, opname)?;
                 let width = match valtype {
-                    ValTypeOriginal::I32 | ValTypeOriginal::F32 => 32,
-                    ValTypeOriginal::I64 | ValTypeOriginal::F64 => 64,
+                    ValType::I32 | ValType::F32 => 32,
+                    ValType::I64 | ValType::F64 => 64,
+                    _ => unreachable!(),
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
-                ft!(vec![ValType::I32], vec![vt(valtype)])
+                ft!(vec![ValType::I32], vec![valtype.clone()])
             },
             Instr::ILoad8(valsize, _, memarg) => {
                 let opname = "iload8";
@@ -323,12 +318,13 @@ impl Instr {
                 let opname = "store";
                 let _ = Instr::check_mem_exist(context, opname)?;
                 let width = match valtype {
-                    ValTypeOriginal::I32 | ValTypeOriginal::F32 => 32,
-                    ValTypeOriginal::I64 | ValTypeOriginal::F64 => 64,
+                    ValType::I32 | ValType::F32 => 32,
+                    ValType::I64 | ValType::F64 => 64,
+                    _ => unreachable!(),
                 };
                 let _ = Instr::check_mem_alignment(opname, memarg, width)?;
 
-                ft!(vec![ValType::I32, vt(valtype)], vec![])
+                ft!(vec![ValType::I32, valtype.clone()], vec![])
             },
             Instr::IStore8(valsize, memarg) => {
                 let opname = "istore8";
@@ -377,20 +373,20 @@ impl Instr {
             Instr::Unreachable => instr_tp!(Ellipsis -> Ellipsis),
             Instr::Block(blocktype, instrs) => {
                 let ft = blocktype.validate(context)?;
-                let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
                 let context = context.clone_with_labels(vts);
                 Instr::validate_instr_sequence(&context, &instrs)
             },
             Instr::Loop(blocktype, instrs) => {
                 let ft = blocktype.validate(context)?;
-                let vts: Vec<ValTypeOriginal> = ft.0.0.iter().map(|v| vt_rev(v)).collect();
+                let vts: Vec<ValType> = ft.0.0.iter().map(|v| v.clone()).collect();
                 let context = context.clone_with_labels(vts);
                 Instr::validate_instr_sequence(&context, &instrs)
             },
             Instr::If(blocktype, instrs1, instrs2) => {
                 if instrs2.is_empty() {
                     let ft = blocktype.validate(context)?;
-                    let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                    let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
                     let context = context.clone_with_labels(vts);
                     let functype = Instr::validate_instr_sequence(&context, &instrs1)?;
                     let mut functype_if = functype.clone();
@@ -398,7 +394,7 @@ impl Instr {
                     Ok(functype_if)
                 } else {
                     let ft = blocktype.validate(context)?;
-                    let vts: Vec<ValTypeOriginal> = ft.1.0.iter().map(|v| vt_rev(v)).collect();
+                    let vts: Vec<ValType> = ft.1.0.iter().map(|v| v.clone()).collect();
                     let context = context.clone_with_labels(vts);
                     let functype1 = Instr::validate_instr_sequence(&context, &instrs1)?;
                     let functype2 = Instr::validate_instr_sequence(&context, &instrs2)?;
@@ -414,21 +410,21 @@ impl Instr {
             },
             Instr::Br(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "br")?;
-                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
+                let label: Vec<ValType> = label.iter().map(|v| v.clone()).collect();
                 let mut vts = vec![ValType::Ellipsis];
                 vts.extend(label);
                 ft!(vts, vec![ValType::Ellipsis])
             },
             Instr::BrIf(labelidx) => {
                 let label = Instr::check_label(context, labelidx, "brif")?;
-                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
+                let label: Vec<ValType> = label.iter().map(|v| v.clone()).collect();
                 let mut args = label.clone();
                 args.push(ValType::I32);
                 ft!(args, label)
             },
             Instr::BrTable(_labelindices, labelidx) => {
                 let label = Instr::check_label(context, labelidx, "brtable")?;
-                let label: Vec<ValType> = label.iter().map(|v| vt(v)).collect();
+                let label: Vec<ValType> = label.iter().map(|v| v.clone()).collect();
                 let mut args = label.clone();
                 args.push(ValType::I32);
                 let mut vts = vec![ValType::Ellipsis];
@@ -437,7 +433,7 @@ impl Instr {
             },
             Instr::Return => {
                 if let Some(rettp) = context.rtn() {
-                    let rettp: Vec<ValType> = rettp.iter().map(|v| vt(v)).collect();
+                    let rettp: Vec<ValType> = rettp.iter().map(|v| v.clone()).collect();
                     let mut vts = vec![ValType::Ellipsis];
                     vts.extend(rettp);
                     ft!(vts, vec![ValType::Ellipsis])
@@ -447,8 +443,8 @@ impl Instr {
             },
             Instr::Call(funcidx) => {
                 if let Some(functype) = context.func(funcidx.clone()) {
-                    let ft0 = functype.0.iter().map(|v| vt(v)).collect();
-                    let ft1 = functype.1.iter().map(|v| vt(v)).collect();
+                    let ft0 = functype.0.iter().map(|v| v.clone()).collect();
+                    let ft1 = functype.1.iter().map(|v| v.clone()).collect();
                     ft!(ft0, ft1)
                 } else {
                     Err(Error::OutOfIndex("instr call validate: funcidx".to_string()))
@@ -461,8 +457,8 @@ impl Instr {
                     Err(Error::PreCondition(format!("instr {} validate: table.elemtype is not funcref", opname)))
                 } else {
                     let tp = Instr::check_type(context, funcidx, opname)?;
-                    let mut tp0: Vec<ValType> = tp.0.iter().map(|v| vt(v)).collect();
-                    let tp1: Vec<ValType> = tp.1.iter().map(|v| vt(v)).collect();
+                    let mut tp0: Vec<ValType> = tp.0.iter().map(|v| v.clone()).collect();
+                    let tp1: Vec<ValType> = tp.1.iter().map(|v| v.clone()).collect();
                     tp0.push(ValType::I32);
     
                     ft!(tp0, tp1)
@@ -488,7 +484,7 @@ impl Instr {
         Ok(tp)
     }
 
-    fn check_local(context: &Context, localidx: &LocalIdx, opname: &str) -> Result<ValTypeOriginal, Error> {
+    fn check_local(context: &Context, localidx: &LocalIdx, opname: &str) -> Result<ValType, Error> {
         let tp = context.local(localidx.clone())
             .ok_or(Error::OutOfIndex(format!("instr {} validate: localidx", opname)))?;
         Ok(tp)
@@ -545,12 +541,12 @@ impl BlockType {
             BlockType::TypeIdx(idx) => {
                 let functype = context.tp(idx.clone())
                     .ok_or(Error::OutOfIndex(format!("blocktype validate: typeidx")))?;
-                let tp0: Vec<ValType> = functype.0.iter().map(|v| vt(v)).collect();
-                let tp1: Vec<ValType> = functype.1.iter().map(|v| vt(v)).collect();
+                let tp0: Vec<ValType> = functype.0.iter().map(|v| v.clone()).collect();
+                let tp1: Vec<ValType> = functype.1.iter().map(|v| v.clone()).collect();
 
                 ft!(tp0, tp1)
             },
-            BlockType::ValType(Some(valtype)) => ft!(vec![], vec![vt(valtype)]),
+            BlockType::ValType(Some(valtype)) => ft!(vec![], vec![valtype.clone()]),
             BlockType::ValType(None) => instr_tp!(() -> ()),
         }
     }

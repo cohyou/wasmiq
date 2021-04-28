@@ -250,6 +250,7 @@ fn instr2wasm(instr: &Instr) -> Vec<Byte> {
         Instr::Load(ValType::I64, memarg) => [vec![0x29], memarg2wasm(memarg)].concat(),
         Instr::Load(ValType::F32, memarg) => [vec![0x2A], memarg2wasm(memarg)].concat(),
         Instr::Load(ValType::F64, memarg) => [vec![0x2B], memarg2wasm(memarg)].concat(),
+        Instr::Load(_, _) => unreachable!(),
         Instr::ILoad8(ValSize::V32, ValSign::S, memarg) => [vec![0x2C], memarg2wasm(memarg)].concat(),
         Instr::ILoad8(ValSize::V32, ValSign::U, memarg) => [vec![0x2D], memarg2wasm(memarg)].concat(),
         Instr::ILoad16(ValSize::V32, ValSign::S, memarg) => [vec![0x2E], memarg2wasm(memarg)].concat(),
@@ -266,7 +267,8 @@ fn instr2wasm(instr: &Instr) -> Vec<Byte> {
         Instr::Store(ValType::I64, memarg) => [vec![0x37], memarg2wasm(memarg)].concat(),
         Instr::Store(ValType::F32, memarg) => [vec![0x38], memarg2wasm(memarg)].concat(),
         Instr::Store(ValType::F64, memarg) => [vec![0x39], memarg2wasm(memarg)].concat(),
-
+        Instr::Store(_, _) => unreachable!(),
+        
         Instr::IStore8(ValSize::V32, memarg) => [vec![0x3A], memarg2wasm(memarg)].concat(),
         Instr::IStore16(ValSize::V32, memarg) => [vec![0x3B], memarg2wasm(memarg)].concat(),
         Instr::IStore8(ValSize::V64, memarg) => [vec![0x3C], memarg2wasm(memarg)].concat(),
@@ -584,6 +586,7 @@ fn valtype2wasm(vt: &ValType) -> Byte {
         ValType::I64 => 0x7E,
         ValType::F32 => 0x7D,
         ValType::F64 => 0x7C,
+        _ => unreachable!(),
     }
 }
 

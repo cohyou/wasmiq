@@ -4,9 +4,13 @@ use crate::{
     Context,
 };
 
+type TypeValIdx = u32;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ValType {
     I32, I64, F32, F64,
+    TypeVal(TypeValIdx),
+    Ellipsis,
 }
 
 pub type ResultType = Vec<ValType>;

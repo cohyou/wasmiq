@@ -1,6 +1,6 @@
 (module
     (func $power (export "power")
-        (param $base i32) (param $exponent i32) ;; (result i32)
+        (param $base i32) (param $exponent i32) (result i32)
         (local $acc i32)
         local.get $exponent
         i32.eqz
@@ -9,8 +9,8 @@
             return
         end
 
-        i32.const 1
-        local.set $acc
+        ;; i32.const 1
+        ;; local.set $acc
 
         ;; loop $label (result i32)
         ;;     local.get $base
@@ -28,9 +28,9 @@
         ;; end
     )
 
-    (func (export "main") ;; (result i32)
+    (func (export "main") (result i32)
         i32.const 2
-        i32.const 3
+        i32.const 0
         call $power
     )
 )

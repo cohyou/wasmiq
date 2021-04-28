@@ -1,9 +1,5 @@
 mod validate;
 
-pub use validate::{
-    vt,
-    vt_rev,
-};
 
 use crate::{
     ValType,

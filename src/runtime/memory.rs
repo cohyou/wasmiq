@@ -83,6 +83,7 @@ impl<'a> Thread<'a> {
                     ValType::I64 => ExecResult::i64val(v as u64),
                     ValType::F32 => ExecResult::f32val(v as f32),
                     ValType::F64 => ExecResult::f64val(v as f64),
+                    _ => unreachable!(),
                 }
             },
             64 => {
@@ -96,6 +97,7 @@ impl<'a> Thread<'a> {
                     ValType::I64 => ExecResult::i64val(v as u64),
                     ValType::F32 => ExecResult::f32val(v as f32),
                     ValType::F64 => ExecResult::f64val(v as f64),
+                    _ => unreachable!(),
                 }
             },
             _ => unreachable!(),
@@ -187,6 +189,7 @@ impl<'a> Thread<'a> {
                 }
                 ExecResult::Vals(vec![])
             },
+            _ => unreachable!(),
         }
     }
 
@@ -194,6 +197,7 @@ impl<'a> Thread<'a> {
         match valtype {
             ValType::I32 | ValType::F32 => 32,
             ValType::I64 | ValType::F64 => 64,
+            _ => unreachable!(),
         }
     }
 

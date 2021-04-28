@@ -232,10 +232,10 @@ impl Module {
     }
 }
 
-use crate::instr::{
-    // vt, 
-    vt_rev,
-};
+// use crate::instr::{
+//     // vt, 
+//     // vt_rev,
+// };
 
 impl Func {
     fn validate(&self, context: &Context) -> Result<FuncType, Error> {
@@ -250,10 +250,18 @@ impl Func {
         new_context.labels = Some(vec![functype.1.clone()]);
         new_context.rtn = Some(functype.1.clone());
 
-        let expr_type = self.body.validate(&new_context)?;
-        let vts: Vec<ValType> = expr_type.0.iter().map(|v| vt_rev(v)).collect();
-        if vts != functype.1 {
-            return Err(Error::Invalid(format!("Func{:?} has return type {:?} but {:?} occured", self.tp, vts, functype.1)));
+        let expr_result_type = self.body.validate(&new_context)?;
+        if let Some(expr_type) = expr_result_type.0.last() {
+            if expr_type == &ValType::Ellipsis {
+                return Ok(functype);
+            }
+        }
+
+        // let vts: Vec<ValType> = expr_type.0.iter().map(|v| v.clone()).collect();
+        if expr_result_type.0 != functype.1 {
+            let message = format!("Func{:?} has return type {:?} but {:?} occured", 
+                self.tp, expr_result_type.0, functype.1);
+            return Err(Error::Invalid(message));
         }
 
         Ok(functype)
@@ -277,7 +285,7 @@ impl Mem {
 impl Global {
     fn validate(&self, context: &Context) -> Result<GlobalType, Error> {
         let rt = self.init.validate(context)?;
-        let vts: Vec<ValType> = rt.0.iter().map(|v| vt_rev(v)).collect();
+        let vts: Vec<ValType> = rt.0.iter().map(|v| v.clone()).collect();
         if vts != vec![self.tp.0] { return Err(Error::Invalid("Global::validate vts != vec![self.tp.0]".to_owned())); }
         if !self.init.is_constant(context) { return Err(Error::Invalid("Global::validate !self.init.is_constant(context)".to_owned())); } 
         Ok(self.tp.clone())
@@ -292,7 +300,7 @@ impl Elem {
         if elemtype != ElemType::FuncRef { return Err(Error::Invalid("Elem::validate elemtype != ElemType::FuncRef".to_owned())); }
 
         let resulttype = self.offset.validate(context)?;
-        let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
+        let vts: Vec<ValType> = resulttype.0.iter().map(|v| v.clone()).collect();
         if vts != vec![ValType::I32] {
             return Err(Error::Invalid("Elem::validate vts != vec![ValType::I32]".to_owned()));
         }
@@ -316,7 +324,7 @@ impl Data {
         if self.data != 0 { return Err(Error::Invalid("Data::validate self.data != 0".to_owned())); }
 
         let resulttype = self.offset.validate(context)?;
-        let vts: Vec<ValType> = resulttype.0.iter().map(|v| vt_rev(v)).collect();
+        let vts: Vec<ValType> = resulttype.0.iter().map(|v| v.clone()).collect();
         if vts != vec![ValType::I32] {
             return Err(Error::Invalid("Data::validate vts != vec![ValType::I32]".to_owned()));
         }

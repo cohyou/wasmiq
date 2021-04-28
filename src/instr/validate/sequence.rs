@@ -13,7 +13,6 @@ use super::{
     ValType,
     ResultType,
     FuncType,
-    vt_rev,
 };
 
 impl Expr {
@@ -131,14 +130,14 @@ impl Instr {
                     let valtype = first_functype.1.last()
                         .ok_or(Error::Invalid("validate_instr_sequence instr_second Drop first_functype.1.last()".to_owned()))?;
                     second_functype_args = ResultType(vec![valtype.clone()]);
-                    instr_resolved = Some(Instr::Drop(Some(vt_rev(valtype))));
+                    instr_resolved = Some(Instr::Drop(Some(valtype.clone())));
                 },
                 &Instr::Select(None) => {
                     let valtype = first_functype.1.last2()
                         .ok_or(Error::Invalid("validate_instr_sequence instr_second Select first_functype.1.last2()".to_owned()))?;
                     second_functype_args = ResultType(vec![valtype.clone(), valtype.clone(), ValType::I32]);
                     second_functype_rets = ResultType(vec![valtype.clone()]);
-                    instr_resolved = Some(Instr::Select(Some(vt_rev(valtype))));
+                    instr_resolved = Some(Instr::Select(Some(valtype.clone())));
                 },
                 _ => (),
             }
