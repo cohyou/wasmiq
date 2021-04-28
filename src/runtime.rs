@@ -161,7 +161,7 @@ impl Debug for StackEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StackEntry::Value(v) => write!(f, "{:?}", v),
-            StackEntry::Label(n, instrs) => write!(f, "Label{:?}<{:?}>", n, instrs),
+            StackEntry::Label(n, instrs) => write!(f, "Label{:?}{:?}", n, instrs),
             StackEntry::Activation(n, frame) => write!(f, "Frame{:?}{:?}", n, frame),
         }
     }
@@ -174,7 +174,7 @@ pub struct Frame {
 }
 impl Debug for Frame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<{:?}>", self.locals)
+        write!(f, "{:?}", self.locals)
     }
 }
 

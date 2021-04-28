@@ -253,7 +253,7 @@ impl Func {
         let expr_type = self.body.validate(&new_context)?;
         let vts: Vec<ValType> = expr_type.0.iter().map(|v| vt_rev(v)).collect();
         if vts != functype.1 {
-            return Err(Error::Invalid(format!("Func::validate vts({:?}) != functype.1({:?})", vts, functype.1)));
+            return Err(Error::Invalid(format!("Func{:?} has return type {:?} but {:?} occured", self.tp, vts, functype.1)));
         }
 
         Ok(functype)
