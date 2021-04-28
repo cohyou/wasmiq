@@ -18,6 +18,7 @@ mod context;
 mod annot;
 
 mod rewriter;
+mod test;
 
 pub use rewriter::{
     tokens_to_string,
@@ -304,80 +305,3 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 }
 
-#[test]
-fn test_parse_if() {
-    let s = r#"
-    (func
-        (param $exponent i32) (result i32)
-        local.get $exponent
-        i32.eqz
-        if 
-            i32.const 1
-            return
-        end
-        i32.const 2
-    )
-    "#;
-    parse_str(s);
-}
-
-#[test]
-fn test_parse_label() {
-    let s = r#"
-    (func
-        block $b (result i32)
-        loop $l (result i32)
-            br $b
-        end
-        end
-    )
-    "#;
-    parse_str(s);
-}
-
-#[test]
-fn test_parse_label2() {
-    let s = r#"
-    (func $power (export "power")
-        (param $base i32) (param $exponent i32) (result i32)
-        (local $acc i32)
-        local.get $exponent
-        i32.eqz
-        if
-            i32.const 1
-            return
-        end
-
-        i32.const 1
-        local.set $acc
-
-        loop $label (result i32)
-            local.get $base
-            local.get $acc
-            i32.mul
-            local.tee $acc
-
-            local.get $exponent
-            i32.const 1
-            i32.sub
-            local.tee $exponent
-            i32.const 0
-            i32.ne
-            br_if $label
-        end
-    )
-    "#;
-    parse_str(s);
-}
-
-#[allow(dead_code)]
-fn parse_str(s: &str) {
-    use std::io::{Cursor, BufReader};
-    let cursor = Cursor::new(s);
-    let reader = BufReader::new(cursor);
-    let mut parser = Parser::new(reader);
-    match parser.parse() {
-        Ok(_) => println!("module: {:?}", parser.module),
-        Err(err) => println!("parse error: {:?}", err),
-    }
-}

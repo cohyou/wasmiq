@@ -84,10 +84,22 @@ macro_rules! instr_one_block {
         parse_optional_label_id!($this, new_label_context.labels);
         $this.contexts.push(new_label_context);
 
-        $this.match_lparen()?;
-
-        // resulttype
-        let vt = $this.parse_blocktype()?;
+        let blocktype = 
+        match $this.lookahead {
+            tk!(TokenKind::LeftParen) => {
+                $this.consume()?;
+                match &$this.lookahead {
+                    kw!(Keyword::Result) => {
+                        $this.parse_blocktype()?
+                    },
+                    kw!(Keyword::Type) => {
+                        $this.parse_blocktype()?
+                    },           
+                    t @ _ => return Err(ParseError::InvalidMessage(t.clone(), format!("instr_one_block"))),
+                }
+            },
+            _ => BlockType::ValType(None),
+        };
 
         // instrs
         let instrs = $this.parse_instrs()?;
@@ -99,7 +111,7 @@ macro_rules! instr_one_block {
 
         $this.contexts.pop();
 
-        $v.push(Instr::$instr(vt, instrs));
+        $v.push(Instr::$instr(blocktype, instrs));
     }};
 }
 
@@ -172,16 +184,32 @@ impl<R> Parser<R> where R: Read + Seek {
     }
 
     fn parse_blocktype(&mut self) -> Result<BlockType, ParseError> {
-        // TODO: only (result valtype)
         let mut bt = BlockType::ValType(None);
-        // self.match_lparen()?;
-        self.match_keyword(Keyword::Result)?;
-        if let kw!(Keyword::ValType(vt)) = self.lookahead {
-            self.consume()?;
-            bt = BlockType::ValType(Some(vt.clone()));            
+
+        match &self.lookahead {
+            kw!(Keyword::Result) => {
+                self.consume()?;
+                if let kw!(Keyword::ValType(vt)) = self.lookahead {
+                    self.consume()?;
+                    bt = BlockType::ValType(Some(vt.clone()));            
+                }
+                self.match_rparen()?;
+                Ok(bt)
+            },
+            kw!(Keyword::Type) => {
+                let mut ft = FuncType::default();
+
+                let typeidx = self.parse_typeuse_typeidx(&mut ft.0, &mut ft.1)?;
+
+                if !self.is_rparen()? {
+                    self.parse_signature(&mut ft.0, &mut ft.1)?;
+                }
+                self.check_typeuse(typeidx, ft)?;
+                Ok(BlockType::TypeIdx(typeidx))
+            },
+            la @ _ => Err(ParseError::InvalidMessage(la.clone(), format!("parse_blocktype"))),
         }
-        self.match_rparen()?;
-        Ok(bt)
+
     }
 
     fn parse_call_indirect(&mut self, instrs: &mut Vec<Instr>) -> Result<(), ParseError> {

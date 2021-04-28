@@ -44,7 +44,7 @@ impl<R> Parser<R> where R: Read + Seek {
         }
     }
 
-    fn parse_typeuse_typeidx(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
+    pub fn parse_typeuse_typeidx(&mut self, params: &mut Vec<ValType>, results: &mut Vec<ValType>) -> Result<TypeIdx, ParseError> {
         self.match_keyword(Keyword::Type)?;
 
         let mut typeidx = self.contexts[0].typedefs.len() as u32;

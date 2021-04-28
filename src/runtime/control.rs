@@ -103,7 +103,6 @@ impl<'a> Thread<'a> {
 
     pub fn execute_brif(&mut self, labelidx: &LabelIdx) -> ExecResult {
         if let Some(StackEntry::Value(Val::I32Const(c))) = self.stack.pop() {
-            pp!("brif: ", c);
             if c == 0 {
                 ExecResult::Vals(vec![])
             } else {
