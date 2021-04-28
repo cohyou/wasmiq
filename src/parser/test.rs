@@ -18,17 +18,32 @@ fn test_parse_if() {
 }
 
 #[test]
-fn test_parse_label() {
+fn test_parse_blocktype() {
     let s = r#"
     (type (func (param i32 i32) (result i32)))
     (func
         block $b
-        loop $l (type 0) (param i32 i32) (result i32)
-            if (param f64)
+            loop $l (type 0) (param i32 i32) (result i32)
+                if (param f64)
+                end
+                br $b
             end
-            br $b
         end
-        end
+    )
+    "#;
+    assert!(parse_str(s).is_some());
+}
+
+#[test]
+fn test_parse_end_label() {
+    let s = r#"
+    (func
+        block nop end
+        loop nop end
+        if nop end
+        block $block nop end $block
+        loop $loop nop end $loop
+        if $if nop end $if
     )
     "#;
     assert!(parse_str(s).is_some());
