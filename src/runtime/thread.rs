@@ -256,7 +256,7 @@ impl<'a> Thread<'a> {
                 let arg_count = argtypes.len();
                 for _ in 0..arg_count {
                     if let Some(StackEntry::Value(val)) = self.stack.pop() {
-                        args.push(val);
+                        args.insert(0, val);
                     }
                 }
     
