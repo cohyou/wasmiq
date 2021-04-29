@@ -137,14 +137,16 @@ impl<'a> Thread<'a> {
                 unreachable!();
             }
         }
+
         loop {
             if let Some(StackEntry::Activation(_, _)) = self.stack.last() {
+                self.stack.pop();
                 break;
             } else {
                 self.stack.pop();
             }
         }
-        ExecResult::Vals(vals)
+        ExecResult::Return(vals)
     }
 
     pub fn execute_call(&mut self, funcidx: &FuncIdx) -> ExecResult {

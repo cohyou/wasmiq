@@ -346,7 +346,7 @@ impl Instr {
 
                 let functype_instr = Instr::validate_instr_sequence(&context, &instrs)?;
                 if Instr::match_functype(&functype_block, &functype_instr) {
-                    let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr);
+                    let message = format!("Block block has type {:?} but {:?} occured", functype_block, functype_instr);
                     return Err(Error::Invalid(message));
                 }
                 Ok(functype_block)
@@ -357,7 +357,7 @@ impl Instr {
 
                 let functype_instr = Instr::validate_instr_sequence(&context, &instrs)?;
                 if Instr::match_functype(&functype_block, &functype_instr) {
-                    let message = format!("If block has type {:?} but {:?} occured", functype_block, functype_instr);
+                    let message = format!("Loop block has type {:?} but {:?} occured", functype_block, functype_instr);
                     return Err(Error::Invalid(message));
                 }
                 Ok(functype_block)

@@ -23,8 +23,8 @@ impl<'a> Thread<'a> {
     }
 
     pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> ExecResult {
-        for instr in instrs {
-            p!(instr);
+        for (_i, instr) in instrs.iter().enumerate() {
+            // p!((i, instr));
             match self.execute_instr(instr) {
                 ExecResult::Vals(vals) => {
                     let vals: Vec<StackEntry> = vals.iter()
@@ -32,8 +32,19 @@ impl<'a> Thread<'a> {
                     self.stack.extend(vals);
                 },
                 ExecResult::Trap(err) => return ExecResult::Trap(err),
+                ExecResult::Return(vals) => {
+                    match instr {
+                        Instr::Call(_) |
+                        Instr::CallIndirect(_) => {
+                            let vals_entry: Vec<StackEntry> = vals.iter()
+                                .map(|v| StackEntry::Value(v.clone())).collect();
+                            self.stack.extend(vals_entry)
+                        },
+                        _ => return ExecResult::Return(vals),
+                    }
+                }
             }
-            p!(self.stack);
+            // p!(self.stack);
         }
 
         let mut vals = vec![];
@@ -279,11 +290,20 @@ impl<'a> Thread<'a> {
                 self.stack.push(activation);
                 let label = StackEntry::Label(m as u32, vec![]);
 
-                if let ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0) {
-                    let vals: Vec<StackEntry> = vals.iter().map(|v| StackEntry::Value(v.clone())).collect();
-                    self.stack.extend(vals);
-                } else {
-                    return ExecResult::Trap(Error::Invalid("Thread::execute_invoke ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0)".to_owned()));
+                match self.execute_instrs_with_label(label, &expr.0) {
+                    ExecResult::Vals(vals) => {
+                        let vals: Vec<StackEntry> = vals.iter().map(|v| StackEntry::Value(v.clone())).collect();
+                        self.stack.extend(vals);
+                    },
+                    ExecResult::Return(vals) => {
+                        // let vals_entry: Vec<StackEntry> = vals.iter().map(|v| StackEntry::Value(v.clone())).collect();
+                        // self.stack.extend(vals_entry);
+                        return ExecResult::Return(vals);
+                    },
+                    ExecResult::Trap(_) => {
+                        let message = "Thread::execute_invoke ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0)";
+                        return ExecResult::Trap(Error::Invalid(message.to_owned()));
+                    }
                 }
 
                 let mut vals = vec![];
@@ -310,7 +330,9 @@ impl<'a> Thread<'a> {
     pub fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) -> ExecResult {
         self.stack.push(label);
 
-        self.execute_instrs(instrs);
+        if let ExecResult::Return(vals) = self.execute_instrs(instrs) {
+            return ExecResult::Return(vals);
+        }
 
         let mut vals = vec![];
         loop {

@@ -137,6 +137,18 @@ fn test_wast_file_condition() {
     assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(132)]));
 }
 
+#[test]
+fn test_wast_file_return() {
+    let file_name = "./wast/return.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 2), Some(vec![Val::I32Const(10512)]));
+}
+
+#[test]
+fn test_wast_file_fibonacci() {
+    let file_name = "./wast/fibonacci.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;

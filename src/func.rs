@@ -27,5 +27,6 @@ pub fn func_invoke<'a>(store: &'a mut Store, funcaddr: FuncAddr, vals: Vec<Val>)
     match res {
         ExecResult::Vals(vals) => Ok(vals),
         ExecResult::Trap(err) => Err(err),
+        ExecResult::Return(vals) => Ok(vals),
     }
 }

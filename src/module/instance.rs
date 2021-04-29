@@ -39,6 +39,7 @@ pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<Ext
     match result {
         ExecResult::Vals(_) => Ok(frame.module),
         ExecResult::Trap(err) => Err(err),
+        ExecResult::Return(_) => Ok(frame.module),
     }
 }
 
