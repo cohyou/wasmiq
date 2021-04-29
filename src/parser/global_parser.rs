@@ -28,12 +28,13 @@ impl<R> Parser<R> where R: Read + Seek {
         self.contexts[0].globals.push(id);
         
         // mutablity
-        let mutablity = Mut::Const;
+        let mut mutablity = Mut::Const;
 
         // valtype
         let vt = if self.is_lparen()? {
             self.match_lparen()?;
             self.match_keyword(Keyword::Mutable)?;
+            mutablity = Mut::Var;
             let vt = self.parse_valtype()?;
             self.match_rparen()?;
             vt 
