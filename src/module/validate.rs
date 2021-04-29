@@ -109,8 +109,8 @@ impl Module {
             }
         }
 
-        let functypes: Vec<TableType> = self.tables.iter().map(|t| t.0.clone()).collect();
-        tables.extend(functypes);
+        let functypes: Vec<FuncType> = self.funcs.iter().map(|t| self.types[t.tp.clone() as usize].clone()).collect();
+        funcs.extend(functypes);
 
         let tabletypes: Vec<TableType> = self.tables.iter().map(|t| t.0.clone()).collect();
         tables.extend(tabletypes);
