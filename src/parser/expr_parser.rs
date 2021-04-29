@@ -180,17 +180,6 @@ impl<R> Parser<R> where R: Read + Seek {
                     instrs.push(Instr::I64Store32(Self::memarg(2)));
                 },
 
-                instr!(Instr::Load(valtype, _)) => {
-                    let valtype_ = valtype.clone();
-                    self.consume()?;
-                    instrs.push(Instr::Store(valtype_, Self::memarg(3)));
-                },
-                instr!(Instr::Store(valtype, _)) => {
-                    let valtype_ = valtype.clone();
-                    self.consume()?;
-                    instrs.push(Instr::Store(valtype_, Self::memarg(3)));
-                },
-
                 // Numeric Instructions
                 instr!(Instr::I32Const(_)) => instr_const!(self, Number::Integer(n), n, instrs, I32Const, u32, "i32.const"),
                 instr!(Instr::I64Const(_)) => instr_const!(self, Number::Integer(n), n, instrs, I64Const, u64, "i64.const"),
