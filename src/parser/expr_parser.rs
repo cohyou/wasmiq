@@ -67,14 +67,6 @@ macro_rules! instr_const_float {
     }};
 }
 
-macro_rules! instr_memarg {
-    ($this: ident, $v:ident, $align:expr) => {{
-        $this.consume()?;
-        let memarg = MemArg { align: $align, offset: 0 };
-        $v.push(Instr::Load(ValType::I32, memarg));
-    }};
-}
-
 macro_rules! instr_one_block {
     ($this:ident, $v:ident, $instr:ident) => {{
         $this.consume()?;
@@ -144,23 +136,60 @@ impl<R> Parser<R> where R: Read + Seek {
                 instr!(Instr::GlobalSet(_)) => instr_global!(self, instrs, GlobalSet),
 
                 // Memory Instructions
-                instr!(Instr::ILoad8(_, _, _)) => instr_memarg!(self, instrs, 0),
-                instr!(Instr::IStore8(_, _)) => instr_memarg!(self, instrs, 0),
+                instr!(Instr::ILoad8(valsize, valsign, _)) => {
+                    let valsize_ = valsize.clone();
+                    let valsign_ = valsign.clone();
+                    self.consume()?;
+                    instrs.push(Instr::ILoad8(valsize_, valsign_, Self::memarg(0)));
+                },
+                instr!(Instr::IStore8(valsize, _)) => {
+                    let valsize_ = valsize.clone();
+                    self.consume()?;
+                    instrs.push(Instr::IStore8(valsize_, Self::memarg(0)));
+                },
 
-                instr!(Instr::ILoad16(_, _, _)) => instr_memarg!(self, instrs, 1),
-                instr!(Instr::IStore16(_, _)) => instr_memarg!(self, instrs, 1),
+                instr!(Instr::ILoad16(valsize, valsign, _)) => {
+                    let valsize_ = valsize.clone();
+                    let valsign_ = valsign.clone();
+                    self.consume()?;
+                    instrs.push(Instr::ILoad16(valsize_, valsign_, Self::memarg(1)));
+                },
+                instr!(Instr::IStore16(valsize, _)) => {
+                    let valsize_ = valsize.clone();
+                    self.consume()?;
+                    instrs.push(Instr::IStore16(valsize_, Self::memarg(1)));
+                },
 
-                instr!(Instr::Load(ValType::I32, _)) => instr_memarg!(self, instrs, 2),
-                instr!(Instr::Load(ValType::F32, _)) => instr_memarg!(self, instrs, 2),
-                instr!(Instr::I64Load32(_, _)) => instr_memarg!(self, instrs, 2),
-                instr!(Instr::Store(ValType::I32, _)) => instr_memarg!(self, instrs, 2),
-                instr!(Instr::Store(ValType::F32, _)) => instr_memarg!(self, instrs, 2),
-                instr!(Instr::I64Store32(_)) => instr_memarg!(self, instrs, 2),
+                instr!(Instr::Load(valtype, _)) => {
+                    let valtype_ = valtype.clone();
+                    self.consume()?;
+                    instrs.push(Instr::Load(valtype_, Self::memarg(2)));
+                },
+                instr!(Instr::I64Load32(valtype, _)) => {
+                    let valtype_ = valtype.clone();
+                    self.consume()?;
+                    instrs.push(Instr::I64Load32(valtype_, Self::memarg(2)));
+                },
+                instr!(Instr::Store(valtype, _)) => {
+                    let valtype_ = valtype.clone();
+                    self.consume()?;
+                    instrs.push(Instr::Store(valtype_, Self::memarg(2)));
+                },
+                instr!(Instr::I64Store32(_)) => {
+                    self.consume()?;
+                    instrs.push(Instr::I64Store32(Self::memarg(2)));
+                },
 
-                instr!(Instr::Load(ValType::I64, _)) => instr_memarg!(self, instrs, 3),
-                instr!(Instr::Load(ValType::F64, _)) => instr_memarg!(self, instrs, 3),
-                instr!(Instr::Store(ValType::I64, _)) => instr_memarg!(self, instrs, 3),
-                instr!(Instr::Store(ValType::F64, _)) => instr_memarg!(self, instrs, 3),
+                instr!(Instr::Load(valtype, _)) => {
+                    let valtype_ = valtype.clone();
+                    self.consume()?;
+                    instrs.push(Instr::Store(valtype_, Self::memarg(3)));
+                },
+                instr!(Instr::Store(valtype, _)) => {
+                    let valtype_ = valtype.clone();
+                    self.consume()?;
+                    instrs.push(Instr::Store(valtype_, Self::memarg(3)));
+                },
 
                 // Numeric Instructions
                 instr!(Instr::I32Const(_)) => instr_const!(self, Number::Integer(n), n, instrs, I32Const, u32, "i32.const"),
@@ -181,6 +210,10 @@ impl<R> Parser<R> where R: Read + Seek {
         }
 
         Ok(instrs)
+    }
+
+    fn memarg(align: u32) -> MemArg {
+        MemArg { align: align, offset: 0 }
     }
 
     fn parse_blocktype(&mut self) -> Result<BlockType, ParseError> {
