@@ -115,6 +115,22 @@ fn test_parse_duplicated_ids() {
     assert!(parse_str(s).is_some());
 }
 
+#[test]
+fn test_parse_store_load() {
+    let s = r#"
+    (module
+        (func $write_memo (param $index i32) (param $value i32)
+            ;; local.get $index
+            ;; i32.const 4
+            ;; i32.mul
+            ;; local.get $value
+            i32.store
+        )
+    )
+    "#;
+    assert!(parse_str(s).is_some());
+}
+
 #[allow(dead_code)]
 fn parse_str(s: &str) -> Option<()> {
     use std::io::{Cursor, BufReader};
