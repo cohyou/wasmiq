@@ -33,10 +33,10 @@ use super::{
 #[derive(Clone, Default, Debug)]
 pub struct Context {
     types: Vec<FuncType>,
-    funcs: Option<Vec<FuncType>>,
-    tables: Option<Vec<TableType>>,
-    mems: Option<Vec<MemType>>,
-    globals: Option<Vec<GlobalType>>,
+    funcs: Vec<FuncType>,
+    tables: Vec<TableType>,
+    mems: Vec<MemType>,
+    globals: Vec<GlobalType>,
     locals: Option<Vec<ValType>>,
     labels: Option<Vec<ResultType>>,
     rtn: Option<ResultType>,
@@ -48,9 +48,7 @@ impl Context {
     }
 
     pub fn global(&self, idx: GlobalIdx) -> Option<GlobalType> {
-        self.globals.as_ref().and_then(|globaltps| {
-            globaltps.get(idx.clone() as usize).cloned()
-        })
+        self.globals.get(idx.clone() as usize).cloned()
     }
 
     pub fn local(&self, idx: LocalIdx) -> Option<ValType> {
@@ -60,15 +58,11 @@ impl Context {
     }
 
     pub fn table(&self) -> Option<TableType> {
-        self.tables.as_ref().and_then(|tabletps| {
-            tabletps.get(0).cloned()
-        })
+        self.tables.get(0).cloned()
     }
 
     pub fn mem(&self) -> Option<MemType> {
-        self.mems.as_ref().and_then(|valtps| {
-            valtps.get(0).cloned()
-        })
+        self.mems.get(0).cloned()
     }
 
     pub fn label(&self, idx: LabelIdx) -> Option<ResultType> {
@@ -82,9 +76,7 @@ impl Context {
     }
 
     pub fn func(&self, idx: FuncIdx) -> Option<FuncType> {
-        self.funcs.as_ref().and_then(|restps| {
-            restps.get(idx.clone() as usize).cloned()
-        })
+        self.funcs.get(idx.clone() as usize).cloned()
     }
 
     pub fn clone_with_labels(&self, vts: Vec<ValType>) -> Context {
@@ -103,68 +95,45 @@ impl Context {
 
 impl Module {
     pub fn validate(&self) -> Result<(Vec<ExternType>, Vec<ExternType>), Error> {
-        let mut context = Context {
+        let mut funcs: Vec<FuncType> = vec![];
+        let mut tables: Vec<TableType> = vec![];
+        let mut mems: Vec<MemType> = vec![];
+        let mut globals: Vec<GlobalType> = vec![];
+
+        for imp in &self.imports {
+            match &imp.desc {
+                ImportDesc::Func(functype) => { funcs.push(self.types[functype.clone() as usize].clone()); },
+                ImportDesc::Table(tabletype) => { tables.push(tabletype.clone()); },
+                ImportDesc::Mem(memtype) => { mems.push(memtype.clone()); },
+                ImportDesc::Global(globaltype) => { globals.push(globaltype.clone()); },
+            }
+        }
+
+        let functypes: Vec<TableType> = self.tables.iter().map(|t| t.0.clone()).collect();
+        tables.extend(functypes);
+
+        let tabletypes: Vec<TableType> = self.tables.iter().map(|t| t.0.clone()).collect();
+        tables.extend(tabletypes);
+
+        let memtypes: Vec<MemType> = self.mems.iter().map(|t| t.0.clone()).collect();
+        mems.extend(memtypes);
+
+        let globaltypes: Vec<GlobalType> = self.globals.iter().map(|t| t.tp.clone()).collect();
+        globals.extend(globaltypes);
+
+        let context = Context {
             types: self.types.clone(),
-            funcs: Some(vec![]),
-            tables: None,
-            mems: None,
-            globals: None,
+            funcs: funcs,
+            tables: tables,
+            mems: mems,
+            globals: globals.clone(),
             locals: None,
             labels: None,
             rtn: None,
         };
 
-        let (funcs, tables, mems, globals) = {
-            let mut funcs: Vec<FuncType> = vec![];
-            let mut tables: Vec<TableType> = vec![];
-            let mut mems: Vec<MemType> = vec![];
-            let mut globals: Vec<GlobalType> = vec![];
-
-            for imp in self.imports.iter().map(|imp| imp.desc.validate(&context)) {
-                let imp = imp?;
-                match imp {
-                    ExternType::Func(functype) => { funcs.push(functype); },
-                    ExternType::Table(tabletype) => { tables.push(tabletype); },
-                    ExternType::Mem(memtype) => { mems.push(memtype); },
-                    ExternType::Global(globaltype) => { globals.push(globaltype); },
-                }
-            }
-
-            let mut context_func = context.clone();
-            for f in &self.funcs {
-                let functype = f.validate(&context_func)?;
-                if let Some(funcs) = &context_func.funcs {
-                    let mut new_funcs = funcs.clone();
-                    new_funcs.push(functype);
-                    context_func.funcs = Some(new_funcs);
-                }
-            }
-            funcs = context_func.funcs.unwrap();
-
-            for tabletype in self.tables.iter().map(|t| t.validate(&context)) {
-                let tabletype = tabletype?;
-                tables.push(tabletype);
-            }
-
-            for memtype in self.mems.iter().map(|t| t.validate(&context)) {
-                let memtype = memtype?;
-                mems.push(memtype);
-            }
-
-            for globaltype in self.globals.iter().map(|t| t.validate(&context)) {
-                let globaltype = globaltype?;
-                globals.push(globaltype);
-            }
-
-            (funcs, tables, mems, globals)
-        };
-
-        context.funcs = Some(funcs);
-        context.tables = Some(tables);
-        context.mems = Some(mems);
-
         let mut context_g = context.clone();
-        context_g.globals = Some(globals);
+        context_g.globals = globals;
 
         // functype is always valid
         // for tp in &self.types {
@@ -211,13 +180,13 @@ impl Module {
             let externtype = exp.desc.validate(&context)?;
             ets.push(externtype);
         }
-
-        if let Some(tables) = context.tables {
-            if tables.len() > 1 { return Err(Error::Invalid("Module::validate tables.len() > 1".to_owned())); }
+            
+        if context.tables.len() > 1 {
+            return Err(Error::Invalid("Module::validate tables.len() > 1".to_owned())); 
         }
 
-        if let Some(mems) = context.mems {
-            if mems.len() > 1 { return Err(Error::Invalid("Module::validate mems.len() > 1".to_owned())); }
+        if context.mems.len() > 1 {
+            return Err(Error::Invalid("Module::validate mems.len() > 1".to_owned())); 
         }
 
         let names = &self.exports.iter()

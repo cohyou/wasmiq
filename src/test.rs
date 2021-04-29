@@ -125,6 +125,12 @@ fn test_wast_file_block() {
     assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
 }
 
+#[test]
+fn test_wast_file_global() {
+    let file_name = "./wast/global.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;

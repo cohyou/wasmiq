@@ -471,7 +471,7 @@ impl Instr {
 
     fn check_global(context: &Context, globalidx: &GlobalIdx, opname: &str) -> Result<GlobalType, Error> {
         let globaltype = context.global(globalidx.clone())
-            .ok_or(Error::OutOfIndex(format!("instr {} validate: globalidx", opname)))?;
+            .ok_or(Error::OutOfIndex(format!("instr {} validate: globalidx({})", opname, globalidx)))?;
         Ok(globaltype)
     }
 
