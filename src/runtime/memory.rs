@@ -34,14 +34,14 @@ impl<'a> Thread<'a> {
         } else {
             unreachable!()
         };
-p!(c);
+
         let ea = c + memarg.offset;
         let ea = ea as usize;
-        let max = ea + (n / 8) as usize; p!(max); p!(mem.data.len());
+        let max = ea + (n / 8) as usize;
         if max > mem.data.len() {
             return ExecResult::Trap(Error::Invalid(format!("load max({:?}) > mem.data.len({:?})", max, mem.data.len())));
         }
-p!(n);
+
         let slice = &mem.data[ea..max];
         match n {
             8 => {
@@ -137,7 +137,7 @@ p!(n);
         let ea = i + memarg.offset;
 
         let ea = ea as usize;
-        let max = ea + (n / 8) as usize; p!(max); p!(mem.data.len());
+        let max = ea + (n / 8) as usize;
         if max > mem.data.len() {
             return ExecResult::Trap(Error::Invalid("Thread::execute_store_internal max > mem.data.len()".to_owned()));
         }

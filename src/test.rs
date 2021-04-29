@@ -146,7 +146,7 @@ fn test_wast_file_return() {
 #[test]
 fn test_wast_file_fibonacci() {
     let file_name = "./wast/fibonacci.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(832040)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(6765)]));
 }
 
 #[test]

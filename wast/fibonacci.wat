@@ -24,7 +24,7 @@
     )
 
     (func (export "main") (result i32)
-        i32.const 30
+        i32.const 20
         call $fibonacci
     )
 )

@@ -163,7 +163,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
             }
         }
         
-        let debugging = true;
+        let debugging = false;
         if debugging {
             pp!("types", tokens_to_string(&self.types));
             pp!("imports", tokens_to_string(&self.imports));

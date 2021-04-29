@@ -89,8 +89,6 @@ impl<R> Parser<R> where R: Read + Seek {
 
         self.match_rparen()?;
 
-        p!(self.contexts);
-
         Self::check_duplicated_ids(&self.contexts[0].funcs, Keyword::Func)?;
         Self::check_duplicated_ids(&self.contexts[0].tables, Keyword::Table)?;
         Self::check_duplicated_ids(&self.contexts[0].mems, Keyword::Memory)?;
