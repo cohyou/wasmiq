@@ -128,7 +128,7 @@ fn test_wast_file_block() {
 #[test]
 fn test_wast_file_global() {
     let file_name = "./wast/global.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(3)]));
 }
 
 #[allow(dead_code)]

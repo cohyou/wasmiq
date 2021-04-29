@@ -313,7 +313,6 @@ impl<'a> Thread<'a> {
         self.execute_instrs(instrs);
 
         let mut vals = vec![];
-        // let m = self.stack.len();p!(m);
         loop {
             if let Some(StackEntry::Value(val)) = self.stack.pop() {
                 vals.push(val);
@@ -321,9 +320,6 @@ impl<'a> Thread<'a> {
                 break;
             }
         }
-
-        // pop the label
-        self.stack.pop();
 
         ExecResult::Vals(vals)
     }
