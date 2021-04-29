@@ -84,6 +84,37 @@ fn test_parse_label2() {
     assert!(parse_str(s).is_some());
 }
 
+#[test]
+fn test_parse_duplicated_start() {
+    let s = r#"
+    (start 0)
+    (start 1)
+    "#;
+    assert!(parse_str(s).is_none());
+}
+
+#[test]
+fn test_parse_duplicated_ids() {
+    let s = r#"
+    (module
+        (type (func))
+        (import "myModule" "importFunc" (func $importFunc (type 0)))
+        (import "" "" (global $ggg (mut i32)))
+        (func $f (type 0))
+        ;; (func $f (type 0))
+        (table 1 funcref)
+        (memory 1)
+        
+        (global $ggg i32 (i32.const 1))
+        (export "table" (table 0))
+        (start $importFunc)
+        (elem (i32.const 0) $f)
+        (data (i32.const 0) "データ")
+    )
+    "#;
+    assert!(parse_str(s).is_some());
+}
+
 #[allow(dead_code)]
 fn parse_str(s: &str) -> Option<()> {
     use std::io::{Cursor, BufReader};

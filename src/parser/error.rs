@@ -14,7 +14,8 @@ pub enum ParseError {
     CantResolveId(Token),
     InvalidTypeuseDef(Token, FuncType, FuncType),
     InvalidMessage(Token, String),
-    Rewrite(RewriteError)  
+    Rewrite(RewriteError),  
+    DuplicatedIds(Keyword, String),
 }
 
 use lexer::LexError;

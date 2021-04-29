@@ -15,7 +15,7 @@ pub struct Context {
     pub typedefs: Vec<FuncType>, // typedefs functype*
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Id {
    Named(String),
    Anonymous(u32),

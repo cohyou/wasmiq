@@ -89,6 +89,27 @@ impl<R> Parser<R> where R: Read + Seek {
 
         self.match_rparen()?;
 
+        p!(self.contexts);
+
+        Self::check_duplicated_ids(&self.contexts[0].funcs, Keyword::Func)?;
+        Self::check_duplicated_ids(&self.contexts[0].tables, Keyword::Table)?;
+        Self::check_duplicated_ids(&self.contexts[0].mems, Keyword::Memory)?;
+        Self::check_duplicated_ids(&self.contexts[0].globals, Keyword::Global)?;
+
+        Ok(())
+    }
+
+    fn check_duplicated_ids(indices: &Vec<Option<Id>>, keyword: Keyword) -> Result<(), ParseError> {
+        let mut names = vec![];
+        for index in indices {
+            if let Some(Id::Named(name)) = index {
+                if names.contains(name) {
+                    return Err(ParseError::DuplicatedIds(keyword, name.clone()));
+                }
+                names.push(name.clone());
+            }
+        }
+
         Ok(())
     }
 
