@@ -74,7 +74,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         if exporting && header.len() == 2 {
                             self.globals.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()))
                         }
-                        self.globals.push(lparen.clone());
+                        self.globals.push(lparen);
                         self.globals.push(mutable);
                         let valtype = self.lexer.next_token()?;
                         self.globals.push(valtype);

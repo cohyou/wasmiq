@@ -130,9 +130,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
     fn rewrite_module_internal(&mut self) -> Result<(), RewriteError> {
         let mut last: Option<Token> = None;
 
-        let mut i = 0;
         loop {
-            if i == 1000 { break; }
             let lookahead = 
             if let Some(token) = self.precedings.pop_front() {
                 token
@@ -163,10 +161,9 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     self.ast.push(lookahead);
                 },
             }
-            i += 1;
         }
         
-        let debugging = false;
+        let debugging = true;
         if debugging {
             pp!("types", tokens_to_string(&self.types));
             pp!("imports", tokens_to_string(&self.imports));

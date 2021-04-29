@@ -57,7 +57,9 @@ impl<R> Rewriter<R> where R: Read + Seek {
             },
             t @ _ => {
                 tokens.push(t);
-                let importdesc = self.scan_simple_list()?;
+                let mut importdesc = self.scan_simple_list()?;
+                let rparen_import = self.lexer.next_token()?;
+                importdesc.push(rparen_import);
                 tokens.extend(importdesc);
             },
         }

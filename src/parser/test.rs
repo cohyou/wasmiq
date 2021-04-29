@@ -99,11 +99,11 @@ fn test_parse_duplicated_ids() {
     (module
         (type (func))
         (import "myModule" "importFunc" (func $importFunc (type 0)))
-        (import "" "" (global $ggg (mut i32)))
+        (import "" "" (global $glbl (mut i32)))
         (func $f (type 0))
         ;; (func $f (type 0))
-        (table 1 funcref)
-        (memory 1)
+        (table $tt 1 funcref)
+        (memory $mm 1)
         
         (global $ggg i32 (i32.const 1))
         (export "table" (table 0))
