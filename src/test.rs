@@ -110,7 +110,7 @@ fn test_wast_file_function() {
 #[test]
 fn test_wast_file_condition_blocktype() {
     let file_name = "./wast/condition-blocktype.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(132)]));
 }
 
 #[test]
@@ -129,6 +129,12 @@ fn test_wast_file_block() {
 fn test_wast_file_global() {
     let file_name = "./wast/global.wat";
     assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(3)]));
+}
+
+#[test]
+fn test_wast_file_condition() {
+    let file_name = "./wast/condition.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(132)]));
 }
 
 #[allow(dead_code)]
