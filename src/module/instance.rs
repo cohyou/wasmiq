@@ -388,7 +388,8 @@ pub fn alloc_table<'a>(store: &'a mut Store, tabletype: TableType) -> TableAddr 
 pub fn alloc_mem<'a>(store: &'a mut Store, memtype: MemType) -> MemAddr {
     let addr = store.mems.len();
     let MemType(Limits{ min: n, max: m }) = memtype;
-    let data = Vec::with_capacity((n * 64) as usize);
+    let length = (n * 64 * 1024) as usize;
+    let data = vec![0; length];
     let meminst = MemInst{ data: data, max: m };
     store.mems.push(meminst);
     addr

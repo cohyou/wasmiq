@@ -31,7 +31,10 @@ impl<'a> Thread<'a> {
                         .map(|v| StackEntry::Value(v.clone())).collect();
                     self.stack.extend(vals);
                 },
-                ExecResult::Trap(err) => return ExecResult::Trap(err),
+                ExecResult::Trap(err) => {
+                    // pp!("execute_instrs err", err);
+                    return ExecResult::Trap(err);
+                },
                 ExecResult::Return(vals) => {
                     match instr {
                         Instr::Call(_) |
@@ -48,11 +51,12 @@ impl<'a> Thread<'a> {
         }
 
         let mut vals = vec![];
-        for entry in &self.stack {
+        for entry in self.stack.iter().rev() {
             if let StackEntry::Value(v) = entry {
                 vals.push(v.clone());
             } else {
-                return ExecResult::Trap(Error::Invalid("Thread::execute_instrs StackEntry::Value(v) = entry".to_owned()));
+                // println!("execute_instrs StackEntry::Value(v) = entry");
+                break;
             }
         }
 
@@ -300,9 +304,9 @@ impl<'a> Thread<'a> {
                         // self.stack.extend(vals_entry);
                         return ExecResult::Return(vals);
                     },
-                    ExecResult::Trap(_) => {
-                        let message = "Thread::execute_invoke ExecResult::Vals(vals) = self.execute_instrs_with_label(label, &expr.0)";
-                        return ExecResult::Trap(Error::Invalid(message.to_owned()));
+                    ExecResult::Trap(err) => {
+                        // pp!("execute_invoke err", err);
+                        return ExecResult::Trap(err);
                     }
                 }
 
@@ -330,8 +334,13 @@ impl<'a> Thread<'a> {
     pub fn execute_instrs_with_label(&mut self, label: StackEntry, instrs: &Vec<Instr>) -> ExecResult {
         self.stack.push(label);
 
-        if let ExecResult::Return(vals) = self.execute_instrs(instrs) {
-            return ExecResult::Return(vals);
+        match self.execute_instrs(instrs) {
+            ExecResult::Return(vals) => return ExecResult::Return(vals),
+            ExecResult::Trap(err) => {
+                // pp!("execute_instrs_with_label err", err);
+                return ExecResult::Trap(err);
+            },
+            _ => {},
         }
 
         let mut vals = vec![];

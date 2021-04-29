@@ -34,14 +34,14 @@ impl<'a> Thread<'a> {
         } else {
             unreachable!()
         };
-
+p!(c);
         let ea = c + memarg.offset;
         let ea = ea as usize;
-        let max = ea + (n / 8) as usize;
+        let max = ea + (n / 8) as usize; p!(max); p!(mem.data.len());
         if max > mem.data.len() {
-            return ExecResult::Trap(Error::Invalid("Thread::execute_load_internal max > mem.data.len()".to_owned()));
+            return ExecResult::Trap(Error::Invalid(format!("load max({:?}) > mem.data.len({:?})", max, mem.data.len())));
         }
-
+p!(n);
         let slice = &mem.data[ea..max];
         match n {
             8 => {
@@ -121,16 +121,23 @@ impl<'a> Thread<'a> {
         let (_, frame) = self.current_frame();
         let memaddr = frame.module.memaddrs[0];
         let mem = &mut self.store.mems[memaddr];
-        let c = if let Some(StackEntry::Value(Val::I32Const(c))) = self.stack.pop() {
-            c
+
+        let val = if let Some(StackEntry::Value(val)) = self.stack.pop() {
+            val
         } else {
             unreachable!()
         };
 
-        let ea = c + memarg.offset;
+        let i = if let Some(StackEntry::Value(Val::I32Const(i))) = self.stack.pop() {
+            i
+        } else {
+            unreachable!()
+        };
+
+        let ea = i + memarg.offset;
 
         let ea = ea as usize;
-        let max = ea + (n / 8) as usize;
+        let max = ea + (n / 8) as usize; p!(max); p!(mem.data.len());
         if max > mem.data.len() {
             return ExecResult::Trap(Error::Invalid("Thread::execute_store_internal max > mem.data.len()".to_owned()));
         }
@@ -138,12 +145,16 @@ impl<'a> Thread<'a> {
 
         match valtype {
             ValType::I32 => {
-                let wrapped_n =
-                if let Some(StackEntry::Value(Val::I32Const(v))) = self.stack.pop() {
-                    v % 2u32.pow(n)
+                let wrapped_n = if let Val::I32Const(c) = val {
+                    if n == 32 {
+                        c
+                    } else {
+                        c % 2u32.pow(n)
+                    }
                 } else {
                     unreachable!()
                 };
+
                 let bytes = wrapped_n.to_le_bytes();
                 for i in 0..(n/8) as usize {
                     slice[i] = bytes[i];
@@ -152,7 +163,7 @@ impl<'a> Thread<'a> {
             },
             ValType::I64 => {
                 let wrapped_n = 
-                if let Some(StackEntry::Value(Val::I64Const(v))) = self.stack.pop() {
+                if let Val::I64Const(v) = val {
                     v % 2u64.pow(n)
                 } else {
                     unreachable!()
@@ -165,7 +176,7 @@ impl<'a> Thread<'a> {
             },
             ValType::F32 => {
                 let n = 
-                if let Some(StackEntry::Value(Val::F32Const(n))) = self.stack.pop() {
+                if let Val::F32Const(n) = val {
                     n
                 } else {
                     unreachable!()
@@ -178,7 +189,7 @@ impl<'a> Thread<'a> {
             },
             ValType::F64 => {
                 let n = 
-                if let Some(StackEntry::Value(Val::F64Const(n))) = self.stack.pop() {
+                if let Val::F64Const(n) = val {
                     n
                 } else {
                     unreachable!()

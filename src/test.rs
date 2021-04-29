@@ -149,6 +149,12 @@ fn test_wast_file_fibonacci() {
     assert_eq!(invoke_file_assert_eq(file_name, 1), Some(vec![Val::I32Const(832040)]));
 }
 
+#[test]
+fn test_wast_file_fibonacci_memo() {
+    let file_name = "./wast/fibonacci-memo.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 3), Some(vec![Val::I32Const(832040)]));
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;

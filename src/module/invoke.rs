@@ -48,14 +48,26 @@ impl Module {
 
         let mut thread = Thread::new(store);
         let mut returnvals = vec![];
-        if let ExecResult::Vals(mut vals) = thread.execute_invoke(&funcaddr) {
-            for _ in 0..returntypes.len() {
-                if let Some(v) = vals.pop() {
-                    returnvals.push(v);
+        match thread.execute_invoke(&funcaddr) {
+            ExecResult::Vals(mut vals) => {
+                for _ in 0..returntypes.len() {
+                    if let Some(v) = vals.pop() {
+                        returnvals.push(v);
+                    }
                 }
-            }    
+                ExecResult::Vals(returnvals)
+            },
+            ExecResult::Trap(err) => ExecResult::Trap(err),
+            ExecResult::Return(mut vals) => {
+                for _ in 0..returntypes.len() {
+                    if let Some(v) = vals.pop() {
+                        returnvals.push(v);
+                    }
+                }
+                ExecResult::Vals(returnvals)
+            }
         }
 
-        ExecResult::Vals(returnvals)
+        
     }
 }
