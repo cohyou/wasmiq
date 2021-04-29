@@ -64,16 +64,19 @@ impl<R> Parser<R> where R: Read + Seek {
 
     fn parse_import_desc_table(&mut self) -> Result<ImportDesc, ParseError> {
         let table_type = self.parse_table_type()?;
+        self.match_rparen()?;
         Ok(ImportDesc::Table(table_type))
     }
 
     fn parse_import_desc_memory(&mut self) -> Result<ImportDesc, ParseError> {        
         let mem_type = self.parse_memory_type()?;
+        self.match_rparen()?;
         Ok(ImportDesc::Mem(mem_type))
     }
 
     fn parse_import_desc_global(&mut self) -> Result<ImportDesc, ParseError> {        
         let global_type = self.parse_global_type()?;
+        self.match_rparen()?;
         Ok(ImportDesc::Global(global_type))
     }
 }

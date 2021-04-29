@@ -8,7 +8,7 @@ use super::*;
 
 impl<R> Parser<R> where R: Read + Seek {
 
-    pub(super) fn parse_global(&mut self) -> Result<(), ParseError> {
+    pub fn parse_global(&mut self) -> Result<(), ParseError> {
         let global_type = self.parse_global_type()?;
 
         let expr = self.parse_expr()?;
@@ -20,12 +20,13 @@ impl<R> Parser<R> where R: Read + Seek {
         Ok(())
     }
 
-    pub(super) fn parse_global_type(&mut self) -> Result<GlobalType, ParseError> {        
+    pub fn parse_global_type(&mut self) -> Result<GlobalType, ParseError> {        
         self.match_keyword(Keyword::Global)?;
 
         // global id
-        parse_optional_id!(self, self.contexts[0].globals);
-
+        let id = self.parse_optional_id_global()?;
+        self.contexts[0].globals.push(id);
+        
         // mutablity
         let mutablity = Mut::Const;
 
@@ -43,5 +44,19 @@ impl<R> Parser<R> where R: Read + Seek {
         let global_type = GlobalType(vt, mutablity);
 
         Ok(global_type)
+    }
+
+    fn parse_optional_id_global(&mut self) -> Result<Option<Id>, ParseError> {
+        if let tk!(TokenKind::Id(s)) = &self.lookahead {
+            let id = Ok(Some(Id::Named(s.clone())));
+            self.consume()?;
+            id
+        } else if let tk!(TokenKind::GenSym(idx)) = &self.lookahead {
+            let id = Ok(Some(Id::Anonymous(idx.clone())));
+            self.consume()?;
+            id
+        } else {
+            Ok(None)
+        }
     }
 }
