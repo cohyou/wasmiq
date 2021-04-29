@@ -138,8 +138,10 @@ impl<'a> Thread<'a> {
             }
         }
         loop {
-            if let Some(StackEntry::Activation(_, _)) = self.stack.pop() {
+            if let Some(StackEntry::Activation(_, _)) = self.stack.last() {
                 break;
+            } else {
+                self.stack.pop();
             }
         }
         ExecResult::Vals(vals)
