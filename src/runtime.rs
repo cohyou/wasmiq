@@ -59,6 +59,7 @@ impl Debug for Val {
 pub enum ExecResult {
     Vals(Vec<Val>),
     Trap(Error),
+    Return(Vec<Val>),
 }
 
 impl ExecResult {

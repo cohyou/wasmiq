@@ -179,10 +179,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
 
         self.ast.extend(self.types.clone());
         self.ast.extend(self.imports.clone());  
-        self.ast.extend(self.funcs.clone());
         self.ast.extend(self.tables.clone());
         self.ast.extend(self.mems.clone());
         self.ast.extend(self.globals.clone());
+        self.ast.extend(self.funcs.clone());
         self.ast.extend(self.exports.clone());
         self.ast.extend(self.elem.clone());
         self.ast.extend(self.data.clone());
