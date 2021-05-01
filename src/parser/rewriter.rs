@@ -19,12 +19,14 @@ use crate::parser::lexer::{
 use crate::parser::{
     Annot,
     Loc,
+    Context,
+    Id,
 };
 use crate::{
     Instr,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RewriteError {
     Invalid(String),
     OnLex(LexError),
@@ -57,6 +59,7 @@ where R: Read + Seek {
     pub ast: Vec<Token>,
     current: usize,
     next_symbol_index: u32,
+    pub context: Context,
 
     precedings: VecDeque<Token>,
 }
@@ -83,6 +86,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 ast: Vec::default(),
                 current: 0,
                 next_symbol_index: 0,
+                context: Context::default(),
 
                 precedings: VecDeque::default(),
             }
@@ -531,10 +535,6 @@ pub fn tokens_to_string(tokens: &Vec<Token>) -> String {
     result
 }
 
-#[allow(dead_code)]
-fn assert_eq_rewrite(before: &str, after:&str) {
-    assert_eq!(tokens_to_string(&rewrite_tokens(before)), after.to_string());
-}
 
 #[test]
 fn test_export() {
@@ -543,4 +543,38 @@ fn test_export() {
         r#"(export "n1" (func 1)) (export "n2" (table 0))"#, 
         r#"(module (export "n1" (func 1)) (export "n2" (table 0)))"#
     );
+}
+
+#[test]
+fn test_context() {
+    let s = r#"
+    (func call $f1)
+    (func $f1 nop)
+    (table 1 2 funcref)
+    (memory 1)
+    (global $ggg (mut i32))
+
+    (func $inline_func (import "" "") (type 0))
+    (table $inline_table (import "" "") 3 4 funcref)
+    (memory $inline_memory (import "" "") 6688)
+    (global $inline_global (import "" "") (mut i64))
+
+    (import "" "" (func $f_im))
+    (global f64)
+    (import "" "" (table $h6e53 funcref))
+    (import "" "" (memory $nnn 1 16))
+    (import "" "" (global $aa (mut i32)))
+    (import "" "" (global $gw i32))
+    "#;
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let reader = BufReader::new(cursor);
+    let mut rewriter = Rewriter::new(reader);
+    let _ = rewriter.rewrite();
+    dbg!(rewriter.context);
+}
+
+#[allow(dead_code)]
+fn assert_eq_rewrite(before: &str, after:&str) {
+    assert_eq!(tokens_to_string(&rewrite_tokens(before)), after.to_string());
 }

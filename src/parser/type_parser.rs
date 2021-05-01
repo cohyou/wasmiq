@@ -11,7 +11,17 @@ impl<R> Parser<R> where R: Read + Seek {
         self.match_keyword(Keyword::Type)?;
 
         // type id
-        parse_optional_id!(self, self.contexts[0].types);
+        // parse_optional_id!(self, self.contexts[0].types);
+        if let tk!(TokenKind::Id(s)) = &self.lookahead {
+            let new_s = s.clone();
+            self.contexts[0].types.push(Some(Id::Named(new_s)));
+            self.consume()?;
+        } else if let tk!(TokenKind::GenSym(idx)) = &self.lookahead {
+            self.contexts[0].types.push(Some(Id::Anonymous(idx.clone())));
+            self.consume()?;
+        } else {
+            self.contexts[0].types.push(None);
+        }
 
         // functype
         self.match_lparen()?;

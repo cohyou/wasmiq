@@ -18,6 +18,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 tokens.push(func);
 
                 let t = self.lexer.next_token()?;
+                if let tk!(TokenKind::Id(s)) = t.clone() {
+                    self.context.funcs.push(Some(Id::Named(s)));
+                } else {
+                    self.context.funcs.push(None);
+                }
 
                 let next = if let id @ tk!(TokenKind::Id(_)) = t {
                     tokens.push(id);
@@ -51,9 +56,77 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     rparen @ tk!(TokenKind::RightParen) => {
                         tokens.extend(self.make_type_gensym_tokens());
                         tokens.push(rparen);
+                        let rparen_import = self.lexer.next_token()?;
+                        tokens.push(rparen_import);
                     },
                     t @ _ => tokens.push(t),
                 }
+            },
+            table @ kw!(Keyword::Table) => {
+                tokens.push(table);
+
+                let t = self.lexer.next_token()?;
+                if let tk!(TokenKind::Id(s)) = t.clone() {
+                    self.context.tables.push(Some(Id::Named(s)));
+                } else {
+                    self.context.tables.push(None);
+                }
+
+                let mut importdesc = self.scan_simple_list()?;
+                let rparen_import = self.lexer.next_token()?;
+                importdesc.push(rparen_import);
+                tokens.extend(importdesc);
+            },
+            mem @ kw!(Keyword::Memory) => {
+                tokens.push(mem);
+
+                let t = self.lexer.next_token()?;
+                if let tk!(TokenKind::Id(s)) = t.clone() {
+                    self.context.mems.push(Some(Id::Named(s)));
+                } else {
+                    self.context.mems.push(None);
+                }
+
+                let mut importdesc = self.scan_simple_list()?;
+                let rparen_import = self.lexer.next_token()?;
+                importdesc.push(rparen_import);
+                tokens.extend(importdesc);
+            },
+            global @ kw!(Keyword::Global) => {
+                tokens.push(global);
+
+                let t = self.lexer.next_token()?;
+                if let tk!(TokenKind::Id(s)) = t.clone() {
+                    self.context.globals.push(Some(Id::Named(s)));
+                } else {
+                    self.context.globals.push(None);
+                }
+
+                let next = if let id @ tk!(TokenKind::Id(_)) = t {
+                    tokens.push(id);
+                    self.lexer.next_token()?
+                } else {
+                    t
+                };
+
+                // let mut importdesc = self.scan_simple_list()?;
+                match next {
+                    lparen @ tk!(TokenKind::LeftParen) => {
+                        tokens.push(lparen);
+                        let keyword_mut = self.lexer.next_token()?;
+                        tokens.push(keyword_mut);      
+                        let valtype = self.lexer.next_token()?;
+                        tokens.push(valtype);                  
+                        let rparen_mut = self.lexer.next_token()?;
+                        tokens.push(rparen_mut);
+                    },
+                    valtype @ kw!(Keyword::ValType(_)) => tokens.push(valtype),
+                    t @ _ => tokens.push(t), 
+                }
+                let rparen_importdesc = self.lexer.next_token()?;
+                tokens.push(rparen_importdesc);
+                let rparen_import = self.lexer.next_token()?;
+                tokens.push(rparen_import);
             },
             t @ _ => {
                 tokens.push(t);
@@ -251,5 +324,16 @@ fn test_import() {
     assert_eq_rewrite(
         r#"(import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32)))"#, 
         r#"(module (import "n1" "n2" (func $f (type 0))) (import "n3" "n4" (func $f (type 1) (param i32))))"#
+    );
+}
+
+#[test]
+fn test_rewrite_multi_import() {
+    assert_eq_rewrite(
+        r#"
+        (func $inline_func (import "" "") (type 0))
+        (table $inline_table (import "" "") 3 4 funcref)
+        "#, 
+        r#"(module (import "" "" (func $inline_func (type 0))) (import "" "" (table $inline_table 3 4 funcref)))"#
     );
 }

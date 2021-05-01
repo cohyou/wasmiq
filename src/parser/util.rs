@@ -29,15 +29,15 @@ macro_rules! instr { ($instr:pat) => {
 
 macro_rules! parse_optional_id {
     ($this:ident, $v:expr) => {
-        if let tk!(TokenKind::Id(s)) = &$this.lookahead {
-            let new_s = s.clone();
-            $v.push(Some(Id::Named(new_s)));
+        if let tk!(TokenKind::Id(_s)) = &$this.lookahead {
+            // let new_s = s.clone();
+            // $v.push(Some(Id::Named(new_s)));
             $this.consume()?;
-        } else if let tk!(TokenKind::GenSym(idx)) = &$this.lookahead {
-            $v.push(Some(Id::Anonymous(idx.clone())));
+        } else if let tk!(TokenKind::GenSym(_idx)) = &$this.lookahead {
+            // $v.push(Some(Id::Anonymous(idx.clone())));
             $this.consume()?;
         } else {
-            $v.push(None);
+            // $v.push(None);
         }
     }
 }

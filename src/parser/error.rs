@@ -5,7 +5,7 @@
  use lexer::{Token, TokenKind};
  use super::*;
  
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ParseError {
     Lex(LexError),
     NotMatch(Token, TokenKind),

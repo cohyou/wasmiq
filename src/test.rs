@@ -48,7 +48,7 @@ fn test_gensym() {
     (type (func (param f32)))
     (func (export "main") (param i32) (result i32) i32.const 32)
     "#;
-    show_parse_result(s);
+    assert!(show_parse_result(s).is_ok());
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn test_resolve_func_id() {
     (type (func))
     (func (export "main") nop)
     "#;
-    show_parse_result(s);
+    assert!(show_parse_result(s).is_ok());
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn test_wast() {
         (i32.sub (i32.add (i32.const 100) (i32.const 50)) (i32.const 1)))
     ;; (func (export "nop") (type 1))
     "#;
-    show_parse_result(s);
+    assert!(show_parse_result(s).is_ok());
 }
 
 #[test]
@@ -79,7 +79,16 @@ fn test_wast_export() {
     (type (func))
     (func (export "nop") (type 1))
     "#;
-    show_parse_result(s);
+    assert!(show_parse_result(s).is_ok());
+}
+
+#[test]
+fn test_wast_resolve_id() {
+    let s = r#"
+    (func call $f1)
+    (func $f1 nop)
+    "#;
+    assert!(show_parse_result(s).is_ok());
 }
 
 #[test]
@@ -179,7 +188,7 @@ fn show_file_parse_result(file_name: &str) {
 }
 
 #[allow(dead_code)]
-fn show_parse_result(s: &str) {
+fn show_parse_result(s: &str) -> Result<(), Error> {
     use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let mut reader = BufReader::new(cursor);
@@ -189,8 +198,12 @@ fn show_parse_result(s: &str) {
             p!(module.imports);
             p!(module.funcs);
             p!(module.exports);
+            Ok(())
         },
-        Err(err) => p!(err),
+        Err(err) => {
+            dbg!(err.clone());
+            Err(err)
+        },
     }
 }
 

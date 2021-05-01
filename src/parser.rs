@@ -62,12 +62,27 @@ impl<R> Parser<R> where R: Read + Seek {
     pub fn new(reader: R) -> Self {
         let mut rewriter = Rewriter::new(reader);
         let _ = rewriter.rewrite();
+        let context = Self::context_from_rewriter(&rewriter);
         Self {
             rewriter: rewriter,
             lookahead: Token::empty(Loc::default()),
-            contexts: vec![Context::default()],
+            contexts: vec![context],
             module: Module::default(),
         }
+    }
+
+    fn context_from_rewriter(rewriter: &Rewriter<R>) -> Context {
+        Context {
+            types: Vec::default(),
+            funcs: rewriter.context.funcs.clone(),
+            tables: rewriter.context.tables.clone(),
+            mems: rewriter.context.mems.clone(),
+            globals: rewriter.context.globals.clone(),
+            locals: Vec::default(),
+            labels: Vec::default(),
+            typedefs: Vec::default(),
+        }
+        
     }
 
     pub fn parse(&mut self) -> Result<(), ParseError> {

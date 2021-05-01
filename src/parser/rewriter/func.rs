@@ -9,10 +9,32 @@ impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_func(&mut self, lparen_func: Token, func: Token) -> Result<(), RewriteError> {
         let mut header = vec![lparen_func, func];
         let maybe_id = self.lexer.next_token()?;
+        if let tk!(TokenKind::Id(s)) = maybe_id.clone() {
+            self.context.funcs.push(Some(Id::Named(s)));
+        }
         let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
 
+        self.set_context_id_func(token1.clone(), token2.clone());
+
         self.rewrite_func_first(header, token1, token2, false)
+    }
+
+    fn set_context_id_func(&mut self, token1: Token, token2: Token) {
+        if let tk!(TokenKind::LeftParen) = token1 {
+            if let kw!(Keyword::Export) = token2 {
+                let new_gensym_index = self.next_symbol_index + 1;
+                self.context.funcs.push(Some(Id::Anonymous(new_gensym_index)));
+            } else {
+                self.context.funcs.push(None);
+            }
+        } else {
+            match token2 {
+                instr!(_) => self.context.funcs.push(None),
+                tk!(TokenKind::RightParen) => self.context.funcs.push(None),
+                _ => {},
+            }
+        }
     }
 
     fn rewrite_func_first(&mut self, header: Vec<Token>, token1: Token, token2: Token, exporting: bool) -> Result<(), RewriteError> {
@@ -111,7 +133,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                         self.imports.extend(holding);
                         let token1 = self.lexer.next_token()?;
                         let token2 = self.lexer.next_token()?;
-                        return self.rewrite_func_rest_import(token1, token2);
+                        self.rewrite_func_rest_import(token1, token2)?;
                     },
                     param @ kw!(Keyword::Param) => {
                         self.rewrite_func_valtypes_first_import(header, lparen, param, exporting)?;
@@ -198,6 +220,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     _ => self.push_others_rest_import(lparen, token2),
                 }
             },
+            rparen @ tk!(TokenKind::RightParen) => {
+                self.imports.push(rparen);
+                self.precedings.push_back(token2);
+            },
             _ => self.push_others_rest_import(token1, token2),
         }
 
@@ -243,9 +269,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
         if header.len() == 2 {
             if exporting {
                 self.funcs.push(Token::gensym(self.next_symbol_index - 1, Loc::zero()));
-            } else {
-                // let gensym = self.make_gensym();
-                // self.funcs.push(gensym);
             }   
         }
     }
@@ -543,3 +566,4 @@ fn test_rewrite_func_export2() {
         r#"(module (func <#:gensym(0)> (type 1)) (export "nop" (func <#:gensym(0)>)))"#
     );
 }
+
