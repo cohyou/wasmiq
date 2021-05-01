@@ -4,21 +4,29 @@ impl<R> Rewriter<R> where R: Read + Seek {
     pub fn rewrite_memory(&mut self, lparen_global: Token, global: Token) -> Result<(), RewriteError> {
         let mut header = vec![lparen_global, global];
         let maybe_id = self.lexer.next_token()?;
-        if let tk!(TokenKind::Id(s)) = maybe_id.clone() {
-            self.context.mems.push(Some(Id::Named(s)));
-        }
+
+        let named_id = if let tk!(TokenKind::Id(s)) = maybe_id.clone() {
+            Some(Id::Named(s))
+        } else {
+            None
+        };
+        
         let token1 = self.scan_id(maybe_id, &mut header)?;
         let token2 = self.lexer.next_token()?;
 
-        self.set_context_id_func_memory(token1.clone(), token1.clone());
+        if let Some(_) = named_id {
+            self.context.mems.push(named_id);
+        } else {
+            self.set_context_id_func_memory(&token1, &token2);
+        }
 
         self.rewrite_memory_internal(header, token1, token2, false)
     }
 
-    fn set_context_id_func_memory(&mut self, token1: Token, token2: Token) {
+    fn set_context_id_func_memory(&mut self, token1: &Token, token2: &Token) {
         if let tk!(TokenKind::LeftParen) = token1 {
             if let kw!(Keyword::Export) = token2 {
-                let new_gensym_index = self.next_symbol_index + 1;
+                let new_gensym_index = self.next_symbol_index;
                 self.context.mems.push(Some(Id::Anonymous(new_gensym_index)));
             } else {
                 self.context.mems.push(None);

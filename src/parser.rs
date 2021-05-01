@@ -63,6 +63,7 @@ impl<R> Parser<R> where R: Read + Seek {
         let mut rewriter = Rewriter::new(reader);
         let _ = rewriter.rewrite();
         let context = Self::context_from_rewriter(&rewriter);
+        dbg!(&context);
         Self {
             rewriter: rewriter,
             lookahead: Token::empty(Loc::default()),
@@ -103,7 +104,7 @@ impl<R> Parser<R> where R: Read + Seek {
         self.parse_module_internal()?;
 
         self.match_rparen()?;
-
+dbg!(&self.contexts);
         Self::check_duplicated_ids(&self.contexts[0].funcs, Keyword::Func)?;
         Self::check_duplicated_ids(&self.contexts[0].tables, Keyword::Table)?;
         Self::check_duplicated_ids(&self.contexts[0].mems, Keyword::Memory)?;

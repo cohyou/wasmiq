@@ -24,8 +24,8 @@ impl<R> Parser<R> where R: Read + Seek {
         self.match_keyword(Keyword::Global)?;
 
         // global id
-        let id = self.parse_optional_id_global()?;
-        self.contexts[0].globals.push(id);
+        let _id = self.parse_optional_id_global()?;
+        // self.contexts[0].globals.push(id);
         
         // mutablity
         let mut mutablity = Mut::Const;

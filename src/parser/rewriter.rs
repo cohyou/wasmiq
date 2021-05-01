@@ -566,6 +566,33 @@ fn test_context() {
     (import "" "" (global $aa (mut i32)))
     (import "" "" (global $gw i32))
     "#;
+    show_context(s);
+}
+
+#[test]
+fn test_rewrite_duplicated_ids() {
+    let s = r#"
+    (module
+        (type (func))
+        (import "myModule" "importFunc" (func $importFunc (type 0)))
+        (import "" "" (global $glbl (mut i32)))
+        (func $f (type 0))
+        ;; (func $f (type 0))
+        (table $tt 1 funcref)
+        (memory $mm 1)
+        
+        (global $ggg i32 (i32.const 1))
+        
+        (start $importFunc)
+        (elem (i32.const 0) $f)
+        (data (i32.const 0) "データ")
+    )
+    "#; // ;; (export "table" (table 0))
+    show_context(s);
+}
+
+#[allow(dead_code)]
+fn show_context(s: &str) {
     use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let reader = BufReader::new(cursor);
