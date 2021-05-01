@@ -161,7 +161,10 @@ impl<'a> Thread<'a> {
         let table = &self.store.tables[ta];
         let ft_expect = &frame.module.types[funcidx.clone() as usize];
         if let Some(StackEntry::Value(Val::I32Const(i))) = self.stack.pop() {
-            if (i as usize) < table.elem.len() { return ExecResult::Trap(Error::Invalid("Thread::execute_callindirect (i as usize) < table.elem.len()".to_owned())); }
+            if (i as usize) >= table.elem.len() {
+                let message = format!("execute_callindirect i({:?}) >= table.elem.len({:?})", i, table.elem.len());
+                return ExecResult::Trap(Error::Invalid(message)); 
+            }
             if let Some(a) = table.elem[i as usize] {
                 if let FuncInst::User(f) = &self.store.funcs[a] {
                     let ft_actual = &f.tp;

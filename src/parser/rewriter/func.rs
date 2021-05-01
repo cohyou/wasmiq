@@ -319,11 +319,6 @@ impl<R> Rewriter<R> where R: Read + Seek {
         self.push_others_import(token1, token2);
     }
 
-    fn push_others(&mut self, token1: Token, token2: Token) {
-        self.funcs.push(token1);
-        self.funcs.push(token2);
-    }
-
     fn push_others_import(&mut self, token1: Token, token2: Token) {
         self.imports.push(token1);
         self.imports.push(token2);

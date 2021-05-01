@@ -27,7 +27,8 @@ impl Module {
             FuncInst::Host(host) => host.tp.clone(),
         };
         if vals.len() != argtypes.len() {
-            return ExecResult::Trap(Error::Invalid("Module::invoke vals.len() != argtypes.len()".to_owned()));
+            let message = format!("Module invoke vals.len{:?} != argtypes.len{:?}", vals, argtypes);
+            return ExecResult::Trap(Error::Invalid(message));
         }
 
         for (argtype, val) in argtypes.iter().zip(vals.clone()) {

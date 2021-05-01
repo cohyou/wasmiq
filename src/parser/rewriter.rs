@@ -310,6 +310,11 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }
         Ok(tokens)
     }
+
+    fn push_others(&mut self, token1: Token, token2: Token) {
+        self.funcs.push(token1);
+        self.funcs.push(token2);
+    }
 }
 
 

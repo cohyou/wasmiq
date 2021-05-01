@@ -182,6 +182,12 @@ fn test_wast_file_type() {
     assert_eq!(invoke_file_assert_eq(file_name, 0), Some(vec![Val::I32Const(1)]));
 }
 
+#[test]
+fn test_wast_file_table_abs() {
+    let file_name = "./wast/table-abs.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 3), Some(vec![Val::I32Const(10)]));
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;

@@ -42,6 +42,14 @@ impl<R> Rewriter<R> where R: Read + Seek {
                     let if_instrs = self.rewrite_if()?;
                     result.extend(if_instrs);
                 },
+                callindirect @ instr!(Instr::CallIndirect(_)) => {
+                    result.push(callindirect);
+                    let (next, callindirect_instrs) = self.rewrite_callindirect_first()?;
+                    result.extend(callindirect_instrs);
+                    dbg!(&next);
+                    token = next;
+                    continue;
+                },
                 tk!(TokenKind::LeftParen) => {
                     let folded_instrs = self.rewrite_folded_instrs(&mut tokens)?;
                     result.extend(folded_instrs);
@@ -65,6 +73,149 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }
 
         Ok(result)
+    }
+
+    fn rewrite_callindirect_first(&mut self) -> Result<(Token, Vec<Token>), RewriteError> {
+        let mut result = vec![];
+        let token = self.lexer.next_token()?;
+
+        match token.clone() {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match self.lexer.next_token()? {
+                    tp @ kw!(Keyword::Type) => {
+                        let holding = self.scan_typeidx_holding(lparen, tp)?;
+                        result.extend(holding);
+                        let token1 = self.lexer.next_token()?;
+                        let token2 = self.lexer.next_token()?;
+                        let (next, rest) = self.rewrite_callindirect_rest(token1, token2)?;
+                        result.extend(rest);
+                        Ok((next, result))
+                    },
+                    param @ kw!(Keyword::Param) => {
+                        let (next, valtypes) = self.rewrite_callindirect_valtypes_first(lparen, param)?;
+                        result.extend(valtypes);
+                        Ok((next, result))
+                    },
+                    result_token @ kw!(Keyword::Result) => {
+                        let (next, valtypes) = self.rewrite_callindirect_valtypes_first(lparen, result_token)?;
+                        result.extend(valtypes);
+                        Ok((next, result))
+                    },
+                    instr @ instr!(_) => {
+                        let typeidx = self.add_typeidx();
+                        result.extend(typeidx);
+
+                        let mut tokens = VecDeque::from(vec![instr]);
+                        let folded_instrs = self.rewrite_folded_instrs(&mut tokens)?;
+                        result.extend(folded_instrs);
+
+                        let next = self.lexer.next_token()?;
+                        Ok((next, result))
+                    },
+                    empty @ tk!(TokenKind::Empty) => Ok((empty, result)),
+                    t @ _ => {
+                        result.push(lparen);
+                        Ok((t, result))
+                    }
+                }
+            },
+            instr @ instr!(_) => {
+                let typeidx = self.add_typeidx();
+                result.extend(typeidx);
+
+                Ok((instr, result))
+            },
+            rparen @ tk!(TokenKind::RightParen) => {
+                let typeidx = self.add_typeidx();
+                result.extend(typeidx);
+
+                Ok((rparen, result))
+            },
+            tk!(TokenKind::Empty) => Ok((token, result)),
+            t @ _ => Ok((t, result)),
+        }
+    }
+
+    fn rewrite_callindirect_rest(&mut self, token1: Token, token2: Token) -> Result<(Token, Vec<Token>), RewriteError> {
+        let mut result = vec![];
+
+        match token1.clone() {
+            lparen @ tk!(TokenKind::LeftParen) => {
+                match token2 {
+                    param @ kw!(Keyword::Param) => {
+                        let (next, valtypes) = self.rewrite_callindirect_valtypes_rest(lparen, param)?;
+                        result.extend(valtypes);
+                        Ok((next, result))
+                    },
+                    result_token @ kw!(Keyword::Result) => {
+                        let (next, valtypes) = self.rewrite_callindirect_valtypes_rest(lparen, result_token)?;
+                        result.extend(valtypes);
+                        Ok((next, result))
+                    },
+                    instr @ instr!(_) => {
+                        let mut tokens = VecDeque::from(vec![instr]);
+                        let folded_instrs = self.rewrite_folded_instrs(&mut tokens)?;
+                        result.extend(folded_instrs);
+
+                        let next = self.lexer.next_token()?;
+                        Ok((next, result))
+                    },
+                    tk!(TokenKind::Empty) => Ok((token1, result)),
+                    _ => {
+                        result.push(token1);
+                        Ok((token2, result))
+                    },
+                }
+            },
+            instr @ instr!(_) => {
+                let instrs = self.rewrite_instrs(vec![instr, token2])?;
+                result.extend(instrs);
+                let next = self.lexer.next_token()?;
+                Ok((next, result))
+            },
+            rparen @ tk!(TokenKind::RightParen) => {
+                // result.push(rparen);
+                self.precedings.push_back(token2);
+                Ok((rparen, result))
+            },
+            _ => {
+                result.push(token1);
+                Ok((token2, result))
+            },
+        }
+    }
+
+    fn rewrite_callindirect_valtypes_first(&mut self, lparen: Token, valtype: Token) -> Result<(Token, Vec<Token>), RewriteError> {
+        let mut result = vec![];
+
+        let typeidx = self.add_typeidx();
+        result.extend(typeidx);
+        let (next ,valtype) = self.rewrite_callindirect_valtypes(lparen, valtype)?;
+        result.extend(valtype);
+
+        Ok((next, result))
+    }
+
+    fn rewrite_callindirect_valtypes_rest(&mut self, lparen: Token, valtype: Token) -> Result<(Token, Vec<Token>), RewriteError> {
+        self.rewrite_callindirect_valtypes(lparen, valtype)
+    }
+
+    fn rewrite_callindirect_valtypes(&mut self, lparen: Token, valtype: Token) -> Result<(Token, Vec<Token>), RewriteError> {
+        let mut result = vec![];
+
+        result.push(lparen);
+        result.push(valtype.clone());
+        if let kw!(keyword) = valtype {
+            let holding = self.rewrite_valtypes(keyword)?;
+            result.extend(holding);
+        }
+        
+        let token1 = self.lexer.next_token()?;
+        let token2 = self.lexer.next_token()?;
+        let (next, rest) = self.rewrite_callindirect_rest(token1, token2)?;
+        result.extend(rest);
+
+        Ok((next, result))
     }
 
     pub fn rewrite_folded_instrs(&mut self, first: &mut VecDeque<Token>) -> Result<Vec<Token>, RewriteError> {
