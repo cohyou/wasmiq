@@ -580,6 +580,6 @@ fn test_rewrite_func_export2() {
 fn test_rewrite_multi_func() {
     assert_eq_rewrite(
         r#"(func) (func (export "main") (result i32))"#, 
-        r#""#
+        r#"(module (func (type <#:gensym(0)>)) (func <#:gensym(1)> (type <#:gensym(2)>) (result i32)) (export "main" (func <#:gensym(1)>)))"#
     );
 }

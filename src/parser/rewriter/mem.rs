@@ -289,6 +289,6 @@ fn test_rewrite_mem_end() {
             (func (export "main"))
         )
         "#, 
-        r#"(module (memory 1) (func <#:gensym(0)> (type <#:gensym(1)>)) (export "main" (func <#:gensym(0)>))"#
+        r#"(module (memory 1) (func <#:gensym(0)> (type <#:gensym(1)>)) (export "main" (func <#:gensym(0)>)))"#
     );
 }
