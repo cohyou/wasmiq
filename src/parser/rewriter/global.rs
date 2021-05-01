@@ -32,7 +32,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.context.globals.push(None);
             }
         } else {
-            match token2 {
+            match token1 {
                 kw!(Keyword::ValType(_)) => self.context.globals.push(None),
                 _ => {},
             }

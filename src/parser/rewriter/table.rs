@@ -34,7 +34,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.context.tables.push(None);
             }
         } else {
-            match token2 {
+            match token1 {
                 tk!(TokenKind::Number(Number::Integer(_))) => self.context.tables.push(None),
                 kw!(Keyword::FuncRef) => {
                     let new_gensym_index = self.next_symbol_index;

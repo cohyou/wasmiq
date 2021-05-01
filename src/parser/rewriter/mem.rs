@@ -32,7 +32,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.context.mems.push(None);
             }
         } else {
-            match token2 {
+            match token1 {
                 tk!(TokenKind::Number(Number::Integer(_))) => self.context.mems.push(None),
                 _ => {},
             }
@@ -277,5 +277,18 @@ fn test_rewrite_mem_data() {
     assert_eq_rewrite(
         r#"(module (memory $id (export "n1") (data "abcd" "wowow" "wasmiq")))"#, 
         r#"(module (memory $id 1 1) (export "n1" (memory $id)) (data $id (i32.const 0) "abcd" "wowow" "wasmiq"))"#
+    );
+}
+
+#[test]
+fn test_rewrite_mem_end() {
+    assert_eq_rewrite(
+        r#"
+        (module
+            (memory 1)
+            (func (export "main"))
+        )
+        "#, 
+        r#"(module (memory 1) (func <#:gensym(0)> (type <#:gensym(1)>)) (export "main" (func <#:gensym(0)>))"#
     );
 }

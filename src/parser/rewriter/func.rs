@@ -37,7 +37,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 self.context.funcs.push(None);
             }
         } else {
-            match token2 {
+            match token1 {
                 instr!(_) => self.context.funcs.push(None),
                 tk!(TokenKind::RightParen) => self.context.funcs.push(None),
                 _ => {},
