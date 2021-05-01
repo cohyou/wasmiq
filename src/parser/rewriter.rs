@@ -182,7 +182,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
         }        
 
         self.ast.extend(self.types.clone());
-        self.ast.extend(self.imports.clone());  
+        self.ast.extend(self.imports.clone());
         self.ast.extend(self.tables.clone());
         self.ast.extend(self.mems.clone());
         self.ast.extend(self.globals.clone());
@@ -547,6 +547,26 @@ fn test_export() {
     assert_eq_rewrite(
         r#"(export "n1" (func 1)) (export "n2" (table 0))"#, 
         r#"(module (export "n1" (func 1)) (export "n2" (table 0)))"#
+    );
+}
+
+#[test]
+fn test_import() {
+    assert_eq_rewrite(
+        r#"
+        (module
+            (import "myModule" "plusOne" (func $plusOne (param i32) (result i32)))
+            (import "myModule" "table" (table 1 funcref))
+            (import "myModule" "memory" (memory 1))
+            (import "myModule" "global" (global $import_global (mut i32)))
+        
+            (func (export "main") (result i32)
+                global.get $import_global
+                call $plusOne
+            )
+        )
+        "#, 
+        r#""#
     );
 }
 

@@ -8,7 +8,7 @@ use super::*;
 
 impl<R> Parser<R> where R: Read + Seek {
 
-    pub(super) fn parse_import(&mut self) -> Result<(), ParseError> {
+    pub fn parse_import(&mut self) -> Result<(), ParseError> {
         self.match_keyword(Keyword::Import)?;
 
         // module

@@ -7,16 +7,18 @@ use super::*;
 
 impl<R> Parser<R> where R: Read + Seek {
 
-    pub(super) fn parse_table(&mut self) -> Result<(), ParseError> {        
+    pub fn parse_table(&mut self) -> Result<(), ParseError> {        
         // tabletype
         let table_type = self.parse_table_type()?;
+
+        self.match_rparen()?;
 
         self.module.tables.push(Table(table_type));
 
         Ok(())
     }
 
-    pub(super) fn parse_table_type(&mut self) -> Result<TableType, ParseError> {
+    pub fn parse_table_type(&mut self) -> Result<TableType, ParseError> {
         let mut table_type = TableType(Limits::default(), ElemType::FuncRef);
         self.match_keyword(Keyword::Table)?;
 
@@ -28,8 +30,7 @@ impl<R> Parser<R> where R: Read + Seek {
 
         // 'funcref'
         self.match_keyword(Keyword::FuncRef)?;
-
-        self.match_rparen()?;
+        
         Ok(table_type)
     }
 }

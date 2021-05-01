@@ -46,7 +46,6 @@ pub fn module_instanciate(store: &mut Store, module: Module, externvals: Vec<Ext
 impl Module {
     fn instanciate(&self, store: &mut Store, externvals: Vec<ExternVal>) -> (Frame, ExecResult) {
         let frame_default = Frame::default();
-        let trap = ExecResult::Trap(Error::Invalid("Module::instanciate".to_owned()));
 
         let externtypes = match self.validate() {
             Err(err) => {
@@ -58,7 +57,8 @@ impl Module {
         };
         let externtypes_imp = externtypes.0;
         if externtypes_imp.len() != externvals.len() { 
-            let trap = ExecResult::Trap(Error::Invalid("Module::instanciate externtypes_imp.len() != externvals.len()".to_owned()));
+            let message = format!("instanciate externtypes_imp.len({:?}) != externvals.len({:?})", externtypes_imp, externvals);
+            let trap = ExecResult::Trap(Error::Invalid(message));
             return (frame_default, trap);
         }
 
@@ -67,7 +67,11 @@ impl Module {
             match ext_val {
                 ExternVal::Func(funcaddr) => {
                     let functype = match store.funcs.get(funcaddr.clone()) {
-                        None => return (frame_default, trap),
+                        None => {
+                            let message = format!("instanciate: store.funcs.get({:?}) is None", &funcaddr);
+                            let trap = ExecResult::Trap(Error::Invalid(message));
+                            return (frame_default, trap);
+                        },
                         Some(FuncInst::User(funcinst)) => funcinst.tp.clone(),
                         Some(FuncInst::Host(funcinst)) => funcinst.tp.clone(),
                     };

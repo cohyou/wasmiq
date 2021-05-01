@@ -71,9 +71,10 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 } else {
                     self.context.tables.push(None);
                 }
+                tokens.push(t);
 
                 let mut importdesc = self.scan_simple_list()?;
-                let rparen_import = self.lexer.next_token()?;
+                let rparen_import = self.lexer.next_token()?;dbg!(&rparen_import);
                 importdesc.push(rparen_import);
                 tokens.extend(importdesc);
             },
@@ -86,6 +87,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 } else {
                     self.context.mems.push(None);
                 }
+                tokens.push(t);
 
                 let mut importdesc = self.scan_simple_list()?;
                 let rparen_import = self.lexer.next_token()?;
