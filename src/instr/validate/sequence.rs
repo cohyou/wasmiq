@@ -18,9 +18,6 @@ use super::{
 impl Expr {
     pub fn validate(&self, context: &Context) -> Result<ResultType, Error> {
         let functype = Instr::validate_instr_sequence(context, &self.0)?;
-        if functype.0.0.len() > 0 {
-            return Err(Error::Invalid("Expr::validate functype.0.0.len() > 0".to_owned()));
-        }
         Ok(ResultType(functype.1.0))
     }
 

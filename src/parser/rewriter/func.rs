@@ -122,6 +122,7 @@ impl<R> Rewriter<R> where R: Read + Seek {
                 let typeidx = self.add_typeidx();
                 self.funcs.extend(typeidx);
                 self.funcs.push(rparen);
+                self.precedings.push_back(token2);
             },
             tk!(TokenKind::Empty) => {},
             _ => self.push_others_first(header, token1, token2),
@@ -575,3 +576,10 @@ fn test_rewrite_func_export2() {
     );
 }
 
+#[test]
+fn test_rewrite_multi_func() {
+    assert_eq_rewrite(
+        r#"(func) (func (export "main") (result i32))"#, 
+        r#""#
+    );
+}

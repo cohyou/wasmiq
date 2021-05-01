@@ -170,6 +170,12 @@ fn test_wast_file_memory_grow() {
     assert_eq!(invoke_file_assert_eq(file_name, 0), Some(vec![]));
 }
 
+#[test]
+fn test_wast_file_index() {
+    let file_name = "./wast/index.wat";
+    assert_eq!(invoke_file_assert_eq(file_name, 2), Some(vec![Val::I32Const(5)]));
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;

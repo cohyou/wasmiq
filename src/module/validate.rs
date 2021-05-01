@@ -215,13 +215,22 @@ impl Func {
         new_context.rtn = Some(functype.1.clone());
 
         let expr_result_type = self.body.validate(&new_context)?;
-        if expr_result_type.0 != functype.1 {
+        if !Self::match_resulttype(&expr_result_type.0, &functype.1) {
             let message = format!("Func{:?} has return type {:?} but {:?} occured", 
                 self.tp, functype.1, expr_result_type.0);
             return Err(Error::Invalid(message));
         }
 
         Ok(functype)
+    }
+
+    pub fn match_resulttype(ft1: &Vec<ValType>, ft2: &Vec<ValType>) -> bool {
+        if ft1 == &vec![ValType::Ellipsis] || 
+           ft2 == &vec![ValType::Ellipsis] {
+            true
+        } else {
+            ft1 == ft2
+        }
     }
 }
 

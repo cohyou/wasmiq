@@ -13,6 +13,7 @@ use crate::{
     Error,
     Context,
     MemArg,
+    Func,
 };
 use super::{
     BlockType,
@@ -449,12 +450,13 @@ impl Instr {
     }
 
     fn match_resulttype(rt1: &ResultType, rt2: &ResultType) -> bool {
-        if rt1.0 == vec![ValType::Ellipsis] || 
-           rt2.0 == vec![ValType::Ellipsis] {
-            true
-        } else {
-            rt1 == rt2
-        }
+        Func::match_resulttype(&rt1.0, &rt2.0)
+        // if rt1.0 == vec![ValType::Ellipsis] || 
+        //    rt2.0 == vec![ValType::Ellipsis] {
+        //     true
+        // } else {
+        //     rt1 == rt2
+        // }
     }
 
     fn check_type(context: &Context, typeidx: &TypeIdx, opname: &str) -> Result<FuncTypeOriginal, Error> {
