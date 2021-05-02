@@ -59,7 +59,6 @@ pub fn lex_string(&mut self) -> LexResult {
                         }
 
                         if let Some(c) = std::char::from_u32(hexnum) {
-                            dbg!(c);
                             let mut res = String::from_utf8(string.to_vec())?;
                             res.push(c);
                             string = res.bytes().collect();
