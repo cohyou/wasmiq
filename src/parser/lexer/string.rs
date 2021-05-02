@@ -27,7 +27,7 @@ pub fn lex_string(&mut self) -> LexResult {
                         self.loc.add_pos();
 
                         // hexnum
-                        let mut hexnum: u32 = 0;
+                        let mut hexnum;
 
                         string_c = self.read()?;
                         self.loc.add_pos();
@@ -59,6 +59,7 @@ pub fn lex_string(&mut self) -> LexResult {
                         }
 
                         if let Some(c) = std::char::from_u32(hexnum) {
+                            dbg!(c);
                             let mut res = String::from_utf8(string.to_vec())?;
                             res.push(c);
                             string = res.bytes().collect();
@@ -148,6 +149,17 @@ pub fn lex_string(&mut self) -> LexResult {
 #[test]
 fn test_escaped_char() {
     let s = r#""\48\65\6c\6c\6f""#;
+    read_char(s);
+}
+
+#[test]
+fn test_escaped_unicode_char() {
+    let s = r#""the\u{2464}""#;
+    read_char(s);
+}
+
+#[allow(dead_code)]
+fn read_char(s: &str) {
     use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let reader = BufReader::new(cursor);

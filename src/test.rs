@@ -228,6 +228,7 @@ fn test_wast_file_string() {
 }
 
 #[test]
+#[ignore]
 fn test_wast_file_string_data() {
     let file_name = "./wast/string-data.wat";
     assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
