@@ -199,7 +199,7 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
                 },
 
                 // b"mul" => Some(Instr::IBinOp(vs, IBinOp::Mul)),
-                // b"and" => Some(Instr::IBinOp(vs, IBinOp::And)),
+                b"and" => Some(Instr::IBinOp(vs, IBinOp::And)),
                 b"or" => Some(Instr::IBinOp(vs, IBinOp::Or)),
                 b"xor" => Some(Instr::IBinOp(vs, IBinOp::Xor)),
                 b"shl" => Some(Instr::IBinOp(vs, IBinOp::Shl)),
@@ -237,7 +237,20 @@ fn vec_to_instr(s: &[u8]) -> Option<Instr> {
 
                 _ => {
                     let instr_tokens: Vec<&[u8]> = instr.split(|&b| b == b'_').collect();
-                    let sign = vec_to_valsign(instr_tokens[1]).unwrap();
+
+                    let sign = 
+                    if let Some(instr_token) = instr_tokens.get(1) {
+                        if let Some(sign) = vec_to_valsign(instr_token) {
+                            sign
+                        } else {
+                            let _ = dbg!(String::from_utf8(s.to_vec()));
+                            return None;
+                        }
+                    } else {
+                        let _ = dbg!(String::from_utf8(s.to_vec()));
+                        return None;
+                    };
+
                     match instr_tokens[0] {
                         b"load8" => Some(Instr::ILoad8(vs, sign, memarg)),
                         b"load16" => Some(Instr::ILoad16(vs, sign, memarg)),
