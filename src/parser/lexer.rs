@@ -213,7 +213,7 @@ fn lex_bytes(&mut self, frag: &[u8]) -> Result<(), LexError> {
     Ok(())
 }
 
-pub(super) fn lex_number(&mut self, sign: u8, begin: Loc) -> LexResult {
+pub fn lex_number(&mut self, sign: u8, begin: Loc) -> LexResult {
     match self.current {
         b'i' => {
             self.loc.add_pos();
@@ -261,12 +261,12 @@ pub(super) fn lex_number(&mut self, sign: u8, begin: Loc) -> LexResult {
                     b'7' => { self.loc.add_pos(); hexnum = hexnum * 16 + 7; },
                     b'8' => { self.loc.add_pos(); hexnum = hexnum * 16 + 8; },
                     b'9' => { self.loc.add_pos(); hexnum = hexnum * 16 + 9; },
-                    b'A' => { self.loc.add_pos(); hexnum = hexnum * 16 + 10; },
-                    b'B' => { self.loc.add_pos(); hexnum = hexnum * 16 + 11; },
-                    b'C' => { self.loc.add_pos(); hexnum = hexnum * 16 + 12; },
-                    b'D' => { self.loc.add_pos(); hexnum = hexnum * 16 + 13; },
-                    b'E' => { self.loc.add_pos(); hexnum = hexnum * 16 + 14; },
-                    b'F' => { self.loc.add_pos(); hexnum = hexnum * 16 + 15; },
+                    b'A' | b'a' => { self.loc.add_pos(); hexnum = hexnum * 16 + 10; },
+                    b'B' | b'b' => { self.loc.add_pos(); hexnum = hexnum * 16 + 11; },
+                    b'C' | b'c' => { self.loc.add_pos(); hexnum = hexnum * 16 + 12; },
+                    b'D' | b'd' => { self.loc.add_pos(); hexnum = hexnum * 16 + 13; },
+                    b'E' | b'e' => { self.loc.add_pos(); hexnum = hexnum * 16 + 14; },
+                    b'F' | b'f' => { self.loc.add_pos(); hexnum = hexnum * 16 + 15; },
                     0xFF => return Err(LexError::eof(self.loc)),
                     _ => break,                
                 }
