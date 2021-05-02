@@ -6,7 +6,7 @@ fn test_invoke() {
     (type (func (result i32)))
     (func $const (export "val42") (type 0) (result i32) i32.const 42)
     "#;
-    assert_eq!(invoke_assert_eq(s, vec![]), Some(vec![Val::I32Const(42)]));
+    assert_eq!(invoke_assert_eq(s, vec![], vec![]), Some(vec![Val::I32Const(42)]));
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn test_invoke2() {
     (type (func (result i32)))
     (func $const (export "addtest") (type 0) (result i32) i32.const 42 i32.const 42 i32.add)
     "#;
-    assert_eq!(invoke_assert_eq(s, vec![]), Some(vec![Val::I32Const(84)]));
+    assert_eq!(invoke_assert_eq(s, vec![], vec![]), Some(vec![Val::I32Const(84)]));
 }
 
 #[test]
@@ -29,7 +29,7 @@ fn test_invoke3() {
         i32.const 1 
         i32.sub)
     "#;
-    assert_eq!(invoke_assert_eq(s, vec![]), Some(vec![Val::I32Const(199)]));
+    assert_eq!(invoke_assert_eq(s, vec![], vec![]), Some(vec![Val::I32Const(199)]));
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_invoke4() {
     (func $const (export "calctest") (type 0) (result i32)
         (i32.sub (i32.add (i32.const 100) (i32.const 50)) (i32.const 1)))
     "#;
-    assert_eq!(invoke_assert_eq(s, vec![]), Some(vec![Val::I32Const(149)]));
+    assert_eq!(invoke_assert_eq(s, vec![], vec![]), Some(vec![Val::I32Const(149)]));
 }
 
 #[test]
@@ -100,98 +100,98 @@ fn test_wast_file() {
 fn test_wast_file_3_3() {
     let file_name = "./wast/3-3.wat";
     // show_file_parse_result(file_name);
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_instruction_type() {
     let file_name = "./wast/instruction-type.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_function() {
     let file_name = "./wast/function.wat";
     // show_file_parse_result(file_name);
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_condition_blocktype() {
     let file_name = "./wast/condition-blocktype.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(132)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(132)]));
 }
 
 #[test]
 fn test_wast_file_loop() {
     let file_name = "./wast/loop.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(8)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(8)]));
 }
 
 #[test]
 fn test_wast_file_block() {
     let file_name = "./wast/block.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(8)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(8)]));
 }
 
 #[test]
 fn test_wast_file_global() {
     let file_name = "./wast/global.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(3)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(3)]));
 }
 
 #[test]
 fn test_wast_file_condition() {
     let file_name = "./wast/condition.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(132)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(132)]));
 }
 
 #[test]
 fn test_wast_file_return() {
     let file_name = "./wast/return.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 2, vec![]), Some(vec![Val::I32Const(10512)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 2, vec![], vec![]), Some(vec![Val::I32Const(10512)]));
 }
 
 #[test]
 fn test_wast_file_fibonacci() {
     let file_name = "./wast/fibonacci.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(6765)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(6765)]));
 }
 
 #[test]
 fn test_wast_file_fibonacci_memo() {
     let file_name = "./wast/fibonacci-memo.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 3, vec![]), Some(vec![Val::I32Const(832040)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 3, vec![], vec![]), Some(vec![Val::I32Const(832040)]));
 }
 
 #[test]
 fn test_wast_file_memory_grow() {
     let file_name = "./wast/memory-grow.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_index() {
     let file_name = "./wast/index.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 2, vec![]), Some(vec![Val::I32Const(5)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 2, vec![], vec![]), Some(vec![Val::I32Const(5)]));
 }
 
 #[test]
 fn test_wast_file_type() {
     let file_name = "./wast/type.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![Val::I32Const(1)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![Val::I32Const(1)]));
 }
 
 #[test]
 fn test_wast_file_table_abs() {
     let file_name = "./wast/table-abs.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 3, vec![]), Some(vec![Val::I32Const(10)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 3, vec![], vec![]), Some(vec![Val::I32Const(10)]));
 }
 
 #[test]
 fn test_wast_file_export() {
     let file_name = "./wast/export.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![Val::I32Const(1)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![Val::I32Const(1)]));
 }
 
 #[test]
@@ -204,52 +204,53 @@ fn test_wast_file_import() {
         ExternVal::Mem(0),
         ExternVal::Global(0),
     ];
-    assert_eq!(invoke_file_assert_eq(file_name, 1, externvals), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, externvals, vec![]), Some(vec![]));
 }
 
 #[test]
 #[ignore]
 fn test_wast_file_link_abs_definition() {
     let file_name = "./wast/link-abs-definition.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 #[ignore]
 fn test_wast_file_link_abs_call() {
     let file_name = "./wast/link-abs-call.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
+#[ignore]
 fn test_wast_file_string() {
     let file_name = "./wast/string.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 #[ignore]
 fn test_wast_file_string_data() {
     let file_name = "./wast/string-data.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_start() {
     let file_name = "./wast/start.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), Some(vec![]));
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), Some(vec![]));
 }
 
 #[test]
 fn test_wast_file_trap() {
     let file_name = "./wast/trap.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![]), None);
+    assert_eq!(invoke_file_assert_eq(file_name, 0, vec![], vec![]), None);
 }
 
 #[test]
 fn test_wast_file_folded_abs() {
     let file_name = "./wast/folded-abs.wat";
-    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![]), Some(vec![Val::I32Const(132)]));
+    assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(132)]));
 }
 
 #[allow(dead_code)]
@@ -296,8 +297,8 @@ fn show_parse_result(s: &str) -> Result<(), Error> {
 }
 
 #[allow(dead_code)]
-fn invoke_assert_eq(s: &str, externvals: Vec<ExternVal>) -> Option<Vec<Val>> {
-    match invoke(s, externvals) {
+fn invoke_assert_eq(s: &str, externvals: Vec<ExternVal>, vals: Vec<Val>) -> Option<Vec<Val>> {
+    match invoke(s, externvals, vals) {
         Ok(vals) => Some(vals),
         Err(err) => {
             println!("error: {:?}", err);
@@ -308,14 +309,14 @@ fn invoke_assert_eq(s: &str, externvals: Vec<ExternVal>) -> Option<Vec<Val>> {
 }
 
 #[allow(dead_code)]
-fn invoke(s: &str, externvals: Vec<ExternVal>) -> Result<Vec<Val>, Error> {
+fn invoke(s: &str, externvals: Vec<ExternVal>, vals: Vec<Val>) -> Result<Vec<Val>, Error> {
     use std::io::{Cursor, BufReader};
     let cursor = Cursor::new(s);
     let mut reader = BufReader::new(cursor);
     let module = module_parse(&mut reader)?;
     let mut store = store_init();
     let _moduleinst = module_instanciate(&mut store, module, externvals)?;
-    let vals = func_invoke(&mut store, 0, vec![])?;
+    let vals = func_invoke(&mut store, 0, vals)?;
     p!(store.funcs);
     p!(store.tables);
     p!(store.mems);
@@ -325,8 +326,8 @@ fn invoke(s: &str, externvals: Vec<ExternVal>) -> Result<Vec<Val>, Error> {
 }
 
 #[allow(dead_code)]
-fn invoke_file_assert_eq(file_name: &str, idx: usize, externvals: Vec<ExternVal>) -> Option<Vec<Val>> {
-    match invoke_file(file_name, idx, externvals) {
+fn invoke_file_assert_eq(file_name: &str, idx: usize, externvals: Vec<ExternVal>, vals: Vec<Val>) -> Option<Vec<Val>> {
+    match invoke_file(file_name, idx, externvals, vals) {
         Ok(vals) => Some(vals),
         Err(err) => {
             println!("error: {:?}", err);
@@ -337,7 +338,7 @@ fn invoke_file_assert_eq(file_name: &str, idx: usize, externvals: Vec<ExternVal>
 }
 
 #[allow(dead_code)]
-fn invoke_file(file_name: &str, idx: usize, externvals: Vec<ExternVal>) -> Result<Vec<Val>, Error> {
+fn invoke_file(file_name: &str, idx: usize, externvals: Vec<ExternVal>, vals: Vec<Val>) -> Result<Vec<Val>, Error> {
     use std::fs::File;
     use std::io::{BufReader};
     let f = File::open(file_name).unwrap();
@@ -349,7 +350,7 @@ fn invoke_file(file_name: &str, idx: usize, externvals: Vec<ExternVal>) -> Resul
     // p!(store.tables);
     // p!(store.mems);
     // p!(store.globals);
-    let vals = func_invoke(&mut store, idx, vec![])?;
+    let vals = func_invoke(&mut store, idx, vals)?;
 
     Ok(vals)
 }

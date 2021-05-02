@@ -23,8 +23,8 @@ impl<'a> Thread<'a> {
     }
 
     pub fn execute_instrs(&mut self, instrs: &Vec<Instr>) -> ExecResult {
-        for (_i, instr) in instrs.iter().enumerate() {
-            // p!((i, instr));
+        for (i, instr) in instrs.iter().enumerate() {
+            p!((i, instr));
             match self.execute_instr(instr) {
                 ExecResult::Vals(vals) => {
                     let vals: Vec<StackEntry> = vals.iter()
@@ -47,7 +47,7 @@ impl<'a> Thread<'a> {
                     }
                 }
             }
-            // p!(self.stack);
+            p!(self.stack);
         }
 
         let mut vals = vec![];

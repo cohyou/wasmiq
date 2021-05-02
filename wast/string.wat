@@ -43,4 +43,10 @@
             end
         end
     )
+
+    (func (export "main")
+        i32.const 0
+        i32.const 88
+        call 0
+    )
 )

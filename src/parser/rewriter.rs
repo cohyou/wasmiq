@@ -565,8 +565,8 @@ fn test_import() {
                 call $plusOne
             )
         )
-        "#, 
-        r#""#
+        "#,
+        r#"(module (import "myModule" "plusOne" (func $plusOne (type <#:gensym(0)>) (param i32) (result i32))) (import "myModule" "table" (table 1 funcref)) (import "myModule" "memory" (memory 1)) (import "myModule" "global" (global $import_global (mut i32))) (func <#:gensym(1)> (type <#:gensym(2)>) (result i32) GlobalGet(0) $import_global Call(0) $plusOne) (export "main" (func <#:gensym(1)>)))"#
     );
 }
 
