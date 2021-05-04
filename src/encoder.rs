@@ -16,8 +16,8 @@ pub fn module_encode(module: &Module) -> std::io::Result<()> {
 
 fn module2wasm(module: &Module) -> Vec<Byte> {
     [
-        b"\0asm".to_vec(),
-        vec![0x01, 0x00, 0x00, 0x00],
+        0x0061736Du32.to_le_bytes().to_vec(),
+        0x01000000u32.to_le_bytes().to_vec(),
         typesection2wasm(&module.types),
         importsection2wasm(&module.imports),
         funcsection2wasm(&module.funcs),

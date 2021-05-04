@@ -253,6 +253,18 @@ fn test_wast_file_folded_abs() {
     assert_eq!(invoke_file_assert_eq(file_name, 1, vec![], vec![]), Some(vec![Val::I32Const(132)]));
 }
 
+#[test]
+fn test_compile() {
+    let s = r#"(module)"#;
+    use std::io::{Cursor, BufReader};
+    let cursor = Cursor::new(s);
+    let mut reader = BufReader::new(cursor);
+    if let Ok(module) = module_parse(&mut reader) {
+        if let Ok(()) = module_encode(&module) {
+        }
+    }
+}
+
 #[allow(dead_code)]
 fn show_file_parse_result(file_name: &str) {
     use std::fs::File;
