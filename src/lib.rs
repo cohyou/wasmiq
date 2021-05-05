@@ -155,6 +155,8 @@ use runtime::{
     MemInst,
     ExportInst,
     ExecResult,
+    signed32,
+    signed64,
 };
 
 mod decoder;

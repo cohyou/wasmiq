@@ -5,6 +5,10 @@ use std::fs::OpenOptions;
 use super::*;
 use instr::*;
 // use context::*;
+use crate::{
+    signed32,
+    signed64,
+};
 
 type Byte = u8;
 
@@ -259,15 +263,15 @@ fn localidx2wasm(idx: &LocalIdx) -> Vec<Byte> { unsigned32_to_wasm(*idx) }
 fn labelidx2wasm(idx: &LabelIdx) -> Vec<Byte> { unsigned32_to_wasm(*idx) }
 
 fn expr2wasm(expr: &Expr) -> Vec<Byte> {
-    instrs2wasm(&expr.0)
-}
-
-fn instrs2wasm(instrs: &Vec<Instr>) -> Vec<Byte> {
     [
-        instrs.iter().map(instr2wasm).collect::<Vec<Vec<Byte>>>().concat(),
+        instrs2wasm(&expr.0),
         vec![0x0B],
     ]
     .concat()
+}
+
+fn instrs2wasm(instrs: &Vec<Instr>) -> Vec<Byte> {
+    instrs.iter().map(instr2wasm).collect::<Vec<Vec<Byte>>>().concat()
 }
 
 fn instr2wasm(instr: &Instr) -> Vec<Byte> {
@@ -339,8 +343,8 @@ fn instr2wasm(instr: &Instr) -> Vec<Byte> {
         Instr::MemorySize => vec![0x3F, 0x00],
         Instr::MemoryGrow => vec![0x40, 0x00],
 
-        Instr::I32Const(n) => [vec![0x41], unsigned32_to_wasm(*n)].concat(),
-        Instr::I64Const(n) => [vec![0x42], unsigned64_to_wasm(*n)].concat(),
+        Instr::I32Const(n) => [vec![0x41], signed32_to_wasm(signed32(n.clone()))].concat(),
+        Instr::I64Const(n) => [vec![0x42], signed64_to_wasm(signed64(n.clone()))].concat(),
         Instr::F32Const(n) => [vec![0x43], n.to_bits().to_le_bytes().to_vec()].concat(),
         Instr::F64Const(n) => [vec![0x44], n.to_bits().to_le_bytes().to_vec()].concat(),
 
@@ -701,22 +705,65 @@ fn unsigned32_to_leb128(n: u32) -> Vec<Byte> {
     }
 }
 
-fn unsigned64_to_wasm(n: u64) -> Vec<Byte> {
-    unsigned64_to_leb128(n)
+fn signed32_to_wasm(n: i32) -> Vec<Byte> {
+    signed32_to_leb128(n)
 }
 
-fn unsigned64_to_leb128(n: u64) -> Vec<Byte> {
+fn signed32_to_leb128(n: i32) -> Vec<Byte> {
     let mut encoded = vec![];
-    let mut n_u64 = n;
+    let mut n_u32 = n;
     loop {
         // println!("{:#32b}", n_u32);
-        let b = n_u64 & 0x000000000000007F;
-        if b == n_u64 {
+        let b = n_u32 & 0x0000007F;
+        n_u32 >>= 7;
+        if (n_u32 == 0 && (b & 0x40) == 0) ||
+           (n_u32 == -1 && (b & 0x40) != 0) {
             encoded.push(b as Byte);
             return encoded;
         } else {
             encoded.push((b as Byte) + 0x80);
-            n_u64 >>= 7;
+            // n_u32 >>= 7;
+        }
+    }
+}
+
+// fn unsigned64_to_wasm(n: u64) -> Vec<Byte> {
+//     unsigned64_to_leb128(n)
+// }
+
+// fn unsigned64_to_leb128(n: u64) -> Vec<Byte> {
+//     let mut encoded = vec![];
+//     let mut n_u64 = n;
+//     loop {
+//         // println!("{:#32b}", n_u32);
+//         let b = n_u64 & 0x000000000000007F;
+//         if b == n_u64 {
+//             encoded.push(b as Byte);
+//             return encoded;
+//         } else {
+//             encoded.push((b as Byte) + 0x80);
+//             n_u64 >>= 7;
+//         }
+//     }
+// }
+
+fn signed64_to_wasm(n: i64) -> Vec<Byte> {
+    signed64_to_leb128(n)
+}
+
+fn signed64_to_leb128(n: i64) -> Vec<Byte> {
+    let mut encoded = vec![];
+    let mut n_u64 = n;
+    loop {
+        let b = n_u64 & 0x000000000000007F;
+        n_u64 >>= 7;
+        if (n_u64 == 0 && (b & 0x40) == 0) ||
+           (n_u64 == -1 && (b & 0x40) != 0) {
+            encoded.push(b as Byte);
+            return encoded;
+        } else {
+            encoded.push((b as Byte) + 0x80);
+            // n_u64 >>= 7;
         }
     }
 }
@@ -780,4 +827,9 @@ fn test_write_unsigned32_to_leb128() {
     use std::fs::File;
     let mut file = File::create("wasm/_.wasm2").unwrap();
     file.write_all(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
+}
+
+#[test]
+fn test_encode_signed_leb128() {
+    assert_eq!(signed32_to_leb128(100), vec![0xE4, 0x00]);
 }
