@@ -255,11 +255,12 @@ fn test_wast_file_folded_abs() {
 
 #[test]
 fn test_compile() {
-    let s = r#"(module)"#;
-    use std::io::{Cursor, BufReader};
-    let cursor = Cursor::new(s);
-    let mut reader = BufReader::new(cursor);
+    use std::fs::File;
+    use std::io::BufReader;
+    let f = File::open("wast/compile.wat").unwrap();
+    let mut reader = BufReader::new(f);
     if let Ok(module) = module_parse(&mut reader) {
+        dbg!(&module);
         if let Ok(()) = module_encode(&module) {
         }
     }

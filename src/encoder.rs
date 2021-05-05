@@ -1,6 +1,6 @@
-use std::fs::File;
 use std::io::prelude::*;
 use std::convert::TryInto;
+use std::fs::OpenOptions;
 
 use super::*;
 use instr::*;
@@ -9,15 +9,34 @@ use instr::*;
 type Byte = u8;
 
 pub fn module_encode(module: &Module) -> std::io::Result<()> {
-    let mut file = File::create("wasm/_.wasm")?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("wasm/_.wasm")?;
+    // file.write_all(&to_le(module2wasm(&module)))?;
     file.write_all(&module2wasm(&module))?;
     Ok(())
 }
 
+// fn to_le(bytes: Vec<Byte>) -> Vec<Byte> {
+//     let mut result = vec![];
+//     let iter = bytes.chunks_exact(4);
+//     for bs in iter.clone() {
+//         result.extend(vec![bs[3], bs[2], bs[1], bs[0]]);
+//     }
+
+//     if iter.remainder().len() > 0 {
+//         result.extend(vec![0x00; 4 - iter.remainder().len()]);
+//         result.extend(iter.remainder());
+//     }
+
+//     result
+// } 
+
 fn module2wasm(module: &Module) -> Vec<Byte> {
     [
-        0x0061736Du32.to_le_bytes().to_vec(),
-        0x01000000u32.to_le_bytes().to_vec(),
+        0x0061736Du32.to_be_bytes().to_vec(),
+        0x01000000u32.to_be_bytes().to_vec(),
         typesection2wasm(&module.types),
         importsection2wasm(&module.imports),
         funcsection2wasm(&module.funcs),
@@ -34,32 +53,61 @@ fn module2wasm(module: &Module) -> Vec<Byte> {
 }
 
 fn typesection2wasm(types: &Vec<FuncType>) -> Vec<Byte> {
-    section2wasm(1, vector2wasm(types.iter().map(functype2wasm).collect()))
+    if types.is_empty() {
+        vec![]
+    } else {
+        section2wasm(1, vector2wasm(types.iter().map(functype2wasm).collect()))  
+    }
 }
 
 fn importsection2wasm(imps: &Vec<Import>) -> Vec<Byte> {
-    section2wasm(2, vector2wasm(imps.iter().map(import2wasm).collect())) 
+    if imps.is_empty() {
+        vec![]
+    } else {
+        section2wasm(2, vector2wasm(imps.iter().map(import2wasm).collect())) 
+    }
 }
 
 fn funcsection2wasm(funcs: &Vec<Func>) -> Vec<Byte> {
-    let typeindices = funcs.iter().map(|f| &f.tp).map(typeidx2wasm).collect::<Vec<Vec<Byte>>>().concat();
-    section2wasm(3, bytevector2wasm(typeindices))
+    if funcs.is_empty() {
+        vec![]
+    } else {
+        let typeindices = funcs.iter().map(|f| &f.tp).map(typeidx2wasm).collect::<Vec<Vec<Byte>>>().concat();
+        section2wasm(3, bytevector2wasm(typeindices))
+    }
 }
 
 fn tablesection2wasm(tables: &Vec<Table>) -> Vec<Byte> {
-    section2wasm(4, vector2wasm(tables.iter().map(table2wasm).collect())) 
+    if tables.is_empty() {
+        vec![]
+    } else {
+        section2wasm(4, vector2wasm(tables.iter().map(table2wasm).collect())) 
+    }
 }
 
 fn memorysection2wasm(mems: &Vec<Mem>) -> Vec<Byte> {
-    section2wasm(5, vector2wasm(mems.iter().map(mem2wasm).collect()))
+    if mems.is_empty() {
+        vec![]
+    } else {
+        section2wasm(5, vector2wasm(mems.iter().map(mem2wasm).collect()))
+    }
 }
 
 fn globalsection2wasm(globals: &Vec<Global>) -> Vec<Byte> {
-    section2wasm(6, vector2wasm(globals.iter().map(global2wasm).collect()))
+    if globals.is_empty() {
+        vec![]
+    } else {
+        section2wasm(6, vector2wasm(globals.iter().map(global2wasm).collect()))
+    }
+    
 }
 
 fn exportsection2wasm(exps: &Vec<Export>) -> Vec<Byte> {
-    section2wasm(7, vector2wasm(exps.iter().map(export2wasm).collect())) 
+    if exps.is_empty() {
+        vec![]
+    } else {
+        section2wasm(7, vector2wasm(exps.iter().map(export2wasm).collect())) 
+    }
 }
 
 fn startsection2wasm(stt: &Option<Start>) -> Vec<Byte> {
@@ -71,15 +119,27 @@ fn startsection2wasm(stt: &Option<Start>) -> Vec<Byte> {
 }
 
 fn elementsection2wasm(elems: &Vec<Elem>) -> Vec<Byte> {
-    section2wasm(9, vector2wasm(elems.iter().map(elem2wasm).collect())) 
+    if elems.is_empty() {
+        vec![]
+    } else {
+        section2wasm(9, vector2wasm(elems.iter().map(elem2wasm).collect())) 
+    }
 }
 
 fn codesection2wasm(funcs: &Vec<Func>) -> Vec<Byte> {
-    section2wasm(10, vector2wasm(funcs.iter().map(code2wasm).collect())) 
+    if funcs.is_empty() {
+        vec![]
+    } else {
+        section2wasm(10, vector2wasm(funcs.iter().map(code2wasm).collect())) 
+    }
 }
-
+    
 fn datasection2wasm(data: &Vec<Data>) -> Vec<Byte> {
-    section2wasm(11, vector2wasm(data.iter().map(data2wasm).collect())) 
+    if data.is_empty() {
+        vec![]
+    } else {
+        section2wasm(11, vector2wasm(data.iter().map(data2wasm).collect())) 
+    }
 }
 
 fn import2wasm(imp: &Import) -> Vec<Byte> {
@@ -150,8 +210,8 @@ fn code2wasm(func: &Func) -> Vec<Byte> {
 
 fn func2wasm(func: &Func) -> Vec<Byte> {
     [
-        func.locals.iter().map(local2wasm)
-            .collect::<Vec<Vec<Byte>>>().concat(),
+        vector2wasm(func.locals.iter().map(local2wasm)
+            .collect::<Vec<Vec<Byte>>>()),
         expr2wasm(&func.body),
     ]
     .concat()
@@ -180,12 +240,14 @@ fn datastring2wasm(_ds: &Vec<Byte>) -> Vec<Byte> {
 }
 
 fn section2wasm(id: Byte, cont: Vec<Byte>) -> Vec<Byte> {
-    [
-        vec![id],
-        unsigned32_to_wasm(cont.len().try_into().unwrap()),
-        cont,
-    ]
-    .concat()
+
+        [
+            vec![id],
+            unsigned32_to_wasm(cont.len().try_into().unwrap()),
+            cont,
+        ]
+        .concat()
+
 }
 
 fn typeidx2wasm(idx: &TypeIdx) -> Vec<Byte> { unsigned32_to_wasm(*idx) }
@@ -711,4 +773,11 @@ fn test_unsigned32_to_leb128() {
     assert_eq!(unsigned32_to_leb128(0x7F), vec![0x7F]);
     assert_eq!(unsigned32_to_leb128(0x80), vec![0x80, 0x01]);
     assert_eq!(unsigned32_to_leb128(624485), vec![0xE5, 0x8E, 0x26]);
+}
+
+#[test]
+fn test_write_unsigned32_to_leb128() {
+    use std::fs::File;
+    let mut file = File::create("wasm/_.wasm2").unwrap();
+    file.write_all(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
 }
