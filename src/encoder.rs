@@ -634,11 +634,11 @@ fn functype2wasm(func: &FuncType) -> Vec<Byte> {
 
 fn blocktype2wasm(blocktype: &BlockType) -> Vec<Byte> {
     match blocktype {
-        BlockType::TypeIdx(_typeidx) => {
-            unimplemented!()
+        BlockType::TypeIdx(typeidx) => {
+            unsigned32_to_wasm(typeidx.clone())
         },
         BlockType::ValType(None) => {
-            vec![]
+            vec![0x40]
         },
         BlockType::ValType(Some(valtype)) => {
             vec![valtype2wasm(valtype)]
