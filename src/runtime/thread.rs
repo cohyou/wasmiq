@@ -354,6 +354,7 @@ impl<'a> Thread<'a> {
                                 &val.tp() == returntype
                             })
                         }
+                        
                         if validate_result_types(&vals, &returntypes) {
                             ExecResult::Vals(vals)
                         } else {
@@ -365,7 +366,7 @@ impl<'a> Thread<'a> {
                         }
                     },
                     Err(error) => {
-                        println!("hostfunc invoke error: {:?}", error);
+                        println!("hostfunc({}) invoke error: {:?}", funcaddr, error);
                         ExecResult::Vals(arg_vals)
                     },
                 }
