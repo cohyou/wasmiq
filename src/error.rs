@@ -10,4 +10,7 @@ pub enum Error {
     Mutability(String),
     PreCondition(String),
     OnParse(ParseError),
+    LackOfArgs(String),
+    InvalidTypeOfArgs(String),
+    InvalidTypeOfResult(String),
 }

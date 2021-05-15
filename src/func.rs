@@ -11,7 +11,7 @@ use crate::{
     alloc_hostfunc,
 };
 
-pub fn func_alloc(store: &mut Store, functype: FuncType, hostfunc: fn()) -> FuncAddr {
+pub fn func_alloc(store: &mut Store, functype: FuncType, hostfunc: fn(&mut Store, Vec<Val>) -> Result<Vec<Val>, Error>) -> FuncAddr {
     alloc_hostfunc(store, functype, hostfunc)
 }
 

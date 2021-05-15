@@ -324,9 +324,51 @@ impl<'a> Thread<'a> {
                 ExecResult::Vals(vals)
             },
             FuncInst::Host(hostfunc) => {
-                let f = hostfunc.hostcode;
-                f();
-                unimplemented!()
+                let (argtypes, returntypes) = hostfunc.tp;
+                if self.stack.len() < argtypes.len() {
+                    let message = format!("invoking host function({})", funcaddr);
+                    return ExecResult::Trap(Error::LackOfArgs(message));
+                }
+                let start_index = self.stack.len() - argtypes.len();
+                let mut arg_entries = self.stack.drain(start_index..);
+                if !arg_entries.all(|entry| entry.is_value()) {
+                    let message = format!("invoking host function({})", funcaddr);
+                    return ExecResult::Trap(Error::InvalidTypeOfArgs(message));
+                }
+                let args = arg_entries.map(|entry| {
+                    if let StackEntry::Value(val) = entry {
+                        val
+                    } else {
+                        unreachable!()
+                    }
+                });
+                let hostfunc = hostfunc.hostcode;
+                let arg_vals = args.collect::<Vec<Val>>();
+                let exec_result = hostfunc(self.store, arg_vals.clone());
+                match exec_result {
+                    Ok(vals) => {
+                        fn validate_result_types(vals: &Vec<Val>, returntypes: &Vec<ValType>) -> bool {
+                            if vals.len() != returntypes.len() { return false; }
+                            vals.into_iter().zip(returntypes.into_iter())
+                                .all(|(val, returntype)| {
+                                &val.tp() == returntype
+                            })
+                        }
+                        if validate_result_types(&vals, &returntypes) {
+                            ExecResult::Vals(vals)
+                        } else {
+                            let message = format!(
+                                "vals: {:?} returntypes: {:?} invoking host function({})", 
+                                vals, returntypes, funcaddr
+                            );
+                            ExecResult::Trap(Error::InvalidTypeOfResult(message))
+                        }
+                    },
+                    Err(error) => {
+                        println!("hostfunc invoke error: {:?}", error);
+                        ExecResult::Vals(arg_vals)
+                    },
+                }
             },
         }
     }

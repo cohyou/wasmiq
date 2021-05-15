@@ -34,6 +34,7 @@ use crate::{
     Func,
     Instr,
     Error,
+    ValType,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -42,6 +43,17 @@ pub enum Val {
     I64Const(u64),
     F32Const(f32),
     F64Const(f64),
+}
+
+impl Val {
+    fn tp(&self) -> ValType {
+        match self {
+            Val::I32Const(_) => ValType::I32,
+            Val::I64Const(_) => ValType::I64,
+            Val::F32Const(_) => ValType::F32,
+            Val::F64Const(_) => ValType::F64,
+        }
+    }
 }
 
 impl Debug for Val {
@@ -103,7 +115,7 @@ impl FuncInst {
     pub fn user(tp: FuncType, module: ModuleInst, code: Func) -> FuncInst {
         FuncInst::User(UserFuncInst {tp, module, code})
     }
-    pub fn host(tp: FuncType, hostcode: fn()) -> FuncInst {
+    pub fn host(tp: FuncType, hostcode: fn(&mut Store, Vec<Val>) -> Result<Vec<Val>, Error>) -> FuncInst {
         FuncInst::Host(HostFuncInst {tp, hostcode})
     }
 }
@@ -115,10 +127,16 @@ pub struct UserFuncInst {
     code: Func,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct HostFuncInst {
     pub tp: FuncType,
-    pub hostcode: fn(),
+    pub hostcode: fn(store: &mut Store, args: Vec<Val>) -> Result<Vec<Val>, Error>,
+}
+
+impl Debug for HostFuncInst {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "hostfunc type: {:?}", self.tp)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -158,6 +176,11 @@ pub enum StackEntry {
     Value(Val),
     Label(u32, Vec<Instr>),
     Activation(u32, Frame),
+}
+impl StackEntry {
+    fn is_value(&self) -> bool {
+        if let StackEntry::Value(_) = self { true } else { false }
+    }
 }
 
 use std::fmt::Debug;

@@ -372,7 +372,7 @@ fn alloc_func(store: &mut Store, func: &Func, moduleinst: &ModuleInst) -> FuncAd
     addr
 }
 
-pub fn alloc_hostfunc(store: &mut Store, functype: FuncType, hostfunc: fn()) -> FuncAddr {
+pub fn alloc_hostfunc(store: &mut Store, functype: FuncType, hostfunc: fn(&mut Store, Vec<Val>) -> Result<Vec<Val>, Error>) -> FuncAddr {
     let addr = store.funcs.len();
     let funcinst = FuncInst::host(functype, hostfunc);
     store.funcs.push(funcinst);
