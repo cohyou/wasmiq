@@ -176,3 +176,5 @@ pub use encoder::{
 };
 
 mod test;
+
+mod wasi;
