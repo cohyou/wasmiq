@@ -35,6 +35,8 @@ use crate::wasi::{
 fn args_get(argv: *mut *mut u8, argv_buf: *mut u8) -> Result<(), Errno> { unimplemented!() }
 
 /// Return command-line argument data sizes.
+///
+/// Returns the number of arguments and the size of the argument string data, or an error.
 fn args_sizes_get() -> Result<(Size, Size), Errno> { unimplemented!() }
 
 /// Read environment variable data.
@@ -43,15 +45,21 @@ fn args_sizes_get() -> Result<(Size, Size), Errno> { unimplemented!() }
 fn environ_get(environ: *mut *mut u8, environ_buf: *mut u8) -> Result<(), Errno> { unimplemented!() }
 
 /// Return environment variable data sizes.
+/// 
+/// Returns the number of environment variable arguments and the size of the environment variable data.
 fn environ_sizes_get() -> Result<(Size, Size), Errno> { unimplemented!() }
 
 /// Return the resolution of a clock. 
 /// Implementations are required to provide a non-zero value for supported clocks. 
 /// For unsupported clocks, return errno::inval. 
 /// Note: This is similar to clock_getres in POSIX.
+/// 
+/// The resolution of the clock, or an error if one happened.
 fn clock_res_get(id: Clockid) -> Result<Timestamp, Errno> { unimplemented!() }
 
 /// Return the time value of a clock. Note: This is similar to clock_gettime in POSIX.
+/// 
+/// The time value of the clock.
 fn clock_time_get(id: Clockid, precision: Timestamp) -> Result<Timestamp, Errno> { unimplemented!() }
 
 /// Provide file advisory information on a file descriptor. 
@@ -72,6 +80,8 @@ fn fd_datasync(fd: Fd) -> Result<(), Errno> { unimplemented!() }
 
 /// Get the attributes of a file descriptor. 
 /// Note: This returns similar flags to fsync(fd, F_GETFL) in POSIX, as well as additional fields.
+/// 
+/// The buffer where the file descriptor's attributes are stored.
 fn fd_fdstat_get(fd: Fd) -> Result<Fdstat, Errno> { unimplemented!() }
 
 /// Adjust the flags associated with a file descriptor. 
@@ -83,6 +93,8 @@ fn fd_fdstat_set_flags(fd: Fd, flags: Fdflags) -> Result<(), Errno> { unimplemen
 fn fd_fdstat_set_rights(fd: Fd, fs_rights_base: Rights, fs_rights_inheriting: Rights) -> Result<(), Errno> { unimplemented!() }
 
 /// Return the attributes of an open file.
+/// 
+/// The buffer where the file's attributes are stored.
 fn fd_filestat_get(fd: Fd) -> Result<Filestat, Errno> { unimplemented!() }
 
 /// Adjust the size of an open file. 
@@ -96,9 +108,13 @@ fn fd_filestat_set_times(fd: Fd, atim: Timestamp, mtim: Timestamp, fst_flags: Fs
 
 /// Read from a file descriptor, without using and updating the file descriptor's offset. 
 /// Note: This is similar to preadv in POSIX.
+/// 
+/// The number of bytes read.
 fn fd_pread(fd: Fd, iovs: IovecArray, offset: Filesize) -> Result<Size, Errno> { unimplemented!() }
 
 /// Return a description of the given preopened file descriptor.
+/// 
+/// The buffer where the description is stored.
 fn fd_prestat_get(fd: Fd) -> Result<Prestat, Errno> { unimplemented!() }
 
 /// Return a description of the given preopened file descriptor.
@@ -106,10 +122,14 @@ fn fd_prestat_dir_name(fd: Fd, path: *mut u8, path_len: Size) -> Result<(), Errn
 
 /// Write to a file descriptor, without using and updating the file descriptor's offset. 
 /// Note: This is similar to pwritev in POSIX.
+/// 
+/// The number of bytes written.
 fn fd_pwrite(fd: Fd, iovs: CiovecArray, offset: Filesize) -> Result<Size, Errno> { unimplemented!() }
 
 /// Read from a file descriptor. 
 /// Note: This is similar to readv in POSIX.
+/// 
+/// The number of bytes read.
 fn fd_read(fd: Fd, iovs: IovecArray) -> Result<Size, Errno> { unimplemented!() }
 
 /// Read directory entries from a directory. 
@@ -117,6 +137,8 @@ fn fd_read(fd: Fd, iovs: IovecArray) -> Result<Size, Errno> { unimplemented!() }
 /// Each directory entry consists of a dirent object, followed by dirent::d_namlen bytes holding the name of the directory entry. 
 /// This function fills the output buffer as much as possible, potentially truncating the last directory entry. 
 /// This allows the caller to grow its read buffer size in case it's too small to fit a single large directory entry, or skip the oversized directory entry.
+/// 
+/// The number of bytes stored in the read buffer. If less than the size of the read buffer, the end of the directory has been reached.
 fn fd_readdir(fd: Fd, buf: *mut u8, buf_len: Size, cookie: Dircookie) -> Result<Size, Errno> { unimplemented!() }
 
 /// Atomically replace a file descriptor by renumbering another file descriptor. 
@@ -127,6 +149,8 @@ fn fd_renumber(fd: Fd, to: Fd) -> Result<(), Errno> { unimplemented!() }
 
 /// Move the offset of a file descriptor. 
 /// Note: This is similar to lseek in POSIX.
+/// 
+/// The new offset of the file descriptor, relative to the start of the file.
 fn fd_seek(fd: Fd, offset: Filedelta, whence: Whence) -> Result<Filesize, Errno> { unimplemented!() }
 
 /// Synchronize the data and metadata of a file to disk. 
@@ -135,6 +159,8 @@ fn fd_sync(fd: Fd) -> Result<(), Errno>  { unimplemented!() }
 
 /// Return the current offset of a file descriptor. 
 /// Note: This is similar to lseek(fd, 0, SEEK_CUR) in POSIX.
+/// 
+/// The current offset of the file descriptor, relative to the start of the file.
 fn fd_tell(fd: Fd) -> Result<Filesize, Errno> { unimplemented!() }
 
 /// Write to a file descriptor. 
@@ -147,6 +173,8 @@ fn path_create_directory(fd: Fd, path: String) -> Result<(), Errno> { unimplemen
 
 /// Return the attributes of a file or directory. 
 /// Note: This is similar to stat in POSIX.
+/// 
+/// The buffer where the file's attributes are stored.
 fn path_filestat_get(fd: Fd, flags: Lookupflags, path: String) -> Result<Filestat, Errno> { unimplemented!() }
 
 /// Adjust the timestamps of a file or directory. 
@@ -162,10 +190,14 @@ fn path_link(old_fd: Fd, old_flags: Lookupflags, old_path: String, new_fd: Fd, n
 /// it is randomized to prevent applications from depending on making assumptions about indexes, since this is error-prone in multi-threaded contexts. 
 /// The returned file descriptor is guaranteed to be less than 2**31. 
 /// Note: This is similar to openat in POSIX.
+/// 
+/// The file descriptor of the file that has been opened.
 fn path_open(fd: Fd, dirflags: Lookupflags, path: String, oflags: Oflags, fs_rights_base: Rights, fs_rights_inheriting: Rights, fdflags: Fdflags) -> Result<Fd, Errno> { unimplemented!() }
 
 /// Read the contents of a symbolic link. 
 /// Note: This is similar to readlinkat in POSIX.
+/// 
+/// The number of bytes placed in the buffer.
 fn path_readlink(fd: Fd, path: String, buf: *mut u8, buf_len: Size) -> Result<Size, Errno> { unimplemented!() }
 
 /// Remove a directory. 
@@ -187,6 +219,8 @@ fn path_symlink(old_path: String, fd: Fd, new_path: String) -> Result<(), Errno>
 fn path_unlink_file(fd: Fd, path: String) -> Result<(), Errno> { unimplemented!() }
 
 /// Concurrently poll for the occurrence of a set of events.
+/// 
+/// The number of events stored.
 fn poll_oneoff(in_: *const Subscription, out: *mut Event, nsubscriptions: Size) -> Result<Size, Errno> { unimplemented!() }
 
 /// Terminate the process normally. 
@@ -209,10 +243,14 @@ fn random_get(buf: *mut u8, buf_len: Size) -> Result<(), Errno> { unimplemented!
 
 /// Receive a message from a socket. 
 /// Note: This is similar to recv in POSIX, though it also supports reading the data into multiple buffers in the manner of readv.
+/// 
+/// Number of bytes stored in ri_data and message flags.
 fn sock_recv(fd: Fd, ri_data: IovecArray, ri_flags: Riflags) -> Result<(Size, Roflags), Errno> { unimplemented!() }
 
 /// Send a message on a socket. 
 /// Note: This is similar to send in POSIX, though it also supports writing the data from multiple buffers in the manner of writev.
+/// 
+/// Number of bytes transmitted.
 fn sock_send(fd: Fd, si_data: CiovecArray, si_flags: Siflags) -> Result<Size, Errno> { unimplemented!() }
 
 /// Shut down socket send and receive channels. 
