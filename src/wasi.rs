@@ -1,4 +1,7 @@
 mod wasi_snapshot_preview1;
+mod module;
+
+pub use module::allocate_funcs as snapshot_preview1;
 
 /// File or memory access pattern advisory information.
 enum Advice {

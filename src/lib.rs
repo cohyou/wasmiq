@@ -157,6 +157,7 @@ use runtime::{
     ExecResult,
     signed32,
     signed64,
+    HostFuncInst,
 };
 
 mod decoder;
